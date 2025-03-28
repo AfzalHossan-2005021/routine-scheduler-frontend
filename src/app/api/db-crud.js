@@ -51,6 +51,11 @@ export const getLabRooms = () =>
   axios.get(api_url("/room/labs")).then((res) => res.data);
 export const getLabCourses = () =>
   axios.get(api_url("/course/labs")).then((res) => res.data);
- 
+
+
+export const getLevelTerms = () =>
+  axios.get(api_url("/level_terms")).then((res) => res.data);
+export const setLevelTermsDB = (levelTerms) =>
+  axios.put(api_url("/level_terms/set"), levelTerms).then((res) => res.data);
 
 

@@ -85,6 +85,7 @@ class Sidebar extends Component {
             </div>
             <Collapse in={ this.state.dbUiMenuOpen }>
               <ul className="nav flex-column sub-menu">
+                <li className="nav-item"> <Link className={ this.isPathActive('/database/initialize') ? 'nav-link active' : 'nav-link' } to="/database/initialize">Initialize</Link></li>
                 <li className="nav-item"> <Link className={ this.isPathActive('/database/teachers') ? 'nav-link active' : 'nav-link' } to="/database/teachers">Teachers</Link></li>
                 <li className="nav-item"> <Link className={ this.isPathActive('/database/rooms') ? 'nav-link active' : 'nav-link' } to="/database/rooms">Rooms</Link></li>
                 <li className="nav-item"> <Link className={ this.isPathActive('/database/courses') ? 'nav-link active' : 'nav-link' } to="/database/courses">Courses</Link></li>

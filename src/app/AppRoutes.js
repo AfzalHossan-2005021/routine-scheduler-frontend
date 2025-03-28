@@ -10,6 +10,7 @@ const Teachers = lazy(() => import("./database/Teachers"));
 const Sections = lazy(() => import("./database/Sections"));
 const Rooms = lazy(() => import("./database/Rooms"));
 const Courses = lazy(() => import("./database/Courses"));
+const Initialize = lazy(() => import("./database/Initialize"));
 
 const TheoryPreference = lazy(() => import("./theory-pref/TheoryPreference"));
 const TheorySelect = lazy(() => import("./forms/TheorySelect"));
@@ -50,6 +51,7 @@ export default function AppRoutes() {
             <Route path="/database/sections" component={Sections} />
             <Route path="/database/rooms" component={Rooms} />
             <Route path="/database/courses" component={Courses} />
+            <Route path="/database/initialize" component={Initialize} />
             <Route path="/theory-assign" component={TheoryPreference} />
             <Route path="/theory-schedule/ask" component={TheorySchedule} />
             <Route path="/theory-schedule/fixed" component={FixedSchedule} />
