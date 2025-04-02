@@ -57,6 +57,8 @@ export default function Rooms() {
                     setSelectedRoom({
                       room: "",
                       type: 0,
+                      active: false,
+                      full_name: "",
                       prev_room: "",
                     });
                   }}
@@ -70,6 +72,7 @@ export default function Rooms() {
                     <tr>
                       <th> Room </th>
                       <th> Type </th>
+                      <th> Active </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -77,6 +80,7 @@ export default function Rooms() {
                       <tr key={index}>
                         <td> {room.room} </td>
                         <td> {room.type===0? "Theory":"Sessional"} </td>
+                        <td> {room.active? "YES" : "NO"} </td>
                         <td>
                           <div
                             className="btn-group"
@@ -160,6 +164,23 @@ export default function Rooms() {
                     </Form.Select>
                   </FormGroup>
                 </Col>
+                <Col md={4} className="px-2 py-1 d-flex align-items-center">
+                      <FormGroup>
+                        <Form.Label>Active Status</Form.Label>
+                        <br />
+                        <Form.Check
+                          type="checkbox"
+                          label={selectedRoom.active ? "Active" : "Inactive"} // Display text
+                          checked={selectedRoom.active} // Correct checked state
+                          onChange={(e) =>
+                            setSelectedRoom({
+                              ...selectedRoom,
+                              active: e.target.checked,
+                            })
+                          }
+                        />
+                      </FormGroup>
+                    </Col>
               </Row>
             </Form>
           </Modal.Body>
@@ -177,6 +198,8 @@ export default function Rooms() {
                 const result = validateRoom(selectedRoom);
                 if (result === null) {
                   if (selectedRoom.prev_room === "") {
+                    console.log(selectedRoom);
+                    
                     createRoom(selectedRoom)
                       .then((res) => {
                         setRooms([...rooms, selectedRoom]);

@@ -30,6 +30,8 @@ export default function TheorySchedule() {
 
   useEffect(() => {
     getTheoryScheduleForm(id).then((res) => {
+      console.log(res);
+      
       const alreadySelectedSlots = [];
       res.sections.forEach((section) => {
         if (section.schedule === null)

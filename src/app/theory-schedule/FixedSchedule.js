@@ -40,12 +40,16 @@ export default function TheorySchedule() {
 
   useEffect(() => {
     if (selectedSection) {
-      const [batch, section] = selectedSection.split(" ");
+      const [batch, section, department] = selectedSection.split(" ");
       getSchedules(batch, section).then((res) => {
+        res = res.filter(s => s.department === department)
         setSchedules(res);
       });
     }
   }, [selectedSection]);
+
+  console.log(sections, courses, schedules);
+  
 
   return (
     <div>
@@ -140,13 +144,13 @@ export default function TheorySchedule() {
                   </option>
                   {sections.map((section) => (
                     <option
-                      value={`${section.batch} ${section.section}`}
+                      value={`${section.batch} ${section.section} ${section.department}`}
                       selected={
                         selectedSection ===
-                        `${section.batch} ${section.section}`
+                        `${section.batch} ${section.section} ${section.department}`
                       }
                     >
-                      {section.level_term} - Section {section.section}
+                      {section.level_term} {section.department} - Section {section.section}
                     </option>
                   ))}
                 </Form.Select>
@@ -206,7 +210,7 @@ export default function TheorySchedule() {
                         .filter(
                           (c) =>
                             c.sections
-                              .map((s) => `${c.batch} ${s}`)
+                              .map((s) => `${c.batch} ${s} ${c.to}`)
                               .includes(selectedSection) &&
                             (!onlyNonDept || !c.course_id.startsWith("CSE"))
                         )

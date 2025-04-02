@@ -103,8 +103,10 @@ export default function Sections() {
                       type: 0,
                       room: "",
                       session: sessionValue[0],
+                      department: "",
                       prev_batch: 0,
                       prev_section: "",
+                      prev_department: "",
                     });
                   }}
                 >
@@ -117,6 +119,7 @@ export default function Sections() {
                     <tr>
                       <th> Batch </th>
                       <th> Level-Term </th>
+                      <th> Department </th>
                       <th> Section </th>
                       <th> Type </th>
                       <th> Room </th>
@@ -128,6 +131,7 @@ export default function Sections() {
                       <tr key={index}>
                         <td> {section.batch} </td>
                         <td> {section.level_term} </td>
+                        <td> {section.department} </td>
                         <td> {section.section} </td>
                         <td> {section.type===0? "Theory":"Sessional"} </td>
                         <td> {section.room} </td>
@@ -147,6 +151,7 @@ export default function Sections() {
                                   index,
                                   prev_batch: section.batch,
                                   prev_section: section.section,
+                                  prev_department: section.department
                                 })
                               }
                             >
@@ -159,6 +164,7 @@ export default function Sections() {
                                 setDeleteSectionSelected({
                                   batch: section.batch,
                                   section: section.section,
+                                  department: section.department
                                 })
                               }
                             >
@@ -293,6 +299,22 @@ export default function Sections() {
                     />
                   </FormGroup>
                 </Col>
+                <Col className="px-2 py-1">
+                  <FormGroup>
+                    <Form.Label>Department</Form.Label>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter Department"
+                      value={selectedSection.department}
+                      onChange={(e) =>
+                        setSelectedSection({
+                          ...selectedSection,
+                          department: e.target.value,
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
               </Row>
             </Form>
           </Modal.Body>
@@ -320,6 +342,7 @@ export default function Sections() {
                     updateSection(
                       selectedSection.prev_batch,
                       selectedSection.prev_section,
+                      selectedSection.prev_department,
                       selectedSection
                     )
                       .then((res) => {
@@ -353,7 +376,7 @@ export default function Sections() {
         centered
       >
         <Modal.Header closeButton>
-          Delete Section : {deleteSectionSelected.batch}{deleteSectionSelected.section}
+          Delete Section : {deleteSectionSelected.batch}{deleteSectionSelected.section}, {deleteSectionSelected.department}
         </Modal.Header>
         <Modal.Body className="px-4">
           <p>Are you sure you want to delete this section?</p>
@@ -368,14 +391,15 @@ export default function Sections() {
           <Button
             variant="danger"
             onClick={(e) => {
-              deleteSection(deleteSectionSelected.batch, deleteSectionSelected.section)
+              deleteSection(deleteSectionSelected.batch, deleteSectionSelected.section, deleteSectionSelected.department)
                 .then((res) => {
                   setDeleteSectionSelected(null);
                   setSections(
                     sections.filter(
                       (t) =>
                         t.batch !== deleteSectionSelected.batch &&
-                        t.section !== deleteSectionSelected.section
+                        t.section !== deleteSectionSelected.section && 
+                        t.department !== deleteSectionSelected.department
                     )
                   );
                   toast.success("Section deleted successfully");

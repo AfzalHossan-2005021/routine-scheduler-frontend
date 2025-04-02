@@ -33,12 +33,12 @@ export default function SessionalSchedule() {
 
   const batches = [
     ...new Set(
-      sections.map((section) => `${section.batch} ${section.level_term}`)
+      sections.map((section) => `${section.batch} ${section.level_term} ${section.department}`)
     ),
   ];
 
   const sectionsForBatch = sections.filter(
-    (section) => `${section.batch} ${section.level_term}` === selectedBatch
+    (section) => `${section.batch} ${section.level_term} ${section.department}` === selectedBatch
   );
 
   const filledTheorySlots = new Set(
@@ -80,12 +80,14 @@ export default function SessionalSchedule() {
 
   useEffect(() => {
     if (selectedSection) {
-      const [batch, section] = selectedSection.split(" ");
+      const [batch, section, department] = selectedSection.split(" ");
       const theorySection = section.substring(0, 1);
       getTheorySchedules(batch, theorySection).then((res) => {
+        res = res.filter((s) => s.department === department)
         setTheorySchedules(res);
       });
       getSessionalSchedules(batch, section).then((res) => {
+        res = res.filter((s) => s.department === department)
         setLabSchedules(res);
         res.forEach((slot) => {
           const course = courses.find((c) => c.course_id === slot.course_id);
@@ -106,7 +108,7 @@ export default function SessionalSchedule() {
 
   useEffect(() => {
     if (selectedCourse) {
-      const [batch, section] = selectedSection.split(" ");
+      const [batch, section, department] = selectedSection.split(" ");
       const course_id = selectedCourse.course_id;
       roomContradiction(batch, section, course_id).then((res) => {
         setRoomContradictions(
@@ -147,6 +149,9 @@ export default function SessionalSchedule() {
 
     return null;
   };
+
+  console.log(courses, sections, theorySchedules, labSchedules);
+  
 
   return (
     <div>
@@ -254,8 +259,11 @@ export default function SessionalSchedule() {
                     Select Batch{" "}
                   </option>
                   {batches.map((batch) => (
+                    // <option value={batch} selected={selectedBatch === batch}>
+                    //   {batch.split(" ")[1]}
+                    // </option>
                     <option value={batch} selected={selectedBatch === batch}>
-                      {batch.split(" ")[1]}
+                      {batch}
                     </option>
                   ))}
                 </Form.Select>
@@ -288,10 +296,10 @@ export default function SessionalSchedule() {
                   </option>
                   {sectionsForBatch.map((section) => (
                     <option
-                      value={`${section.batch} ${section.section}`}
+                      value={`${section.batch} ${section.section} ${section.department}`}
                       selected={
                         selectedSection ===
-                        `${section.batch} ${section.section}`
+                        `${section.batch} ${section.section} ${section.department}`
                       }
                     >
                       Section {section.section}
@@ -319,7 +327,7 @@ export default function SessionalSchedule() {
                       courses
                         .filter((c) =>
                           c.sections
-                            .map((s) => `${c.batch} ${s}`)
+                            .map((s) => `${c.batch} ${s} ${c.to}`)
                             .includes(selectedSection)
                         )
                         .map((course) => (
@@ -350,8 +358,8 @@ export default function SessionalSchedule() {
                       toast.error("Select a course first");
                       return;
                     }
-                    const [batch, section] = selectedSection.split(" ");
-                    setSessionalSchedules(batch, section, labSchedules).then(
+                    const [batch, section, department] = selectedSection.split(" ");
+                    setSessionalSchedules(batch, section, department, labSchedules).then(
                       (res) => {
                         toast.success("Schedule saved");
                         setIsChanged(false);

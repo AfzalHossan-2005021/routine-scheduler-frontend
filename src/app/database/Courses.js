@@ -117,6 +117,10 @@ export default function Courses() {
                       sections: [],
                       session: sessionValue[0],
                       class_per_week: 0,
+                      teacher_credit: 0,
+                      from: "",
+                      to: "",
+                      level_term: "",
                     });
                   }}
                 >
@@ -311,7 +315,7 @@ export default function Courses() {
                     </Form.Select>
                   </FormGroup>
                 </Col>
-                <Col md={8} className="px-2 py-1 d-flex align-items-center">
+                <Col  className="px-2 py-1 d-flex align-items-center">
                   <FormGroup>
                     <Form.Label>Sections</Form.Label>
                     <br />
@@ -321,7 +325,8 @@ export default function Courses() {
                           (s) =>
                             s.batch === selectedCourse.batch &&
                             s.type === selectedCourse.type &&
-                            s.session === selectedCourse.session
+                            s.session === selectedCourse.session && 
+                            s.department == selectedCourse.to
                         )
                         .map((section, index) => (
                           <div className=" form-check-inline">
@@ -346,6 +351,77 @@ export default function Courses() {
                     </Form>
                   </FormGroup>
                 </Col>
+                <Col className="px-2 py-1">
+                  <FormGroup>
+                    <Form.Label>Teacher Credit</Form.Label>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter Teacher Credit"
+                      value={selectedCourse.teacher_credit}
+                      onChange={(e) =>
+                        setSelectedCourse({
+                          ...selectedCourse,
+                          teacher_credit: Number.parseFloat(
+                            e.target.value || "0"
+                          ),
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+              </Row>
+              <Row>
+                <Col className="px-2 py-1">
+                  <FormGroup>
+                    <Form.Label>From</Form.Label>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter offering department"
+                      value={selectedCourse.from}
+                      onChange={(e) =>
+                        setSelectedCourse({
+                          ...selectedCourse,
+                          from: e.target.value || "CSE",
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+
+                <Col md={4} className="px-2 py-1 d-flex align-items-center">
+                <FormGroup>
+                    <Form.Label>To</Form.Label>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter Offered department"
+                      value={selectedCourse.to}
+                      onChange={(e) =>
+                        setSelectedCourse({
+                          ...selectedCourse,
+                          to: 
+                            e.target.value || "CSE"
+                          ,
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+                <Col className="px-2 py-1">
+                  <FormGroup>
+                    <Form.Label>Level-Term</Form.Label>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter Level-Term (e.g. L-2 T-1)"
+                      value={selectedCourse.level_term}
+                      onChange={(e) =>
+                        setSelectedCourse({
+                          ...selectedCourse,
+                          level_term: e.target.value || "",
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
               </Row>
             </Form>
           </Modal.Body>
@@ -365,7 +441,8 @@ export default function Courses() {
                     (s) =>
                       s.batch === selectedCourse.batch &&
                       s.type === selectedCourse.type &&
-                      s.session === selectedCourse.session
+                      s.session === selectedCourse.session && 
+                      s.department === selectedCourse.to
                   )
                   .map((s) => s.section);
                 selectedCourse.sections = selectedCheckboxes.filter((s) =>

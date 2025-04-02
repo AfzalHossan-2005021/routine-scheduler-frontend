@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { useRef } from "react";
 import { useState } from "react";
-import { Button, CloseButton, Badge, ProgressBar } from "react-bootstrap";
+import { Button, CloseButton, Badge, ProgressBar, Form, FormGroup } from "react-bootstrap";
 import { toast } from "react-hot-toast";
 
-import { getLabCourses, getLabRooms, getRoom } from "../api/db-crud";
+import { getLabCourses, getLabRooms, getRoom, getNonDeptLabCourses, getNonDeptLabRooms } from "../api/db-crud";
 import CardWithButton from "../shared/CardWithButton";
 import Genetic from "genetic-js";
 import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
@@ -15,6 +15,7 @@ export default function LabRoomAssign() {
     // { course_id: "CSE 102", name: "Introduction to Programming" },
     // { course_id: "CSE 103", name: "Discrete Mathematics" },
   ]);
+  const [nonDeptCourses, setNonDeptCourses] = useState([]);
 
   const [savedConstraints, setSavedConstraints] = useState(false);
   const [viewRoomAssignment, setViewRoomAssignment] = useState(false);
@@ -28,6 +29,8 @@ export default function LabRoomAssign() {
     // { room: "SEL" },
     // { room: "NL" },
   ]);
+  const [nonDeptRooms, setNonDeptRooms] = useState([]);
+  const [nonDeptCourseRoom, setNonDeptCourseRoom] = useState([]);
 
   const [courseRoom, setCourseRoom] = useState([
     // { course_id: "CSE 101", rooms: ["MCL", "MML"] },
@@ -52,6 +55,23 @@ export default function LabRoomAssign() {
       courses_ = res;
       setOfferedCourse(res);
     });
+
+    let non_dept_rooms_, non_dept_courses_;
+    const nonDeptLabs = getNonDeptLabRooms().then((res) => {
+      // console.log(res);
+      non_dept_rooms_ = res;
+      setNonDeptRooms(res);
+    });
+    const nonDeptCoursesVar = getNonDeptLabCourses().then((res) => {
+      // console.log(res);
+      non_dept_courses_ = res;
+      setNonDeptCourses(res);
+    });
+    
+    
+
+    
+    
 
     Promise.all([labs, courses]).then(() => {
       getRoomAssign().then((res) => {
@@ -79,6 +99,8 @@ export default function LabRoomAssign() {
     });
   }, []);
 
+  console.log(nonDeptRooms, nonDeptCourses, nonDeptCourseRoom);
+
   const uniqueNames = {};
 
   // Filter and show only the unique named courses
@@ -94,6 +116,21 @@ export default function LabRoomAssign() {
     setUniqueNamedCourses(uniqueCourses);
     // console.log(uniqueNamedCourses);
   }, [offeredCourse]);
+
+  useEffect(() => {
+    setNonDeptCourseRoom(prev => {
+      console.log("here", nonDeptCourses);
+      
+      return nonDeptCourses.map((course) => {
+        return {
+          course_id: course.course_id,
+          section: course.section,
+          batch: course.batch,
+          room: ""
+        }
+      })
+    })
+  }, [nonDeptCourses])
 
   let maxAllowed = Math.ceil(offeredCourse.length / rooms.length);
 
@@ -316,6 +353,61 @@ export default function LabRoomAssign() {
         onClick={(e) => {}}
       />
 
+      {!alreadySaved && (
+      <div className="row">
+        <div className="col-12 grid-margin">
+          <div className="card">
+            <div className="card-body">
+              <h4 className="card-title">Non-departmental Lab room assignment</h4>
+              <div className="table-responsive">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <td>Course</td>
+                      <td>Section</td>
+                      <td>Room</td>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {nonDeptCourses.map((course, index) => (
+                      <tr key={index}>
+                        <td>{course.course_id}</td>
+                        <td>{course.section}</td>
+                        <td>
+                          <FormGroup>
+                            <Form.Select
+                              size="lg"
+                              onChange={(e) => {
+                                setNonDeptCourseRoom(prev => {
+                                  return prev.map((cr, i) => {
+                                    if(i === index){
+                                      return {
+                                        ...cr,
+                                        room: e.target.value,
+                                      }
+                                    }
+                                    return cr;
+                                  })
+                                })
+                              }}
+                            > 
+                              <option value="None"></option>
+                              {nonDeptRooms.map((room, index) => (
+                                <option value={room.room}>{room.room}</option>
+                              ))}
+                            </Form.Select>
+                          </FormGroup>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>)}
+      
       {!alreadySaved && (
         <div className="row">
           <div className="col-12 grid-margin">
@@ -750,7 +842,8 @@ export default function LabRoomAssign() {
                     size="md"
                     className="btn-block btn-rounded"
                     onClick={() => {
-                      const data = [];
+                      let data = [];
+                      data = data.concat(nonDeptCourseRoom);
                       fixedRoomAllocation.forEach((room) => {
                         room.courses.forEach((course) => {
                           data.push({
@@ -761,6 +854,8 @@ export default function LabRoomAssign() {
                           });
                         });
                       });
+                      console.log(data);
+                      
                       setRoomAssign(data).then((res) => {
                         toast.success("Lab Room Assignment Saved");
                         setAlreadySaved(true);

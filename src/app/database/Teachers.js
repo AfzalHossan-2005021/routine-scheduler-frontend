@@ -91,6 +91,12 @@ export default function Teachers() {
                       active: 1,
                       theory_courses: 0,
                       sessional_courses: 0,
+                      designation: "",
+                      full_time_status: false,
+                      offers_thesis_1: false,
+                      offers_thesis_2: false,
+                      offers_msc: false,
+                      teacher_credits_offered: 0,
                       prev_initial: "",
                     });
                   }}
@@ -110,6 +116,12 @@ export default function Teachers() {
                       <th> Active </th>
                       <th> Theory Courses </th>
                       <th> Sessional Courses </th>
+                      <th>Designation</th>
+                      <th>Fulll time status</th>
+                      <th>Offer Thesis 1</th>
+                      <th>Offer Thesis 2</th>
+                      <th>Offer MSC</th>
+                      <th>Teacher credits offered</th>
                       <th> Action </th>
                     </tr>
                   </thead>
@@ -124,6 +136,12 @@ export default function Teachers() {
                         <td> {teacher.active} </td>
                         <td> {teacher.theory_courses} </td>
                         <td> {teacher.sessional_courses} </td>
+                        <td> {teacher.designation} </td>
+                        <td> {teacher.full_time_status ? "FULL" : "PART"} </td>
+                        <td> {teacher.offers_thesis_1 ? "YES" : "NO"} </td>
+                        <td> {teacher.offers_thesis_2 ? "YES" : "NO"} </td>
+                        <td> {teacher.offers_msc ? "YES" : "NO"} </td>
+                        <td> {teacher.teacher_credits_offered} </td>
                         <td>
                           <div
                             className="btn-group"
@@ -320,6 +338,124 @@ export default function Teachers() {
                       }
                     />
                   </FormGroup>
+                </Col>
+              </Row>
+              <Row>
+                <Col md={6} className="px-2 py-1">
+                  <FormGroup>
+                    <Form.Label>Designation</Form.Label>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter Designation"
+                      value={selectedTeacher.designation}
+                      onChange={(e) =>
+                        setSelectedTeacher({
+                          ...selectedTeacher,
+                          designation: e.target.value || "",
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+                <Col className="px-2 py-1 d-flex align-items-center">
+                  {/* Currently Active Checkbox */}
+                  <div className="form-check">
+                    <label className="form-check-label">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={selectedTeacher.full_time_status}
+                        onChange={(e) =>
+                          setSelectedTeacher({
+                            ...selectedTeacher,
+                            full_time_status: e.target.checked ? true : false,
+                          })
+                        }
+                      />
+                      <i className="input-helper"></i>
+                      Full Time Status : {selectedTeacher.full_time_status ? "FULL" : "PART"}
+                    </label>
+                  </div>
+                </Col>
+              </Row>
+              <Row>
+                <Col className="px-2 py-1 d-flex align-items-center">
+                  {/* Currently Active Checkbox */}
+                  <div className="form-check">
+                    <label className="form-check-label">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={selectedTeacher.offer_thesis_1}
+                        onChange={(e) =>
+                          setSelectedTeacher({
+                            ...selectedTeacher,
+                            offer_thesis_1: e.target.checked ? true : false,
+                          })
+                        }
+                      />
+                      <i className="input-helper"></i>
+                      Offer Thesis 1 : {selectedTeacher.offers_thesis_1 ? "YES" : "NO"}
+                    </label>
+                  </div>
+                </Col>
+                <Col className="px-2 py-1 d-flex align-items-center">
+                  {/* Currently Active Checkbox */}
+                  <div className="form-check">
+                    <label className="form-check-label">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={selectedTeacher.offers_thesis_2}
+                        onChange={(e) =>
+                          setSelectedTeacher({
+                            ...selectedTeacher,
+                            offers_thesis_2: e.target.checked ? true : false,
+                          })
+                        }
+                      />
+                      <i className="input-helper"></i>
+                      Offer Thesis 2: {selectedTeacher.offers_thesis_2 ? "YES" : "NO"}
+                    </label>
+                  </div>
+                </Col>
+              </Row>
+              <Row>
+                <Col md={6} className="px-2 py-1">
+                  <FormGroup>
+                    <Form.Label>Teacher Credits Offered</Form.Label>
+                    <FormControl
+                      type="text"
+                      placeholder="Enter credits"
+                      value={selectedTeacher.teacher_credits_offered}
+                      onChange={(e) =>
+                        setSelectedTeacher({
+                          ...selectedTeacher,
+                          teacher_credits_offered: e.target.value || "",
+                        })
+                      }
+                    />
+                  </FormGroup>
+                </Col>
+                <Col className="px-2 py-1 d-flex align-items-center">
+                  {/* Currently Active Checkbox */}
+                  <div className="form-check">
+                    <label className="form-check-label">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={selectedTeacher.offers_msc}
+                        onChange={(e) =>
+                          setSelectedTeacher({
+                            ...selectedTeacher,
+                            offers_msc: e.target.checked ? true : false,
+                          })
+                        }
+                      />
+                      <i className="input-helper"></i>
+                      Offer MSC : {selectedTeacher.offers_msc ? "YES" : "NO"}
+                    </label>
+                  </div>
                 </Col>
               </Row>
             </Form>
