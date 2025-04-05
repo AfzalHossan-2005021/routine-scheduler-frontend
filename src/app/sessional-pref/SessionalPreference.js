@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useState } from "react";
-import { finalizeSessional as finalize, getSessionalStatus as getStatus, initiateSessional as initiate } from "../api/theory-assign";
-import { Alert, Button, Modal } from "react-bootstrap";
+import { finalizeSessional as finalize, getSessionalStatus as getStatus, initiateSessional as initiate, setTeacherSessionalAssignment } from "../api/theory-assign";
+import { getTeachers } from "../api/db-crud";
+import { Alert, Button, Modal, FormGroup, Form } from "react-bootstrap";
 import CardWithButton from "../shared/CardWithButton";
 
 export default function SessionalPreference() {
@@ -12,15 +13,20 @@ export default function SessionalPreference() {
   });
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState([]);
+  const [allTeachers, setAllTeachers] = useState([]);
 
   useEffect(() => {
     getStatus().then((res) => {
       setStatus({ values: [], submitted: [], ...res });
     });
+    getTeachers().then((res) => {
+          res = res.filter((t) => t.active === 1)
+          setAllTeachers(res);
+        })
   }, []);
 
   const selectedCourseRef = useRef();
-
+  
   return (
     <div>
       <div className="page-header">
@@ -367,15 +373,63 @@ export default function SessionalPreference() {
                       </tr>
                     </thead>
                     <tbody>
-                      {status.assignment.map((course, index) => (
-                        <tr key={index}>
+                      {status.assignment.map((course, cindex) => (
+                        <tr key={cindex}>
                           <td> {course.course_id} </td>
                           <td> {course.name} </td>
                           <td>
                               {course.teachers && [...new Set(course.teachers.map(t => t.section))].sort().map((section, index) => (<>
                                 <strong>{section}</strong><br/>
                                 <ul>
-                                  {course.teachers.filter(t => t.section === section).map(t => <li>{t.name} ({t.initial})</li>)}
+                                  {course.teachers.filter(teacher => teacher.section === section).map((teacher, i) => (
+                                  
+                                  // <li>{teacher.name} ({teacher.initial})</li>
+                                  <li key={i}>
+                                  <div>
+                                    {teacher.initial} - {teacher.name}
+                                    <FormGroup>
+                                      <Form.Select
+                                        size="lg"
+                                        onChange={(e) => {
+                                          const [newInitial, newName] = e.target.value.split("|");
+                                
+                                          setTeacherSessionalAssignment({
+                                            course_id: course.course_id,
+                                            initial: newInitial,
+                                            section: section,
+                                            old_initial: teacher.initial, // Ensure API supports this
+                                          }).then((res) => {
+                                            setStatus((prev) => ({
+                                              ...prev,
+                                              assignment: prev.assignment.map((c, j) =>
+                                                j === cindex
+                                                  ? {
+                                                      ...c,
+                                                      teachers: c.teachers.map((t) =>
+                                                        t.initial === teacher.initial && t.section === section
+                                                          ? { initial: newInitial, name: newName, section: t.section }
+                                                          : t
+                                                      ),
+                                                    }
+                                                  : c
+                                              ),
+                                            }));
+                                          });
+                                        }}
+                                      >
+                                        <option value="None">Change Teacher</option>
+                                        {allTeachers?.map((t) => (
+                                          <option key={t.initial} value={`${t.initial}|${t.name}`}>
+                                            {t.initial} - {t.name}
+                                          </option>
+                                        ))}
+                                      </Form.Select>
+                                    </FormGroup>
+                                  </div>
+                                </li>  
+                                  
+                                )
+                                  )}
                                 </ul> 
                               </>))}
                           </td>
@@ -392,3 +446,41 @@ export default function SessionalPreference() {
     </div>
   );
 }
+
+
+
+{/* <li>
+                                      <div>
+                                        {teacher.initial} - {teacher.name}
+                                        <FormGroup>
+                                          <Form.Select
+                                            size="lg"
+                                            onChange={(e) => {
+                                              const [newInitial, newName] = e.target.value.split(" ");
+                                        
+                                              setTeacherSessionalAssignment({ course_id: course.course_id, initial: newInitial, section:section, old_initial: teacher.initial })
+                                                .then((res) => {
+                                                  setStatus((prev) => ({
+                                                    ...prev,
+                                                    assignment: prev.assignment.map((c, j) =>
+                                                      j === cindex
+                                                        ? {
+                                                            ...c,
+                                                            teachers: c.teachers.map((t, k) =>
+                                                              k === i ? { initial: newInitial, name: newName, section: t.section } : t
+                                                            ),
+                                                          }
+                                                        : c
+                                                    ),
+                                                  }));
+                                                });
+                                            }}
+                                          >
+                                            <option value="None">Change Teacher</option>
+                                            {allTeachers?.map(t => (
+                                              <option value={`${t.initial} ${t.name}`}>{t.initial} - {t.name}</option>
+                                            ))}
+                                          </Form.Select>
+                                        </FormGroup>
+                                      </div>
+                                    </li>    */}

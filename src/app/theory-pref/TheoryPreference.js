@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useState } from "react";
-import { finalize, getStatus, initiate } from "../api/theory-assign";
+import { finalize, getStatus, initiate, setTeacherAssignment } from "../api/theory-assign";
+import { getTeachers } from "../api/db-crud";
 import { Alert, Button, FormCheck, Modal } from "react-bootstrap";
 import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
 import CardWithButton from "../shared/CardWithButton";
@@ -13,11 +14,16 @@ export default function TheoryPreference() {
   });
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState([]);
+  const [allTeachers, setAllTeachers] = useState([]);
 
   useEffect(() => {
     getStatus().then((res) => {
       setStatus({ values: [], submitted: [], ...res });
     });
+    getTeachers().then((res) => {
+      res = res.filter((t) => t.active === 1)
+      setAllTeachers(res);
+    })
   }, []);
 
   const selectedCourseRef = useRef();
@@ -375,10 +381,45 @@ export default function TheoryPreference() {
                           <td>
                             <ul>
                               {(course.teachers ? course.teachers : []).map(
-                                (teacher) => (
-                                  <li>
-                                    {teacher.initial} - {teacher.name}
-                                  </li>
+                                (teacher, i) => (
+                                  <>
+                                    <li>
+                                      <div>
+                                        {teacher.initial} - {teacher.name}
+                                        <FormGroup>
+                                          <Form.Select
+                                            size="lg"
+                                            onChange={(e) => {
+                                              const [newInitial, newName] = e.target.value.split("|");
+                                        
+                                              setTeacherAssignment({ course_id: course.course_id, initial: newInitial, old_initial: teacher.initial })
+                                                .then((res) => {
+                                                  setStatus((prev) => ({
+                                                    ...prev,
+                                                    assignment: prev.assignment.map((c, j) =>
+                                                      j === index
+                                                        ? {
+                                                            ...c,
+                                                            teachers: c.teachers.map((t, k) =>
+                                                              k === i ? { initial: newInitial, name: newName } : t
+                                                            ),
+                                                          }
+                                                        : c
+                                                    ),
+                                                  }));
+                                                });
+                                            }}
+                                          >
+                                            <option value="None">Change Teacher</option>
+                                            {allTeachers?.map(t => (
+                                              <option value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
+                                            ))}
+                                          </Form.Select>
+                                        </FormGroup>
+                                      </div>
+                                    </li>
+                                    
+                                  </>
                                 )
                               )}
                             </ul>
