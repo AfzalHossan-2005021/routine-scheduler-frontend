@@ -10,7 +10,7 @@ import Footer from "./shared/Footer";
 import "./App.css";
 import { useLocation } from "react-router-dom/cjs/react-router-dom.min";
 import { FORBIDDEN, UNAUTHORIZED } from "./api";
-import { Toaster, toast } from "react-hot-toast";
+import { toast } from "react-hot-toast";
 
 export const UserContext = createContext({user: undefined, setUser: u => {}});
 export const UserProvider = UserContext.Provider;
@@ -27,14 +27,23 @@ function App(props) {
     (response) => response,
     (error) => {
       console.log(error);
-      const status = error.response.status;
+      
+      // Check if error.response exists before accessing its properties
+      if (error.response) {
+        const status = error.response.status;
 
-      if (status === UNAUTHORIZED || status === FORBIDDEN) {
-        localStorage.removeItem("token");
-        setUser({loggedIn: false});
-        return Promise.reject(error);
+        if (status === UNAUTHORIZED || status === FORBIDDEN) {
+          localStorage.removeItem("token");
+          setUser({loggedIn: false});
+          return Promise.reject(error);
+        } else {
+          const message = error.response.data?.message || "Something went wrong...";
+          toast.error(message);
+          return Promise.reject(error);
+        }
       } else {
-        const message = error.response.message || "Something went wrong...";
+        // Handle network errors or other errors without response
+        const message = error.message || "Network error or server is unreachable";
         toast.error(message);
         return Promise.reject(error);
       }

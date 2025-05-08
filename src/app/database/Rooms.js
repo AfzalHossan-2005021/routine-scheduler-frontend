@@ -1,5 +1,5 @@
 import { useState , useEffect } from "react";
-import { Button, FormCheck, Modal } from "react-bootstrap";
+import { Button, Modal } from "react-bootstrap";
 import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
 
 import { toast } from "react-hot-toast";
@@ -58,7 +58,6 @@ export default function Rooms() {
                       room: "",
                       type: 0,
                       active: false,
-                      full_name: "",
                       prev_room: "",
                     });
                   }}

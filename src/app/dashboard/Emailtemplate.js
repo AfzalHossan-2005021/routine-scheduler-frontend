@@ -1,6 +1,6 @@
 import React from "react";
-import { useEffect, useState } from "react";
-import { Alert, Button, Card, Form, InputGroup, Modal } from "react-bootstrap";
+import { useState } from "react";
+import { Button, Card } from "react-bootstrap";
 import { setTheoryEmail,setScheduleEmail,setSessionalEmail } from "../api/dashboard";
 import EditEmailModal from "./EditEmailModal";
 import { toast } from "react-hot-toast";
@@ -52,7 +52,7 @@ export default function Emailtemplate({ theoryEmail, scheduleEmail, sessionalEma
                     <div className="card-body">
                         <h4 className="card-title mb-5">Email Templates</h4>
                         <div
-                            class="row flex-row flex-nowrap "
+                            className="row flex-row flex-nowrap "
                             style={{ overflowX: "auto" }}
                         >
                             <Card

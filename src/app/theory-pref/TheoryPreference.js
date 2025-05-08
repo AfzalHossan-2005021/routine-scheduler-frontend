@@ -2,8 +2,8 @@ import { useEffect, useRef } from "react";
 import { useState } from "react";
 import { finalize, getStatus, initiate, setTeacherAssignment } from "../api/theory-assign";
 import { getTeachers } from "../api/db-crud";
-import { Alert, Button, FormCheck, Modal } from "react-bootstrap";
-import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
+import { Alert, Button, Modal } from "react-bootstrap";
+import { Form, FormGroup } from "react-bootstrap";
 import CardWithButton from "../shared/CardWithButton";
 
 export default function TheoryPreference() {

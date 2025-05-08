@@ -8,16 +8,21 @@ import {
 
 export default function Initialize(){
     const [levelTerms, setLevelTerms] = useState([]);
-    let status_buttons = [];
     
     useEffect(() => {
-        getLevelTerms().then((res) => {
-            console.log(res.message);
-            setLevelTerms(res.data);
-            console.log(levelTerms);
-            
-            
-        })
+        getLevelTerms()
+            .then((res) => {
+                console.log(res.message);
+                setLevelTerms(res.data);
+                console.log(levelTerms);
+            })
+            .catch((error) => {
+                console.error("Error fetching level terms:", error);
+                // Display a user-friendly error message
+                toast.error("Failed to load level terms. Please try again later.");
+                // Initialize with empty array to prevent rendering errors
+                setLevelTerms([]);
+            });
     }, [])
 
     console.log(levelTerms);

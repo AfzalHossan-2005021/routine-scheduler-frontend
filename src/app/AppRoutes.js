@@ -1,4 +1,4 @@
-import React, { Component, Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 
 import Spinner from "../app/shared/Spinner";
@@ -24,13 +24,8 @@ const LabRoomAssign = lazy(() => import("./lab-room-assign/LabRoomAssign"));
 const SessionalPreference = lazy(() => import("./sessional-pref/SessionalPreference"));
 const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSchedule"));
 
-const Error404 = lazy(() => import("./error-pages/Error404"));
-const Error500 = lazy(() => import("./error-pages/Error500"));
-
 const Login = lazy(() => import("./user-pages/Login"));
 const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
-
-const BlankPage = lazy(() => import("./general-pages/BlankPage"));
 
 const pdfPage = lazy(() => import("./pdf/ShowPdf"));
 

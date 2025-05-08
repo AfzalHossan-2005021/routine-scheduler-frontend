@@ -104,18 +104,16 @@ function App() {
               <h4 className="card-title mb-4">Gmail Credentials</h4>
               <Alert variant="info" className="mb-3">
                 <Alert.Heading>How to get Gmail Credentials?</Alert.Heading>
-                <p>
-                  <ol>
-                    <li>
-                      Go to{" "}
-                      <a href="https://myaccount.google.com/lesssecureapps">
-                        https://myaccount.google.com/lesssecureapps
-                      </a>
-                    </li>
-                    <li>Turn on the option</li>
-                    <li>Save the credentials</li>
-                  </ol>
-                </p>
+                <ol>
+                  <li>
+                    Go to{" "}
+                    <a href="https://myaccount.google.com/lesssecureapps">
+                      https://myaccount.google.com/lesssecureapps
+                    </a>
+                  </li>
+                  <li>Turn on the option</li>
+                  <li>Save the credentials</li>
+                </ol>
               </Alert>
               <Form>
                 <InputGroup className="mb-3">

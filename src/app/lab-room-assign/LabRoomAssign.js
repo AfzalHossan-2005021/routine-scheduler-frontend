@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import { useRef } from "react";
 import { useState } from "react";
-import { Button, CloseButton, Badge, ProgressBar, Form, FormGroup } from "react-bootstrap";
+import { Button, Badge, ProgressBar, Form, FormGroup } from "react-bootstrap";
 import { toast } from "react-hot-toast";
 
-import { getLabCourses, getLabRooms, getRoom, getNonDeptLabCourses, getNonDeptLabRooms } from "../api/db-crud";
+import { getLabCourses, getLabRooms } from "../api/db-crud";
 import CardWithButton from "../shared/CardWithButton";
 import Genetic from "genetic-js";
 import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
@@ -41,7 +41,6 @@ export default function LabRoomAssign() {
   const [progress, setProgress] = useState(0);
 
   const [alreadySaved, setAlreadySaved] = useState(false);
-  const [backendData, setBackendData] = useState([]);
 
   useEffect(() => {
     let rooms_, courses_;
@@ -56,26 +55,8 @@ export default function LabRoomAssign() {
       setOfferedCourse(res);
     });
 
-    let non_dept_rooms_, non_dept_courses_;
-    const nonDeptLabs = getNonDeptLabRooms().then((res) => {
-      // console.log(res);
-      non_dept_rooms_ = res;
-      setNonDeptRooms(res);
-    });
-    const nonDeptCoursesVar = getNonDeptLabCourses().then((res) => {
-      // console.log(res);
-      non_dept_courses_ = res;
-      setNonDeptCourses(res);
-    });
-    
-    
-
-    
-    
-
     Promise.all([labs, courses]).then(() => {
       getRoomAssign().then((res) => {
-        setBackendData(res);
         if (res.length > 0) {
           setAlreadySaved(true);
           const labRooms = rooms_.map((room) => {
@@ -131,33 +112,6 @@ export default function LabRoomAssign() {
       })
     })
   }, [nonDeptCourses])
-
-  let maxAllowed = Math.ceil(offeredCourse.length / rooms.length);
-
-  const roomAlloc = rooms.map((room) => {
-    return {
-      room: room.room,
-      count: 0,
-      courses: [],
-    };
-  });
-
-  const countMinIndex = (arr) => {
-    let minCount = Infinity;
-    let minIndex = -1;
-
-    // console.log(item.rooms);
-
-    arr.forEach((room) => {
-      const room_index = rooms.findIndex((r) => r.room === room);
-      // console.log(index, roomAlloc[index].count);
-      if (roomAlloc[room_index].count < minCount) {
-        minCount = roomAlloc[room_index].count;
-        minIndex = room_index;
-      }
-    });
-    return minIndex;
-  };
 
   const geneticAlgorithm = (roomAssignments, rooms) => {
     const courses = Object.keys(roomAssignments);
@@ -292,7 +246,7 @@ export default function LabRoomAssign() {
     const allRoomSet = roomNameOnly;
 
     const possibleRoom = courseNameOnly.reduce((map, course) => {
-      const [course_id, section] = course.split(" ");
+      const course_id = course.split(" ")[0];
       const roomSet = courseRoomMap[course_id] || allRoomSet;
       map[course] = roomSet;
       return map;

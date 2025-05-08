@@ -1,7 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useState } from "react";
-import { Alert, Button, FormCheck, Modal, ModalBody } from "react-bootstrap";
-import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
+import { Alert, Button, Modal, ModalBody } from "react-bootstrap";
 import { finalize, getStatus, initiate } from "../api/theory-schedule";
 import CardWithButton from "../shared/CardWithButton";
 
@@ -13,7 +12,6 @@ export default function TheoryAskSchedule() {
   });
 
   const [selectedTeacher, setSelectedTeacher] = useState(null);
-  const [selectedCourse, setSelectedCourse] = useState([]);
 
   useEffect(() => {
     getStatus().then((res) => {

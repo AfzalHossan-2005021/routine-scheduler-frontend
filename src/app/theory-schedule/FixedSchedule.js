@@ -1,8 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useState } from "react";
-import { finalize, getStatus, initiate } from "../api/theory-assign";
-import { Alert, Button, FormCheck, Modal, ProgressBar } from "react-bootstrap";
-import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
+import { Button, ProgressBar } from "react-bootstrap";
+import { Form} from "react-bootstrap";
 import ScheduleSelectionTable, { days } from "../shared/ScheduleSelctionTable";
 import { getCourses, getSections } from "../api/db-crud";
 import { toast } from "react-hot-toast";

@@ -1,13 +1,10 @@
 import { useEffect } from "react";
-import { useRef } from "react";
 import { useState } from "react";
 import { Button, Form, ProgressBar } from "react-bootstrap";
 import { toast } from "react-hot-toast";
 import { useParams } from "react-router-dom";
 import {
-  getTheoryPreferencesForm,
   getTheoryScheduleForm,
-  submitTheoryPreferencesForm,
   submitTheoryScheduleForm,
 } from "../api/form";
 import ScheduleSelectionTable, { days } from "../shared/ScheduleSelctionTable";
