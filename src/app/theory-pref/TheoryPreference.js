@@ -1,5 +1,4 @@
-import { useEffect, useRef } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { finalize, getStatus, initiate, setTeacherAssignment } from "../api/theory-assign";
 import { getTeachers } from "../api/db-crud";
 import { Alert, Button, Modal } from "react-bootstrap";
@@ -15,6 +14,8 @@ export default function TheoryPreference() {
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [selectedCourse, setSelectedCourse] = useState([]);
   const [allTeachers, setAllTeachers] = useState([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState("");
 
   useEffect(() => {
     getStatus().then((res) => {
@@ -80,8 +81,22 @@ export default function TheoryPreference() {
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
+                              onClick={() => {
+                                setConfirmAction("Resend");
+                                setShowConfirm(true);
+                              }}
                             >
                               Resend
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-success btn-sm ms-2"
+                              onClick={() => {
+                                setConfirmAction("Add Preference");
+                                setShowConfirm(true);
+                              }}
+                            >
+                              Add Preference
                             </button>
                           </td>
                         </tr>
@@ -433,6 +448,29 @@ export default function TheoryPreference() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <Modal show={true} onHide={() => setShowConfirm(false)} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>Confirm Action</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            Are you sure you want to proceed with <b>{confirmAction}</b>?
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={() => {
+              console.log(confirmAction);
+              setShowConfirm(false);
+            }}>
+              Confirm
+            </Button>
+          </Modal.Footer>
+        </Modal>
       )}
     </div>
   );

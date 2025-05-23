@@ -79,6 +79,9 @@ export default function SessionalPreference() {
                             <button
                               type="button"
                               className="btn btn-primary btn-sm"
+                              onClick={() => {
+                                console.log("RESEND");
+                                }}
                             >
                               Resend
                             </button>
