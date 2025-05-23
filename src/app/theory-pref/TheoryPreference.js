@@ -16,6 +16,7 @@ export default function TheoryPreference() {
   const [allTeachers, setAllTeachers] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState("");
+  const [selectedTeacherRow, setSelectedTeacherRow] = useState(null);
 
   useEffect(() => {
     getStatus().then((res) => {
@@ -83,6 +84,7 @@ export default function TheoryPreference() {
                               className="btn btn-primary btn-sm"
                               onClick={() => {
                                 setConfirmAction("Resend");
+                                setSelectedTeacherRow(teacher);
                                 setShowConfirm(true);
                               }}
                             >
@@ -93,6 +95,7 @@ export default function TheoryPreference() {
                               className="btn btn-success btn-sm ms-2"
                               onClick={() => {
                                 setConfirmAction("Add Preference");
+                                setSelectedTeacherRow(teacher);
                                 setShowConfirm(true);
                               }}
                             >
@@ -457,14 +460,24 @@ export default function TheoryPreference() {
             <Modal.Title>Confirm Action</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            Are you sure you want to proceed with <b>{confirmAction}</b>?
+            Are you sure you want to proceed with <b>{confirmAction}</b> for <b>{selectedTeacherRow?.name}</b> ({selectedTeacherRow?.initial})?
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setShowConfirm(false)}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={() => {
-              console.log(confirmAction);
+            <Button variant="primary" onClick={async () => {
+              if (confirmAction === "Resend") {
+                // Call API to resend mail to selectedTeacherRow.email
+                // Example: await resendTheoryPrefMail(selectedTeacherRow.email)
+                console.log("Resend mail to:", selectedTeacherRow.email);
+              } else if (confirmAction === "Add Preference") {
+                // Redirect to theory preference form for this teacher
+                // Example: window.location.href = `/form/theory-pref/${selectedTeacherRow.token}`;
+                // If you have a token or id, use it here
+                // For now, just log
+                console.log("Fill up theory preference for:", selectedTeacherRow.initial);
+              }
               setShowConfirm(false);
             }}>
               Confirm
