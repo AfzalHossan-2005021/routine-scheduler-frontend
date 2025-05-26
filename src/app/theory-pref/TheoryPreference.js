@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { finalize, getStatus, initiate, setTeacherAssignment } from "../api/theory-assign";
+import { toast } from "react-hot-toast";
+import { finalize, getStatus, initiate, setTeacherAssignment, resendTheoryPrefMail } from "../api/theory-assign";
 import { getTeachers } from "../api/db-crud";
 import { Alert, Button, Modal } from "react-bootstrap";
 import { Form, FormGroup } from "react-bootstrap";
@@ -468,9 +469,12 @@ export default function TheoryPreference() {
             </Button>
             <Button variant="primary" onClick={async () => {
               if (confirmAction === "Resend") {
-                // Call API to resend mail to selectedTeacherRow.email
-                // Example: await resendTheoryPrefMail(selectedTeacherRow.email)
-                console.log("Resend mail to:", selectedTeacherRow.email);
+                try {
+                  await resendTheoryPrefMail(selectedTeacherRow.initial);
+                  toast.success("Resent email successfully");
+                } catch (err) {
+                  toast.error("Failed to resend email");
+                }
               } else if (confirmAction === "Add Preference") {
                 // Redirect to theory preference form for this teacher
                 // Example: window.location.href = `/form/theory-pref/${selectedTeacherRow.token}`;
