@@ -28,10 +28,12 @@ export const initiateSessional = () =>
 export const finalizeSessional = () =>
   axios.get(api_url("/assign/sessional/finalize")).then((res) => res.data);
 
-
-export const setTeacherAssignment = (assignment) => 
+export const setTeacherAssignment = (assignment) =>
   axios.put(api_url("/assign/theory/set"), assignment).then((res) => res.data);
-export const setTeacherSessionalAssignment = (assignment) => 
+export const setTeacherSessionalAssignment = (assignment) =>
   axios.put(api_url("/assign/sessional/set"), assignment).then((res) => res.data);
+export const resendTheoryPrefMail = (initial) =>
+  axios.get(api_url(`/assign/theory/resend/${initial}`)).then((res) => res.data);
+
 export const saveReorderedTeacherPreference = (initial, response) =>
   axios.post(api_url("/assign/theory/save-preference"), {initial,response,}).then((res) => res.data);
