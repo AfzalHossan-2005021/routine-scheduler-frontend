@@ -7,19 +7,13 @@ import { useParams } from "react-router-dom";
 import { getSessionalPreferencesForm, submitSessionalPreferencesForm } from "../api/form";
 
 export default function SessionalSelect() {
-  const { id } = useParams();
+  const { initial } = useParams();
 
   const [teacher, setTeacher] = useState({
     initial: "...",
     name: "Loading...",
   });
-  const [offeredCourse, setOfferedCourse] = useState([
-    // { course_id: "CSE 101", name: "Introduction to Computer Science" },
-    // { course_id: "CSE 102", name: "Introduction to Programming" },
-    // { course_id: "CSE 103", name: "Discrete Mathematics" },
-    // { course_id: "CSE 104", name: "Physics" },
-    // { course_id: "CSE 105", name: "Physics Lab" },
-  ]);
+  const [offeredCourse, setOfferedCourse] = useState([]);
 
   const [selectedCourse, setSelectedCourse] = useState([]);
 
@@ -27,12 +21,12 @@ export default function SessionalSelect() {
   const selectedCourseRef = useRef();
 
   useEffect(() => {
-    getSessionalPreferencesForm(id).then((form) => {
+    getSessionalPreferencesForm(initial).then((form) => {
       setTeacher(form.teacher);
       setOfferedCourse(form.courses);
       setSelectedCourse([])
     });
-  }, [id]);
+  }, [initial]);
 
   return (
     <div>
@@ -288,7 +282,7 @@ export default function SessionalSelect() {
                         const preferences = selectedCourse.map(
                           (course) => course.course_id
                         );
-                        submitSessionalPreferencesForm(id, preferences)
+                        submitSessionalPreferencesForm(initial, preferences)
                         .then((res) => {
                           toast.success("Preferences saved successfully");
                         }).catch(console.log)

@@ -36,9 +36,9 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<Spinner />}>
       <Switch>
-        <Route exact path="/form/theory-pref/:id" component={TheorySelect} />
-        <Route exact path="/form/sessional-pref/:id" component={SessionalSelect} />
-        <Route exact path="/form/theory-sched/:id" component={TheoryScheduleForm} />
+        <Route exact path="/form/theory-pref/:initial" component={TheorySelect} />
+        <Route exact path="/form/sessional-pref/:initial" component={SessionalSelect} />
+        <Route exact path="/form/theory-sched/:initial" component={TheoryScheduleForm} />
         {user.loggedIn ? (
           <Switch>
             <Route exact path="/dashboard" component={Dashboard} />

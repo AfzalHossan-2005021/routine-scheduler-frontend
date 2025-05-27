@@ -95,9 +95,20 @@ export default function TheoryPreference() {
                               type="button"
                               className="btn btn-success btn-sm ms-2"
                               onClick={() => {
-                                setConfirmAction("Add Preference");
                                 setSelectedTeacherRow(teacher);
-                                setShowConfirm(true);
+                                // Open directly in new tab
+                                const newWindow = window.open(`/form/theory-pref/${teacher.initial}`, '_blank');
+                                
+                                // Set up polling to check if window closed
+                                const pollTimer = setInterval(() => {
+                                  if (newWindow.closed) {
+                                    clearInterval(pollTimer);
+                                    // Refresh data when child window closes
+                                    getStatus().then((res) => {
+                                      setStatus({ values: [], submitted: [], ...res });
+                                    });
+                                  }
+                                }, 500);
                               }}
                             >
                               Add Preference
@@ -180,7 +191,12 @@ export default function TheoryPreference() {
       {selectedTeacher !== null && (
         <Modal
           show={true}
-          onHide={() => setSelectedTeacher(null)}
+          onHide={() => {
+            setSelectedTeacher(null);
+            getStatus().then((res) => {
+              setStatus({ values: [], submitted: [], ...res });
+            });
+          }}
           size="md"
           centered
         >
@@ -355,7 +371,12 @@ export default function TheoryPreference() {
             >
               Save
             </Button>
-            <Button variant="outline-dark" onClick={() => setSelectedTeacher(null)}>
+            <Button variant="outline-dark" onClick={() => {
+              setSelectedTeacher(null);
+              getStatus().then((res) => {
+                setStatus({ values: [], submitted: [], ...res });
+              });
+            }}>
               Close
             </Button>
           </Modal.Footer>
@@ -494,12 +515,6 @@ export default function TheoryPreference() {
                 } catch (err) {
                   toast.error("Failed to resend email");
                 }
-              } else if (confirmAction === "Add Preference") {
-                // Redirect to theory preference form for this teacher
-                // Example: window.location.href = `/form/theory-pref/${selectedTeacherRow.token}`;
-                // If you have a token or id, use it here
-                // For now, just log
-                console.log("Fill up theory preference for:", selectedTeacherRow.initial);
               }
               setShowConfirm(false);
             }}>

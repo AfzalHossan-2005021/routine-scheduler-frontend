@@ -10,7 +10,7 @@ import {
 import ScheduleSelectionTable, { days } from "../shared/ScheduleSelctionTable";
 
 export default function TheorySchedule() {
-  const { id } = useParams();
+  const { initial } = useParams();
   const [form, setForm] = useState(null);
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -26,7 +26,7 @@ export default function TheorySchedule() {
   const isLastTeacher = form && form.teachers.length && form.teachers[form.teachers.length - 1].initial === form.initial;
 
   useEffect(() => {
-    getTheoryScheduleForm(id).then((res) => {
+    getTheoryScheduleForm(initial).then((res) => {
       console.log(res);
       
       const alreadySelectedSlots = [];
@@ -45,7 +45,7 @@ export default function TheorySchedule() {
       setSections(res.sections);
       setSelectedSlots(alreadySelectedSlots);
     });
-  }, [id]);
+  }, [initial]);
 
   useEffect(() => {
     if (form && selectedSection) {
@@ -178,7 +178,7 @@ export default function TheorySchedule() {
                           return;
                       }
                     }
-                    submitTheoryScheduleForm(id, selectedSlots.map(slot => {
+                    submitTheoryScheduleForm(initial, selectedSlots.map(slot => {
                       const [day, time] = slot.split(" / ")[0].split(" ");
                       const [batch, section] = slot.split(" / ")[1].split(" ");
                       return {
