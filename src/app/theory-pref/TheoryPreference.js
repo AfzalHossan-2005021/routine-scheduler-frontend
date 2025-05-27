@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { finalize, getStatus, initiate, setTeacherAssignment } from "../api/theory-assign";
+import { finalize, getStatus, initiate, setTeacherAssignment, saveReorderedTeacherPreference } from "../api/theory-assign";
 import { getTeachers } from "../api/db-crud";
 import { Alert, Button, Modal } from "react-bootstrap";
 import { Form, FormGroup } from "react-bootstrap";
@@ -154,7 +154,7 @@ export default function TheoryPreference() {
                                 console.log(selectedTeacher);
                               }}
                             >
-                              Show
+                              Edit Preference
                             </button>
                           </td>
                         </tr>
@@ -256,6 +256,7 @@ export default function TheoryPreference() {
                           reorderedCourses[index] = reorderedCourses[index - 1];
                           reorderedCourses[index - 1] = temp;
                         }
+                        console.log(reorderedCourses);
                         setSelectedCourse(reorderedCourses);
                         selectedCourseRef.current.selectedIndex = Math.max(
                           0,
@@ -334,7 +335,25 @@ export default function TheoryPreference() {
             </form>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="outline-dark">Close</Button>
+            <Button 
+              variant="success" 
+              className="me-auto"
+              onClick={() => {
+                saveReorderedTeacherPreference(selectedTeacher.initial, selectedCourse)
+                  .then(() => {
+                    // Refresh the status to show updated data
+                    getStatus().then((res) => {
+                      setStatus({ values: [], submitted: [], ...res });
+                    });
+                    setSelectedTeacher(null);
+                  });
+              }}
+            >
+              Save
+            </Button>
+            <Button variant="outline-dark" onClick={() => setSelectedTeacher(null)}>
+              Close
+            </Button>
           </Modal.Footer>
         </Modal>
       )}
@@ -343,27 +362,27 @@ export default function TheoryPreference() {
         title="Assign Teachers according to Seniorty"
         subtitle="Final Phase"
         status={
-          status.status < 2
-            ? "Only Avaliable when everybody submitted"
-            : status.status === 2
-            ? "Click to Assign and Finalize"
+          status.status === 0
+            ? "Only Avaliable when somebody submitted"
+            : status.status < 4
+            ? "Click to Assign"
             : "This Phase is Completed"
         }
         bgColor={
-          status.status < 2
+          status.status === 0
             ? "secondary"
-            : status.status === 2
+            : status.status < 4
             ? "info"
             : "success"
         }
         icon={
-          status.status < 2
+          status.status === 0
             ? "mdi-cancel"
-            : status.status === 2
+            : status.status < 4
             ? "mdi-autorenew"
             : "mdi-check"
         }
-        disabled={status.status !== 2}
+        disabled={status.status === 0}
         onClick={(e) => {
           finalize().then((res) => {
             getStatus().then((res) => {
