@@ -60,7 +60,7 @@ function Navbar() {
                   <span className="availability-status online"></span>
                 </div>
                 <div className="nav-profile-text">
-                  <p className="mb-1 text-black">MJKSabit</p>
+                  <p className="mb-1 text-black"><b>Saem Hasan</b></p>
                 </div>
               </Dropdown.Toggle>
 
