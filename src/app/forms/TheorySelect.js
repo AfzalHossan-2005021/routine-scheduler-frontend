@@ -3,23 +3,18 @@ import { useRef } from "react";
 import { useState } from "react";
 import { Button } from "react-bootstrap";
 import { toast } from "react-hot-toast";
-import { useParams } from "react-router-dom";
+import { useParams, useHistory } from "react-router-dom";
 import { getTheoryPreferencesForm, submitTheoryPreferencesForm } from "../api/form";
 
 export default function TheorySelect() {
-  const { id } = useParams();
+  const { initial } = useParams();
+  const history = useHistory();
 
   const [teacher, setTeacher] = useState({
     initial: "...",
     name: "Loading...",
   });
-  const [offeredCourse, setOfferedCourse] = useState([
-    { course_id: "CSE 101", name: "Introduction to Computer Science" },
-    { course_id: "CSE 102", name: "Introduction to Programming" },
-    { course_id: "CSE 103", name: "Discrete Mathematics" },
-    { course_id: "CSE 104", name: "Physics" },
-    { course_id: "CSE 105", name: "Physics Lab" },
-  ]);
+  const [offeredCourse, setOfferedCourse] = useState([]);
 
   const [selectedCourse, setSelectedCourse] = useState([]);
 
@@ -27,12 +22,13 @@ export default function TheorySelect() {
   const selectedCourseRef = useRef();
 
   useEffect(() => {
-    getTheoryPreferencesForm(id).then((form) => {
+    getTheoryPreferencesForm(initial).then((form) => {
+      console.log("Form data received:", form);
       setTeacher(form.teacher);
       setOfferedCourse(form.courses);
       setSelectedCourse([])
     });
-  }, [id]);
+  }, [initial]);
 
   return (
     <div>
@@ -273,9 +269,18 @@ export default function TheorySelect() {
                     <h5 className="text-start m-2">Your Preference</h5>
                   </div>
                 </div>
-                <div className="mt-3 pb-5">
+                <div className="mt-3 pb-5 d-flex justify-content-end">
                   <Button
-                    className="btn btn-primary btn-lg font-weight-medium auth-form-btn float-right"
+                    className="btn btn-secondary btn-lg font-weight-medium me-2"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.close();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="btn btn-primary btn-lg font-weight-medium auth-form-btn"
                     onClick={(e) => {
                       e.preventDefault();
                       if (offeredCourse.length !== 0) {
@@ -288,9 +293,13 @@ export default function TheorySelect() {
                         const preferences = selectedCourse.map(
                           (course) => course.course_id
                         );
-                        submitTheoryPreferencesForm(id, { preferences })
+                        submitTheoryPreferencesForm(initial, { preferences })
                         .then((res) => {
                           toast.success("Preferences saved successfully");
+                          // Add a slight delay before closing the window to allow toast to be seen
+                          setTimeout(() => {
+                            window.close();
+                          }, 1500); // 1.5 seconds delay
                         }).catch(console.log)
                       }
                     }}
