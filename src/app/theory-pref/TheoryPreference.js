@@ -361,7 +361,6 @@ export default function TheoryPreference() {
           </Modal.Footer>
         </Modal>
       )}
-
       <CardWithButton
         title="Assign Teachers according to Seniorty"
         subtitle="Final Phase"
