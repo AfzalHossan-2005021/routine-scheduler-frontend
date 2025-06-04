@@ -439,17 +439,21 @@ export default function TheoryPreference() {
                         <tr key={index}>
                           <td> {course.course_id} </td>
                           <td> {course.name} </td>
-                          {/* First Teacher Dropdown */}
-                          <td>
-                            <FormGroup>
-                              <Form.Select
-                                size="lg"
-                                value={(course.teachers && course.teachers[0]) ? `${course.teachers[0].initial}|${course.teachers[0].name}` : "None"}
-                                onChange={(e) => {
-                                  const [newInitial, newName] = e.target.value.split("|");
-                                  const oldInitial = course.teachers && course.teachers[0] ? course.teachers[0].initial : null;
-                                  
-                                  if (oldInitial) {
+                          {/* Teacher Dropdowns - Using loop for all three teachers */}
+                          {[0, 1, 2].map((teacherIndex) => (
+                            <td key={teacherIndex}>
+                              <FormGroup>
+                                <Form.Select
+                                  size="lg"
+                                  value={(course.teachers && course.teachers[teacherIndex]) 
+                                    ? `${course.teachers[teacherIndex].initial}|${course.teachers[teacherIndex].name}` 
+                                    : "None"}
+                                  onChange={(e) => {
+                                    const [newInitial, newName] = e.target.value.split("|");
+                                    const oldInitial = course.teachers && course.teachers[teacherIndex] 
+                                      ? course.teachers[teacherIndex].initial 
+                                      : null;
+                                    
                                     setTeacherAssignment({ course_id: course.course_id, initial: newInitial, old_initial: oldInitial })
                                       .then((res) => {
                                         setStatus((prev) => ({
@@ -458,102 +462,31 @@ export default function TheoryPreference() {
                                             j === index
                                               ? {
                                                   ...c,
-                                                  teachers: [
-                                                    { initial: newInitial, name: newName },
-                                                    ...(c.teachers?.slice(1) || [])
-                                                  ],
+                                                  teachers: c.teachers
+                                                    ? [
+                                                        ...c.teachers.slice(0, teacherIndex),
+                                                        { initial: newInitial, name: newName },
+                                                        ...c.teachers.slice(teacherIndex + 1)
+                                                      ]
+                                                    : [
+                                                        ...(new Array(teacherIndex).fill(null)),
+                                                        { initial: newInitial, name: newName }
+                                                      ]
                                                 }
                                               : c
                                           ),
                                         }));
                                       });
-                                  }
-                                }}
-                              >
-                                <option value="None">Select Teacher</option>
-                                {allTeachers?.map(t => (
-                                  <option key={t.initial} value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
-                                ))}
-                              </Form.Select>
-                            </FormGroup>
-                          </td>
-                          {/* Second Teacher Dropdown */}
-                          <td>
-                            <FormGroup>
-                              <Form.Select
-                                size="lg"
-                                value={(course.teachers && course.teachers[1]) ? `${course.teachers[1].initial}|${course.teachers[1].name}` : "None"}
-                                onChange={(e) => {
-                                  const [newInitial, newName] = e.target.value.split("|");
-                                  const oldInitial = course.teachers && course.teachers[1] ? course.teachers[1].initial : null;
-                                  
-                                  if (oldInitial) {
-                                    setTeacherAssignment({ course_id: course.course_id, initial: newInitial, old_initial: oldInitial })
-                                      .then((res) => {
-                                        setStatus((prev) => ({
-                                          ...prev,
-                                          assignment: prev.assignment.map((c, j) =>
-                                            j === index
-                                              ? {
-                                                  ...c,
-                                                  teachers: [
-                                                    c.teachers[0],
-                                                    { initial: newInitial, name: newName },
-                                                    ...(c.teachers?.slice(2) || [])
-                                                  ],
-                                                }
-                                              : c
-                                          ),
-                                        }));
-                                      });
-                                  }
-                                }}
-                              >
-                                <option value="None">Select Teacher</option>
-                                {allTeachers?.map(t => (
-                                  <option key={t.initial} value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
-                                ))}
-                              </Form.Select>
-                            </FormGroup>
-                          </td>
-                          {/* Third Teacher Dropdown */}
-                          <td>
-                            <FormGroup>
-                              <Form.Select
-                                size="lg"
-                                value={(course.teachers && course.teachers[2]) ? `${course.teachers[2].initial}|${course.teachers[2].name}` : "None"}
-                                onChange={(e) => {
-                                  const [newInitial, newName] = e.target.value.split("|");
-                                  const oldInitial = course.teachers && course.teachers[2] ? course.teachers[2].initial : null;
-                                  
-                                  if (oldInitial) {
-                                    setTeacherAssignment({ course_id: course.course_id, initial: newInitial, old_initial: oldInitial })
-                                      .then((res) => {
-                                        setStatus((prev) => ({
-                                          ...prev,
-                                          assignment: prev.assignment.map((c, j) =>
-                                            j === index
-                                              ? {
-                                                  ...c,
-                                                  teachers: [
-                                                    ...(c.teachers?.slice(0, 2) || []),
-                                                    { initial: newInitial, name: newName }
-                                                  ],
-                                                }
-                                              : c
-                                          ),
-                                        }));
-                                      });
-                                  }
-                                }}
-                              >
-                                <option value="None">Select Teacher</option>
-                                {allTeachers?.map(t => (
-                                  <option key={t.initial} value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
-                                ))}
-                              </Form.Select>
-                            </FormGroup>
-                          </td>
+                                  }}
+                                >
+                                  <option value="None">Select Teacher</option>
+                                  {allTeachers?.map(t => (
+                                    <option key={t.initial} value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
+                                  ))}
+                                </Form.Select>
+                              </FormGroup>
+                            </td>
+                          ))}
                         </tr>
                       ))}
                     </tbody>
