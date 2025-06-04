@@ -428,7 +428,9 @@ export default function TheoryPreference() {
                       <tr>
                         <th> Course ID </th>
                         <th> Name </th>
-                        <th> Teachers </th>
+                        <th> Teacher 1 </th>
+                        <th> Teacher 2 </th>
+                        <th> Teacher 3 </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -436,52 +438,54 @@ export default function TheoryPreference() {
                         <tr key={index}>
                           <td> {course.course_id} </td>
                           <td> {course.name} </td>
-                          <td>
-                            <ul>
-                              {(course.teachers ? course.teachers : []).map(
-                                (teacher, i) => (
-                                  <>
-                                    <li>
-                                      <div>
-                                        {teacher.initial} - {teacher.name}
-                                        <FormGroup>
-                                          <Form.Select
-                                            size="lg"
-                                            onChange={(e) => {
-                                              const [newInitial, newName] = e.target.value.split("|");
-                                        
-                                              setTeacherAssignment({ course_id: course.course_id, initial: newInitial, old_initial: teacher.initial })
-                                                .then((res) => {
-                                                  setStatus((prev) => ({
-                                                    ...prev,
-                                                    assignment: prev.assignment.map((c, j) =>
-                                                      j === index
-                                                        ? {
-                                                            ...c,
-                                                            teachers: c.teachers.map((t, k) =>
-                                                              k === i ? { initial: newInitial, name: newName } : t
-                                                            ),
-                                                          }
-                                                        : c
-                                                    ),
-                                                  }));
-                                                });
-                                            }}
-                                          >
-                                            <option value="None">Change Teacher</option>
-                                            {allTeachers?.map(t => (
-                                              <option value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
-                                            ))}
-                                          </Form.Select>
-                                        </FormGroup>
-                                      </div>
-                                    </li>
+                          {/* Teacher Dropdowns - Using loop for all three teachers */}
+                          {[0, 1, 2].map((teacherIndex) => (
+                            <td key={teacherIndex}>
+                              <FormGroup>
+                                <Form.Select
+                                  size="lg"
+                                  value={(course.teachers && course.teachers[teacherIndex]) 
+                                    ? `${course.teachers[teacherIndex].initial}|${course.teachers[teacherIndex].name}` 
+                                    : "None"}
+                                  onChange={(e) => {
+                                    const [newInitial, newName] = e.target.value.split("|");
+                                    const oldInitial = course.teachers && course.teachers[teacherIndex] 
+                                      ? course.teachers[teacherIndex].initial 
+                                      : null;
                                     
-                                  </>
-                                )
-                              )}
-                            </ul>
-                          </td>
+                                    setTeacherAssignment({ course_id: course.course_id, initial: newInitial, old_initial: oldInitial })
+                                      .then((res) => {
+                                        setStatus((prev) => ({
+                                          ...prev,
+                                          assignment: prev.assignment.map((c, j) =>
+                                            j === index
+                                              ? {
+                                                  ...c,
+                                                  teachers: c.teachers
+                                                    ? [
+                                                        ...c.teachers.slice(0, teacherIndex),
+                                                        { initial: newInitial, name: newName },
+                                                        ...c.teachers.slice(teacherIndex + 1)
+                                                      ]
+                                                    : [
+                                                        ...(new Array(teacherIndex).fill(null)),
+                                                        { initial: newInitial, name: newName }
+                                                      ]
+                                                }
+                                              : c
+                                          ),
+                                        }));
+                                      });
+                                  }}
+                                >
+                                  <option value="None">Select Teacher</option>
+                                  {allTeachers?.map(t => (
+                                    <option key={t.initial} value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
+                                  ))}
+                                </Form.Select>
+                              </FormGroup>
+                            </td>
+                          ))}
                         </tr>
                       ))}
                     </tbody>
