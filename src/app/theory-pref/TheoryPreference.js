@@ -5,6 +5,7 @@ import { getTeachers } from "../api/db-crud";
 import { Alert, Button, Modal } from "react-bootstrap";
 import { Form, FormGroup } from "react-bootstrap";
 import CardWithButton from "../shared/CardWithButton";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function TheoryPreference() {
   const [status, setStatus] = useState({
@@ -18,6 +19,7 @@ export default function TheoryPreference() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState("");
   const [selectedTeacherRow, setSelectedTeacherRow] = useState(null);
+  const [allCourses, setAllCourses] = useState([]);
 
   useEffect(() => {
     getStatus().then((res) => {
@@ -27,9 +29,62 @@ export default function TheoryPreference() {
       res = res.filter((t) => t.active === 1)
       setAllTeachers(res);
     })
+    // Remove dummy courses, only set real courses if available
   }, []);
 
   const selectedCourseRef = useRef();
+
+  // Helper to get courses not in selectedCourse
+  const getOfferedCourses = () => allCourses.filter(c => !selectedCourse.includes(c));
+
+  // Drag and drop handler for reordering and moving between lists
+  const onDragEnd = (result) => {
+    const { source, destination } = result;
+    if (!destination) return;
+
+    // Drag within Your Preference
+    if (source.droppableId === 'preference-list' && destination.droppableId === 'preference-list') {
+      const reordered = Array.from(selectedCourse);
+      const [removed] = reordered.splice(source.index, 1);
+      reordered.splice(destination.index, 0, removed);
+      setSelectedCourse(reordered);
+      return;
+    }
+
+    // Drag from Offered Courses to Your Preference
+    if (source.droppableId === 'offered-list' && destination.droppableId === 'preference-list') {
+      const offered = getOfferedCourses();
+      const course = offered[source.index];
+      if (!selectedCourse.includes(course)) {
+        const newPref = Array.from(selectedCourse);
+        newPref.splice(destination.index, 0, course);
+        setSelectedCourse(newPref);
+      }
+      return;
+    }
+
+    // Drag from Your Preference to Offered Courses (remove from preference)
+    if (source.droppableId === 'preference-list' && destination.droppableId === 'offered-list') {
+      const newPref = Array.from(selectedCourse);
+      newPref.splice(source.index, 1);
+      setSelectedCourse(newPref);
+      return;
+    }
+  };
+
+  // Add course to preference (at end)
+  const addToPreference = (course) => {
+    if (!selectedCourse.includes(course)) {
+      setSelectedCourse([...selectedCourse, course]);
+    }
+  };
+
+  // Remove course from preference (goes back to offered)
+  const removeFromPreference = (index) => {
+    const newPref = Array.from(selectedCourse);
+    newPref.splice(index, 1);
+    setSelectedCourse(newPref);
+  };
 
   return (
     <div>
@@ -191,14 +246,10 @@ export default function TheoryPreference() {
       {selectedTeacher !== null && (
         <Modal
           show={true}
-          onHide={() => {
-            setSelectedTeacher(null);
-            getStatus().then((res) => {
-              setStatus({ values: [], submitted: [], ...res });
-            });
-          }}
-          size="md"
+          onHide={() => setSelectedTeacher(null)}
+          size="md" // changed from 'lg' to 'md' for a less wide modal
           centered
+          dialogClassName="custom-width-modal" // custom class for finer control
         >
           <Modal.Header closeButton>
             <h4>Theory Course Preference Selected By</h4>
@@ -206,153 +257,49 @@ export default function TheoryPreference() {
               {selectedTeacher.name} ({selectedTeacher.initial})
             </h6>
           </Modal.Header>
-          <Modal.Body className="px-4">
-            <form>
-              <div className="row">
-                <div className="col-12" style={{ padding: 10 }}>
-                  <select
-                    class="form-select"
-                    multiple
-                    aria-label="multiple select example"
-                    style={{ height: 400, width: "100%" }}
-                    ref={selectedCourseRef}
-                  >
-                    {selectedCourse.map((course) => (
-                      <option value={course}>{course}</option>
-                    ))}
-                  </select>
+          <Modal.Body className="px-3">
+            <DragDropContext onDragEnd={onDragEnd}>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: '100%', maxWidth: 540, padding: 6 }}>
+                  <h6>Your Preference (Drag to reorder)</h6>
+                  <Droppable droppableId="preference-list">
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        style={{ border: '1px solid #ccc', borderRadius: 4, minHeight: 250, maxHeight: 350, overflowY: 'auto', padding: 6, background: '#fafafa', width: '100%' }}
+                      >
+                        {selectedCourse.map((course, idx) => (
+                          <Draggable key={course} draggableId={course} index={idx}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                style={{
+                                  userSelect: 'none',
+                                  padding: 6,
+                                  margin: '0 0 6px 0',
+                                  background: snapshot.isDragging ? '#e0e0e0' : '#fff',
+                                  border: '1px solid #aaa',
+                                  borderRadius: 4,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  ...provided.draggableProps.style
+                                }}
+                              >
+                                <span style={{ flex: 1 }}>{course}</span>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
                 </div>
               </div>
-              <div className="row d-flex justify-content-between">
-                <div className="col-3 " style={{ padding: 10 }}>
-                  <div className="d-grid gap-2  mb-5">
-                    <Button
-                      variant="outline-dark"
-                      size="sm"
-                      className="mb-2 btn-block"
-                      onClick={(e) => {
-                        const selectedOptions = Array.from(
-                          selectedCourseRef.current.selectedOptions
-                        ).map((option) => option.value);
-
-                        setSelectedCourse(
-                          selectedCourse.filter(
-                            (course) => !selectedOptions.includes(course)
-                          )
-                        );
-
-                        setSelectedCourse([
-                          ...selectedOptions,
-                          ...selectedCourse.filter(
-                            (course) => !selectedOptions.includes(course)
-                          ),
-                        ]);
-                        selectedCourseRef.current.selectedIndex = -1;
-                      }}
-                    >
-                      Move Top
-                    </Button>
-                  </div>
-                </div>
-                <div className="col-3 " style={{ padding: 10 }}>
-                  <div className="d-grid gap-2  mb-5">
-                    <Button
-                      variant="outline-dark"
-                      size="sm"
-                      className="mb-2 btn-block"
-                      onClick={(e) => {
-                        const selectedOptions = Array.from(
-                          selectedCourseRef.current.selectedOptions
-                        ).map((option) => option.value);
-
-                        const reorderedCourses = [...selectedCourse];
-
-                        for (let i = 0; i < selectedOptions.length; i++) {
-                          const index = reorderedCourses.findIndex(
-                            (course) => course === selectedOptions[i]
-                          );
-                          if (index === 0) continue;
-                          const temp = reorderedCourses[index];
-                          reorderedCourses[index] = reorderedCourses[index - 1];
-                          reorderedCourses[index - 1] = temp;
-                        }
-                        console.log(reorderedCourses);
-                        setSelectedCourse(reorderedCourses);
-                        selectedCourseRef.current.selectedIndex = Math.max(
-                          0,
-                          selectedCourseRef.current.selectedIndex - 1
-                        );
-                      }}
-                    >
-                      Move Up
-                    </Button>
-                  </div>
-                </div>
-                <div className="col-3 " style={{ padding: 10 }}>
-                  <div className="d-grid gap-2  mb-5">
-                    <Button
-                      variant="outline-dark"
-                      size="sm"
-                      className="mb-2 btn-block"
-                      onClick={(e) => {
-                        const selectedOptions = Array.from(
-                          selectedCourseRef.current.selectedOptions
-                        ).map((option) => option.value);
-                        const reorderedCourses = [...selectedCourse];
-                        for (let i = selectedOptions.length - 1; i >= 0; i--) {
-                          const index = reorderedCourses.findIndex(
-                            (course) => course === selectedOptions[i]
-                          );
-                          if (index === reorderedCourses.length - 1) continue;
-                          const temp = reorderedCourses[index];
-                          reorderedCourses[index] = reorderedCourses[index + 1];
-                          reorderedCourses[index + 1] = temp;
-                        }
-                        setSelectedCourse(reorderedCourses);
-                        selectedCourseRef.current.selectedIndex = Math.min(
-                          selectedCourseRef.current.options.length - 1,
-                          selectedCourseRef.current.selectedIndex + 1
-                        );
-                      }}
-                    >
-                      Move Down
-                    </Button>
-                  </div>
-                </div>
-                <div className="col-3 " style={{ padding: 10 }}>
-                  <div className="d-grid gap-2  mb-5">
-                    <Button
-                      variant="outline-dark"
-                      size="sm"
-                      className="mb-2 btn-block"
-                      onClick={(e) => {
-                        const selectedOptions = Array.from(
-                          selectedCourseRef.current.selectedOptions
-                        ).map((option) => option.value);
-                        const reorderedCourses = [...selectedCourse];
-                        for (let i = 0; i < selectedOptions.length; i++) {
-                          const index = reorderedCourses.findIndex(
-                            (course) => course === selectedOptions[i]
-                          );
-                          if (index === reorderedCourses.length - 1) continue;
-                          const temp = reorderedCourses[index];
-                          reorderedCourses[index] =
-                            reorderedCourses[reorderedCourses.length - 1];
-                          reorderedCourses[reorderedCourses.length - 1] = temp;
-                        }
-                        setSelectedCourse(reorderedCourses);
-                        selectedCourseRef.current.selectedIndex = Math.min(
-                          selectedCourseRef.current.options.length - 1,
-                          selectedCourseRef.current.selectedIndex + 1
-                        );
-                      }}
-                    >
-                      Move Bottom
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </form>
+            </DragDropContext>
           </Modal.Body>
           <Modal.Footer>
             <Button 
@@ -361,7 +308,6 @@ export default function TheoryPreference() {
               onClick={() => {
                 saveReorderedTeacherPreference(selectedTeacher.initial, selectedCourse)
                   .then(() => {
-                    // Refresh the status to show updated data
                     getStatus().then((res) => {
                       setStatus({ values: [], submitted: [], ...res });
                     });
@@ -529,3 +475,10 @@ export default function TheoryPreference() {
     </div>
   );
 }
+
+/*
+Place this CSS in your main stylesheet (e.g., index.css or App.css):
+.custom-width-modal .modal-dialog {
+  max-width: 620px;
+}
+*/
