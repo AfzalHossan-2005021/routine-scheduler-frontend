@@ -445,6 +445,17 @@ export default function TheoryPreference() {
                               <FormGroup>
                                 <Form.Select
                                   size="lg"
+                                  style={{
+                                    border: "1px solid #e4e4e4",
+                                    borderRadius: "4px",
+                                    background: course.teachers && course.teachers[teacherIndex] ? "linear-gradient(to right, rgba(182, 109, 255, 0.1), rgba(255, 255, 255, 0.9))" : "#fff",
+                                    color: "#3e4b5b",
+                                    boxShadow: "none",
+                                    padding: "10px 15px",
+                                    fontWeight: "500",
+                                    transition: "all 0.3s ease"
+                                  }}
+                                  className="custom-select-styled"
                                   value={(course.teachers && course.teachers[teacherIndex]) 
                                     ? `${course.teachers[teacherIndex].initial}|${course.teachers[teacherIndex].name}` 
                                     : "None"}
@@ -479,9 +490,11 @@ export default function TheoryPreference() {
                                       });
                                   }}
                                 >
-                                  <option value="None">Select Teacher</option>
+                                  <option value="None" style={{fontWeight: "500"}}>Select Teacher</option>
                                   {allTeachers?.map(t => (
-                                    <option key={t.initial} value={`${t.initial}|${t.name}`}>{t.initial} - {t.name}</option>
+                                    <option key={t.initial} value={`${t.initial}|${t.name}`} style={{padding: "8px"}}>
+                                      {t.initial} - {t.name}
+                                    </option>
                                   ))}
                                 </Form.Select>
                               </FormGroup>
