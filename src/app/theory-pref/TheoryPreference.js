@@ -20,6 +20,7 @@ export default function TheoryPreference() {
   const [confirmAction, setConfirmAction] = useState("");
   const [selectedTeacherRow, setSelectedTeacherRow] = useState(null);
   const [allCourses, setAllCourses] = useState([]);
+  const [showAssignConfirm, setShowAssignConfirm] = useState(false);
 
   useEffect(() => {
     getStatus().then((res) => {
@@ -305,14 +306,17 @@ export default function TheoryPreference() {
             <Button 
               variant="success" 
               className="me-auto"
-              onClick={() => {
-                saveReorderedTeacherPreference(selectedTeacher.initial, selectedCourse)
-                  .then(() => {
-                    getStatus().then((res) => {
-                      setStatus({ values: [], submitted: [], ...res });
-                    });
-                    setSelectedTeacher(null);
+              onClick={async () => {
+                try {
+                  await saveReorderedTeacherPreference(selectedTeacher.initial, selectedCourse);
+                  toast.success("Saved preference successfully");
+                  getStatus().then((res) => {
+                    setStatus({ values: [], submitted: [], ...res });
                   });
+                  setSelectedTeacher(null);
+                } catch (err) {
+                  toast.error("Couldn't Save Preference");
+                }
               }}
             >
               Save
@@ -353,14 +357,31 @@ export default function TheoryPreference() {
             : "mdi-check"
         }
         disabled={status.status === 0}
-        onClick={(e) => {
-          finalize().then((res) => {
-            getStatus().then((res) => {
-              setStatus({ values: [], submitted: [], ...res });
-            });
-          });
-        }}
+        onClick={() => setShowAssignConfirm(true)}
       />
+      <Modal show={showAssignConfirm} onHide={() => setShowAssignConfirm(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Assignment</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to assign Teachers?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="danger" onClick={() => setShowAssignConfirm(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={() => {
+            setShowAssignConfirm(false);
+            finalize().then((res) => {
+              getStatus().then((res) => {
+                setStatus({ values: [], submitted: [], ...res });
+              });
+            });
+          }}>
+            Yes, Assign
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {status.assignment && (
         <div className="row">
