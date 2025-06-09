@@ -21,12 +21,22 @@ export default function TheoryPreference() {
 
   useEffect(() => {
     getStatus().then((res) => {
-      setStatus({ values: [], submitted: [], ...res });
+      // Sort the teachers in the status by seniority rank
+      let modifiedRes = {...res};
+      if (modifiedRes.values && modifiedRes.values.length > 0) {
+        modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+      }
+      if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+        modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+      }
+      setStatus({ values: [], submitted: [], ...modifiedRes });
     });
     getTeachers().then((res) => {
-      res = res.filter((t) => t.active === 1)
-      setAllTeachers(res);
-    })
+      res = res.filter((t) => t.active === 1);
+      // Sort teachers by seniority rank (lower rank means more senior)
+      const sortedTeachers = [...res].sort((a, b) => a.seniority_rank - b.seniority_rank);
+      setAllTeachers(sortedTeachers);
+    });
   }, []);
 
   const selectedCourseRef = useRef();
@@ -51,7 +61,15 @@ export default function TheoryPreference() {
         onClick={(e) => {
           initiate().then((res) => {
             getStatus().then((res) => {
-              setStatus({ values: [], submitted: [], ...res });
+              // Sort the teachers in the status by seniority rank
+              let modifiedRes = {...res};
+              if (modifiedRes.values && modifiedRes.values.length > 0) {
+                modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              setStatus({ values: [], submitted: [], ...modifiedRes });
             });
           });
         }}
@@ -70,15 +88,17 @@ export default function TheoryPreference() {
                         <th> Initial </th>
                         <th> Name </th>
                         <th> Email </th>
+                        <th> Seniority Rank </th>
                         <th> Action </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {status.values.map((teacher, index) => (
+                      {[...status.values].sort((a, b) => a.seniority_rank - b.seniority_rank).map((teacher, index) => (
                         <tr key={index}>
                           <td> {teacher.initial} </td>
                           <td> {teacher.name} </td>
                           <td> {teacher.email} </td>
+                          <td> {teacher.seniority_rank} </td>
                           <td>
                             <button
                               type="button"
@@ -105,7 +125,15 @@ export default function TheoryPreference() {
                                     clearInterval(pollTimer);
                                     // Refresh data when child window closes
                                     getStatus().then((res) => {
-                                      setStatus({ values: [], submitted: [], ...res });
+                                      // Sort the teachers in the status by seniority rank
+                                      let modifiedRes = {...res};
+                                      if (modifiedRes.values && modifiedRes.values.length > 0) {
+                                        modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                                      }
+                                      if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                                        modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                                      }
+                                      setStatus({ values: [], submitted: [], ...modifiedRes });
                                     });
                                   }
                                 }, 500);
@@ -148,15 +176,17 @@ export default function TheoryPreference() {
                         <th> Initial </th>
                         <th> Name </th>
                         <th> Email </th>
+                        <th> Seniority Rank </th>
                         <th> Action </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {status.submitted.map((teacher, index) => (
+                      {[...status.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank).map((teacher, index) => (
                         <tr key={index}>
                           <td> {teacher.initial} </td>
                           <td> {teacher.name} </td>
                           <td> {teacher.email} </td>
+                          <td> {teacher.seniority_rank} </td>
                           <td>
                             <button
                               type="button"
@@ -194,7 +224,15 @@ export default function TheoryPreference() {
           onHide={() => {
             setSelectedTeacher(null);
             getStatus().then((res) => {
-              setStatus({ values: [], submitted: [], ...res });
+              // Sort the teachers in the status by seniority rank
+              let modifiedRes = {...res};
+              if (modifiedRes.values && modifiedRes.values.length > 0) {
+                modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              setStatus({ values: [], submitted: [], ...modifiedRes });
             });
           }}
           size="md"
@@ -363,7 +401,15 @@ export default function TheoryPreference() {
                   .then(() => {
                     // Refresh the status to show updated data
                     getStatus().then((res) => {
-                      setStatus({ values: [], submitted: [], ...res });
+                      // Sort the teachers in the status by seniority rank
+                      let modifiedRes = {...res};
+                      if (modifiedRes.values && modifiedRes.values.length > 0) {
+                        modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                      }
+                      if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                        modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                      }
+                      setStatus({ values: [], submitted: [], ...modifiedRes });
                     });
                     setSelectedTeacher(null);
                   });
@@ -374,7 +420,15 @@ export default function TheoryPreference() {
             <Button variant="outline-dark" onClick={() => {
               setSelectedTeacher(null);
               getStatus().then((res) => {
-                setStatus({ values: [], submitted: [], ...res });
+                // Sort the teachers in the status by seniority rank
+                let modifiedRes = {...res};
+                if (modifiedRes.values && modifiedRes.values.length > 0) {
+                  modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                }
+                if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                  modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                }
+                setStatus({ values: [], submitted: [], ...modifiedRes });
               });
             }}>
               Close
@@ -411,7 +465,15 @@ export default function TheoryPreference() {
         onClick={(e) => {
           finalize().then((res) => {
             getStatus().then((res) => {
-              setStatus({ values: [], submitted: [], ...res });
+              // Sort the teachers in the status by seniority rank
+              let modifiedRes = {...res};
+              if (modifiedRes.values && modifiedRes.values.length > 0) {
+                modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              setStatus({ values: [], submitted: [], ...modifiedRes });
             });
           });
         }}

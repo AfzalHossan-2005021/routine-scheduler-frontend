@@ -49,7 +49,9 @@ export default function Teachers() {
 
   useEffect(() => {
     getTeachers().then((res) => {
-      setTeachers(res);
+      // Sort teachers by seniority rank (lower rank means more senior)
+      const sortedTeachers = [...res].sort((a, b) => a.seniority_rank - b.seniority_rank);
+      setTeachers(sortedTeachers);
     });
   }, []);
 
@@ -476,7 +478,9 @@ export default function Teachers() {
                   if (selectedTeacher.prev_initial === "") {
                     createTeacher(selectedTeacher)
                       .then((res) => {
-                        setTeachers([...teachers, selectedTeacher]);
+                        const updatedTeachers = [...teachers, selectedTeacher];
+                        // Maintain sorting by seniority rank after adding a teacher
+                        setTeachers(updatedTeachers.sort((a, b) => a.seniority_rank - b.seniority_rank));
                         toast.success("Teacher added successfully");
                       })
                       .catch(console.log);
@@ -488,7 +492,8 @@ export default function Teachers() {
                         );
                         const newTeachers = [...teachers];
                         newTeachers[index] = selectedTeacher;
-                        setTeachers(newTeachers);
+                        // Maintain sorting by seniority rank after updating a teacher
+                        setTeachers(newTeachers.sort((a, b) => a.seniority_rank - b.seniority_rank));
                         toast.success("Teacher updated successfully");
                       })
                       .catch(console.log);

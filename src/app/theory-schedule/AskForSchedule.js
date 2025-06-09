@@ -15,7 +15,19 @@ export default function TheoryAskSchedule() {
 
   useEffect(() => {
     getStatus().then((res) => {
-      setStatus({ values: [], submitted: [], ...res });
+      // Sort the teachers in the status by seniority rank
+      let modifiedRes = { ...res };
+      if (modifiedRes.values && modifiedRes.values.length > 0) {
+        modifiedRes.values = [...modifiedRes.values].sort(
+          (a, b) => a.seniority_rank - b.seniority_rank
+        );
+      }
+      if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+        modifiedRes.submitted = [...modifiedRes.submitted].sort(
+          (a, b) => a.seniority_rank - b.seniority_rank
+        );
+      }
+      setStatus({ values: [], submitted: [], ...modifiedRes });
     });
   }, []);
 
@@ -46,7 +58,15 @@ export default function TheoryAskSchedule() {
         onClick={(e) => {
           initiate().then((res) => {
             getStatus().then((res) => {
-              setStatus({ values: [], submitted: [], ...res });
+              // Sort the teachers in the status by seniority rank
+              let modifiedRes = {...res};
+              if (modifiedRes.values && modifiedRes.values.length > 0) {
+                modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              setStatus({ values: [], submitted: [], ...modifiedRes });
             });
           });
         }}
@@ -65,16 +85,18 @@ export default function TheoryAskSchedule() {
                         <th> Name </th>
                         <th> Email </th>
                         <th> Course </th>
+                        <th> Seniority Rank </th>
                         <th> Action </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {status.values.map((teacher, index) => (
+                      {[...status.values].sort((a, b) => a.seniority_rank - b.seniority_rank).map((teacher, index) => (
                         <tr key={index}>
                           <td> {teacher.initial} </td>
                           <td> {teacher.name} </td>
                           <td> {teacher.email} </td>
                           <td> {teacher.course_id} </td>
+                          <td> {teacher.seniority_rank} </td>
                           <td>
                             <button
                               type="button"
@@ -120,15 +142,17 @@ export default function TheoryAskSchedule() {
                         <th> Initial </th>
                         <th> Name </th>
                         <th> Email </th>
+                        <th> Seniority Rank </th>
                         <th> Action </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {status.submitted.map((teacher, index) => (
+                      {[...status.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank).map((teacher, index) => (
                         <tr key={index}>
                           <td> {teacher.initial} </td>
                           <td> {teacher.name} </td>
                           <td> {teacher.email} </td>
+                          <td> {teacher.seniority_rank} </td>
                           <td>
                             <button
                               type="button"
@@ -168,9 +192,12 @@ export default function TheoryAskSchedule() {
           <ModalBody>
             <h4>Selected Timeslots</h4>
             <ul>
-              {JSON.parse(selectedTeacher.response).map((slot) => (<li>
-                {slot.day} {slot.time}{slot.time%12 < 6 ? "PM" : "AM"} - {slot.batch} {slot.section}
-              </li>))}
+              {JSON.parse(selectedTeacher.response).map((slot) => (
+                <li>
+                  {slot.day} {slot.time}
+                  {slot.time % 12 < 6 ? "PM" : "AM"} - {slot.batch} {slot.section}
+                </li>
+              ))}
             </ul>
           </ModalBody>
           <Modal.Footer>
@@ -198,7 +225,15 @@ export default function TheoryAskSchedule() {
         onClick={(e) => {
           finalize().then((res) => {
             getStatus().then((res) => {
-              setStatus({ values: [], submitted: [], ...res });
+              // Sort the teachers in the status by seniority rank
+              let modifiedRes = {...res};
+              if (modifiedRes.values && modifiedRes.values.length > 0) {
+                modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+              }
+              setStatus({ values: [], submitted: [], ...modifiedRes });
             });
           });
         }}
