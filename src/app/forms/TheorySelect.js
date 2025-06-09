@@ -5,6 +5,8 @@ import { Button } from "react-bootstrap";
 import { toast } from "react-hot-toast";
 import { useParams, useHistory } from "react-router-dom";
 import { getTheoryPreferencesForm, submitTheoryPreferencesForm } from "../api/form";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Modal } from "react-bootstrap";
 
 export default function TheorySelect() {
   const { initial } = useParams();
@@ -18,6 +20,8 @@ export default function TheorySelect() {
 
   const [selectedCourse, setSelectedCourse] = useState([]);
 
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const offeredCourseRef = useRef();
   const selectedCourseRef = useRef();
 
@@ -29,6 +33,53 @@ export default function TheorySelect() {
       setSelectedCourse([])
     });
   }, [initial]);
+
+  // Drag and drop handler
+  const onDragEnd = (result) => {
+    const { source, destination } = result;
+    if (!destination) return;
+
+    // Reorder within Offered Courses
+    if (source.droppableId === 'offered-list' && destination.droppableId === 'offered-list') {
+      const reordered = Array.from(offeredCourse);
+      const [removed] = reordered.splice(source.index, 1);
+      reordered.splice(destination.index, 0, removed);
+      setOfferedCourse(reordered);
+      return;
+    }
+    // Reorder within Your Preference
+    if (source.droppableId === 'preference-list' && destination.droppableId === 'preference-list') {
+      const reordered = Array.from(selectedCourse);
+      const [removed] = reordered.splice(source.index, 1);
+      reordered.splice(destination.index, 0, removed);
+      setSelectedCourse(reordered);
+      return;
+    }
+    // Drag from Offered Courses to Your Preference
+    if (source.droppableId === 'offered-list' && destination.droppableId === 'preference-list') {
+      const offered = Array.from(offeredCourse);
+      const [moved] = offered.splice(source.index, 1);
+      setOfferedCourse(offered);
+      setSelectedCourse([
+        ...selectedCourse.slice(0, destination.index),
+        moved,
+        ...selectedCourse.slice(destination.index),
+      ]);
+      return;
+    }
+    // Drag from Your Preference to Offered Courses
+    if (source.droppableId === 'preference-list' && destination.droppableId === 'offered-list') {
+      const preference = Array.from(selectedCourse);
+      const [moved] = preference.splice(source.index, 1);
+      setSelectedCourse(preference);
+      setOfferedCourse([
+        ...offeredCourse.slice(0, destination.index),
+        moved,
+        ...offeredCourse.slice(destination.index),
+      ]);
+      return;
+    }
+  };
 
   return (
     <div>
@@ -47,231 +98,89 @@ export default function TheorySelect() {
                 {teacher.name} ({teacher.initial})
               </h6>
               <form>
-                <div className="row">
-                  <div className="col-5" style={{ padding: 10 }}>
-                    <select
-                      class="form-select text-dark"
-                      multiple
-                      aria-label="multiple select example"
-                      style={{ height: 400, width: "100%" }}
-                      ref={offeredCourseRef}
-                    >
-                      {offeredCourse.map((course) => (
-                        <option value={course.course_id}>
-                          {course.course_id} - {course.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <h5 className="text-end m-2">Offered Courses</h5>
-                  </div>
-                  <div
-                    className="col-2 d-flex flex-column justify-content-between"
-                    style={{ padding: 10 }}
-                  >
-                    <div className="d-grid gap-2">
-                      <Button
-                        variant="outline-success"
-                        size="sm"
-                        className="mb-2 btn-block"
-                        onClick={(e) => {
-                          const selectedOptions = Array.from(
-                            offeredCourseRef.current.selectedOptions
-                          )
-                            .map((option) => option.value)
-                            .map((course_id) =>
-                              offeredCourse.find(
-                                (course) => course.course_id === course_id
-                              )
-                            );
-                          setOfferedCourse(
-                            offeredCourse.filter(
-                              (course) => !selectedOptions.includes(course)
-                            )
-                          );
-                          setSelectedCourse([
-                            ...selectedCourse,
-                            ...selectedOptions,
-                          ]);
-                          offeredCourseRef.current.selectedIndex = -1;
-                        }}
-                      >
-                        Move Right
-                      </Button>
-                      <Button
-                        variant="outline-danger"
-                        size="sm"
-                        className="btn-block"
-                        onClick={(e) => {
-                          const selectedOptions = Array.from(
-                            selectedCourseRef.current.selectedOptions
-                          )
-                            .map((option) => option.value)
-                            .map((course_id) =>
-                              selectedCourse.find(
-                                (course) => course.course_id === course_id
-                              )
-                            );
-                          setSelectedCourse(
-                            selectedCourse.filter(
-                              (course) => !selectedOptions.includes(course)
-                            )
-                          );
-                          setOfferedCourse([
-                            ...offeredCourse,
-                            ...selectedOptions,
-                          ]);
-                          selectedCourseRef.current.selectedIndex = -1;
-                        }}
-                      >
-                        Move Left
-                      </Button>
+                <DragDropContext onDragEnd={onDragEnd}>
+                  <div className="row">
+                    <div className="col-5" style={{ padding: 10 }}>
+                      <Droppable droppableId="offered-list">
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            style={{ minHeight: 400, border: '1px solid #aaa', borderRadius: 4, background: '#fff', padding: 4 }}
+                          >
+                            {offeredCourse.map((course, idx) => (
+                              <Draggable key={course.course_id} draggableId={course.course_id} index={idx}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    style={{
+                                      userSelect: 'none',
+                                      padding: 8,
+                                      margin: '0 0 6px 0',
+                                      background: snapshot.isDragging ? '#e0e0e0' : '#fafafa',
+                                      border: '1px solid #ccc',
+                                      borderRadius: 4,
+                                      ...provided.draggableProps.style
+                                    }}
+                                  >
+                                    {course.course_id} - {course.name}
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                      <h5 className="text-end m-2">Offered Courses</h5>
                     </div>
-                    <div className="d-grid gap-2  mb-5">
-                      <Button
-                        variant="outline-dark"
-                        size="sm"
-                        className="mb-2 btn-block"
-                        onClick={(e) => {
-                          const selectedOptions = Array.from(
-                            selectedCourseRef.current.selectedOptions
-                          )
-                            .map((option) => option.value)
-                            .map((course_id) =>
-                              selectedCourse.find(
-                                (course) => course.course_id === course_id
-                              )
-                            );
-                          setSelectedCourse(
-                            selectedCourse.filter(
-                              (course) => !selectedOptions.includes(course)
-                            )
-                          );
-                          setSelectedCourse([
-                            ...selectedOptions,
-                            ...selectedCourse.filter(
-                              (course) => !selectedOptions.includes(course)
-                            ),
-                          ]);
-                          selectedCourseRef.current.selectedIndex = -1;
-                        }}
-                      >
-                        Move Top
-                      </Button>
-                      <Button
-                        variant="outline-dark"
-                        size="sm"
-                        className="mb-2 btn-block"
-                        onClick={(e) => {
-                          const selectedOptions = Array.from(
-                            selectedCourseRef.current.selectedOptions
-                          ).map((option) => option.value);
-                          const reorderedCourses = [...selectedCourse];
-                          for (let i = 0; i < selectedOptions.length; i++) {
-                            const index = reorderedCourses.findIndex(
-                              (course) =>
-                                course.course_id === selectedOptions[i]
-                            );
-                            if (index === 0) continue;
-                            const temp = reorderedCourses[index];
-                            reorderedCourses[index] =
-                              reorderedCourses[index - 1];
-                            reorderedCourses[index - 1] = temp;
-                          }
-                          setSelectedCourse(reorderedCourses);
-                          selectedCourseRef.current.selectedIndex = Math.max(
-                            0,
-                            selectedCourseRef.current.selectedIndex - 1
-                          );
-                        }}
-                      >
-                        Move Up
-                      </Button>
-                      <Button
-                        variant="outline-dark"
-                        size="sm"
-                        className="mb-2 btn-block"
-                        onClick={(e) => {
-                          const selectedOptions = Array.from(
-                            selectedCourseRef.current.selectedOptions
-                          ).map((option) => option.value);
-                          const reorderedCourses = [...selectedCourse];
-                          for (
-                            let i = selectedOptions.length - 1;
-                            i >= 0;
-                            i--
-                          ) {
-                            const index = reorderedCourses.findIndex(
-                              (course) =>
-                                course.course_id === selectedOptions[i]
-                            );
-                            if (index === reorderedCourses.length - 1) continue;
-                            const temp = reorderedCourses[index];
-                            reorderedCourses[index] =
-                              reorderedCourses[index + 1];
-                            reorderedCourses[index + 1] = temp;
-                          }
-                          setSelectedCourse(reorderedCourses);
-                          selectedCourseRef.current.selectedIndex = Math.min(
-                            selectedCourseRef.current.options.length - 1,
-                            selectedCourseRef.current.selectedIndex + 1
-                          );
-                        }}
-                      >
-                        Move Down
-                      </Button>
-                      <Button
-                        variant="outline-dark"
-                        size="sm"
-                        className="mb-2 btn-block"
-                        onClick={(e) => {
-                          const selectedOptions = Array.from(
-                            selectedCourseRef.current.selectedOptions
-                          ).map((option) => option.value);
-                          const reorderedCourses = [...selectedCourse];
-                          for (let i = 0; i < selectedOptions.length; i++) {
-                            const index = reorderedCourses.findIndex(
-                              (course) =>
-                                course.course_id === selectedOptions[i]
-                            );
-                            if (index === reorderedCourses.length - 1) continue;
-                            const temp = reorderedCourses[index];
-                            reorderedCourses[index] =
-                              reorderedCourses[reorderedCourses.length - 1];
-                            reorderedCourses[reorderedCourses.length - 1] =
-                              temp;
-                          }
-                          setSelectedCourse(reorderedCourses);
-                          selectedCourseRef.current.selectedIndex = Math.min(
-                            selectedCourseRef.current.options.length - 1,
-                            selectedCourseRef.current.selectedIndex + 1
-                          );
-                        }}
-                      >
-                        Move Bottom
-                      </Button>
+                    <div className="col-2 d-flex flex-column justify-content-center align-items-center" style={{ padding: 10 }}>
+                      {/* No move buttons, just drag and drop */}
+                      <span style={{ fontSize: 24, color: '#bbb' }}>&#8596;</span>
+                    </div>
+                    <div className="col-5" style={{ padding: 10 }}>
+                      <Droppable droppableId="preference-list">
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            style={{ minHeight: 400, border: '1px solid #aaa', borderRadius: 4, background: '#fff', padding: 4 }}
+                          >
+                            {selectedCourse.map((course, idx) => (
+                              <Draggable key={course.course_id} draggableId={course.course_id} index={idx}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    style={{
+                                      userSelect: 'none',
+                                      padding: 8,
+                                      margin: '0 0 6px 0',
+                                      background: snapshot.isDragging ? '#e0e0e0' : '#fafafa',
+                                      border: '1px solid #ccc',
+                                      borderRadius: 4,
+                                      ...provided.draggableProps.style
+                                    }}
+                                  >
+                                    {course.course_id} - {course.name}
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                      <h5 className="text-start m-2">Your Preference</h5>
                     </div>
                   </div>
-                  <div className="col-5" style={{ padding: 10 }}>
-                    <select
-                      class="form-select text-dark"
-                      multiple
-                      aria-label="multiple select example"
-                      style={{ height: 400, width: "100%" }}
-                      ref={selectedCourseRef}
-                    >
-                      {selectedCourse.map((course) => (
-                        <option value={course.course_id}>
-                          {course.course_id} - {course.name}
-                        </option>
-                      ))}
-                    </select>
-                    <h5 className="text-start m-2">Your Preference</h5>
-                  </div>
-                </div>
+                </DragDropContext>
                 <div className="mt-3 pb-5 d-flex justify-content-end">
                   <Button
-                    className="btn btn-secondary btn-lg font-weight-medium me-2"
+                    className="btn btn-danger btn-lg font-weight-medium me-2"
                     onClick={(e) => {
                       e.preventDefault();
                       window.close();
@@ -290,23 +199,42 @@ export default function TheorySelect() {
                         ]);
                         setOfferedCourse([]);
                       } else {
-                        const preferences = selectedCourse.map(
-                          (course) => course.course_id
-                        );
-                        submitTheoryPreferencesForm(initial, { preferences })
-                        .then((res) => {
-                          toast.success("Preferences saved successfully");
-                          // Add a slight delay before closing the window to allow toast to be seen
-                          setTimeout(() => {
-                            window.close();
-                          }, 1500); // 1.5 seconds delay
-                        }).catch(console.log)
+                        setShowConfirm(true);
                       }
                     }}
                   >
                     {offeredCourse.length !== 0 ? "Confirm" : "SUBMIT"}
                   </Button>
                 </div>
+                <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered>
+                  <Modal.Header closeButton>
+                    <Modal.Title>Confirm Submission</Modal.Title>
+                  </Modal.Header>
+                  <Modal.Body>
+                    Are you sure you want to submit your preferences?
+                  </Modal.Body>
+                  <Modal.Footer>
+                    <Button variant="danger" onClick={() => setShowConfirm(false)}>
+                      Cancel
+                    </Button>
+                    <Button variant="primary" onClick={() => {
+                      setShowConfirm(false);
+                      const preferences = selectedCourse.map(
+                        (course) => course.course_id
+                      );
+                      submitTheoryPreferencesForm(initial, { preferences })
+                        .then((res) => {
+                          toast.success("Preferences saved successfully");
+                          setTimeout(() => {
+                            window.close();
+                          }, 1500);
+                        })
+                        .catch(console.log);
+                    }}>
+                      Yes, Submit
+                    </Button>
+                  </Modal.Footer>
+                </Modal>
               </form>
             </div>
           </div>

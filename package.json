@@ -5,6 +5,7 @@
   "author": "Md. Jehadul Karim",
   "description": "This is the frontend of Routine Scheduler",
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@mdi/font": "^7.2.96",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
