@@ -30,6 +30,7 @@ export default function SessionalSchedule() {
 
   const [roomContradictions, setRoomContradictions] = useState([]);
   const [teacherContradictions, setTeacherContradictions] = useState([]);
+  const [labTimes, setLabTimes] = useState([]);
 
   const batches = [
     ...new Set(
@@ -45,7 +46,7 @@ export default function SessionalSchedule() {
     theorySchedules.map((slot) => `${slot.day} ${slot.time}`)
   );
 
-  const labTimes = [];
+  const computedLabTimes = [];
   days.forEach((day) => {
     possibleLabTimes.forEach((time) => {
       if (
@@ -53,10 +54,17 @@ export default function SessionalSchedule() {
         !filledTheorySlots.has(`${day} ${(time + 1) % 12}`) &&
         !filledTheorySlots.has(`${day} ${(time + 2) % 12}`)
       ) {
-        labTimes.push(`${day} ${time}`);
+        computedLabTimes.push(`${day} ${time}`);
       }
     });
   });
+  
+  // Initialize labTimes if not already set
+  useEffect(() => {
+    if (labTimes.length === 0) {
+      setLabTimes(computedLabTimes);
+    }
+  }, [computedLabTimes.length]);
 
   const selectedLabSlots = labSchedules
     .filter((slot) => slot.course_id !== selectedCourse?.course_id)
@@ -83,15 +91,37 @@ export default function SessionalSchedule() {
       const [batch, section, department] = selectedSection.split(" ");
       const theorySection = section.substring(0, 1);
       getTheorySchedules(batch, theorySection).then((res) => {
-        res = res.filter((s) => s.department === department)
-        setTheorySchedules(res);
+        let allSchedules = [];
+        
+        // Include only main section schedules
+        if (res.mainSection) {
+          allSchedules = [
+            ...res.mainSection.filter(s => s.department === department)
+          ];
+        }
+        
+        setTheorySchedules(allSchedules);
+        
+        // Update labTimes based on type 1 courses
+        const labTimeSlots = new Set();
+        allSchedules.forEach(schedule => {
+          if (schedule.type === 1 && (schedule.time === 2 || schedule.time === 8 || schedule.time === 11)) {
+            labTimeSlots.add(`${schedule.day} ${schedule.time}`);
+          }
+        });
+        
+        // Update labTimes state if needed
+        if (labTimeSlots.size > 0) {
+          setLabTimes([...computedLabTimes, ...labTimeSlots]);
+        }
       });
       getSessionalSchedules(batch, section).then((res) => {
-        res = res.filter((s) => s.department === department)
+        // Filter by department and ensure exact section matches
+        res = res.filter((s) => s.department === department && s.section === section);
         setLabSchedules(res);
         res.forEach((slot) => {
           const course = courses.find((c) => c.course_id === slot.course_id);
-          if (course.class_per_week === 0.5) {
+          if (course && course.class_per_week === 0.5) {
             setDualCheck((dualCheck) => {
               dualCheck.add(`${slot.day} ${slot.time}`);
               return dualCheck;
@@ -136,7 +166,7 @@ export default function SessionalSchedule() {
   const isLabSlotValid = (day, time) => {
     if (!selectedCourse) return "Select a course first";
 
-    if (labTimes.findIndex((slot) => slot === `${day} ${time}`) === -1)
+    if (computedLabTimes.findIndex((slot) => slot === `${day} ${time}`) === -1)
       return "You can only select lab slots";
 
     if (selectedCourseSlots.length >= Math.ceil(selectedCourse.class_per_week))
@@ -150,8 +180,6 @@ export default function SessionalSchedule() {
     return null;
   };
 
-  console.log(courses, sections, theorySchedules, labSchedules);
-  
 
   return (
     <div>
@@ -218,7 +246,7 @@ export default function SessionalSchedule() {
                     );
                   }
                 }}
-                labTimes={labTimes}
+                labTimes={new Set(labTimes)}
                 dualCheck={dualCheck}
               />
             </div>
@@ -232,6 +260,7 @@ export default function SessionalSchedule() {
               <Form>
                 <Form.Select
                   className="form-control-sm btn-block"
+                  value={selectedBatch || ""}
                   onChange={(e) => {
                     if (
                       e.target.value !== selectedBatch &&
@@ -251,21 +280,21 @@ export default function SessionalSchedule() {
                   }}
                 >
                   <option
-                    value={null}
-                    selected={selectedBatch === null}
+                    value=""
                     disabled
                   >
                     {" "}
                     Select Batch{" "}
                   </option>
                   {batches.map((batch) => (
-                    <option key={batch} value={batch} selected={selectedBatch === batch}>
+                    <option key={batch} value={batch}>
                       {batch}
                     </option>
                   ))}
                 </Form.Select>
                 <Form.Select
                   className="form-control-sm btn-block"
+                  value={selectedSection || ""}
                   onChange={(e) => {
                     if (
                       e.target.value !== selectedSection &&
@@ -284,8 +313,7 @@ export default function SessionalSchedule() {
                   }}
                 >
                   <option
-                    value={null}
-                    selected={selectedSection === null}
+                    value=""
                     disabled
                   >
                     {" "}
@@ -295,10 +323,6 @@ export default function SessionalSchedule() {
                     <option
                       key={`${section.batch}-${section.section}-${section.department}`}
                       value={`${section.batch} ${section.section} ${section.department}`}
-                      selected={
-                        selectedSection ===
-                        `${section.batch} ${section.section} ${section.department}`
-                      }
                     >
                       Section {section.section}
                     </option>
@@ -307,6 +331,7 @@ export default function SessionalSchedule() {
                 <div className="form-check btn-block">
                   <Form.Select
                     className="form-control-sm btn-block"
+                    value={selectedCourse ? selectedCourse.course_id : ""}
                     onChange={(e) => {
                       setSelectedCourse(
                         courses.find((c) => c.course_id === e.target.value)
@@ -314,8 +339,7 @@ export default function SessionalSchedule() {
                     }}
                   >
                     <option
-                      value={null}
-                      selected={selectedCourse === null}
+                      value=""
                       disabled
                     >
                       {" "}
@@ -332,7 +356,6 @@ export default function SessionalSchedule() {
                           <option
                             key={course.course_id}
                             value={course.course_id}
-                            selected={selectedCourse === course.course_id}
                           >
                             {course.course_id}
                           </option>
@@ -391,8 +414,11 @@ export default function SessionalSchedule() {
                     </tr>
                   </thead>
                   <tbody>
-                    {roomContradictions.map((contradiction) => (
-                      <tr className={selectedCourseSlots.includes(`${contradiction.day} ${contradiction.time}`) ? "table-danger" : ""}>
+                    {roomContradictions.map((contradiction, index) => (
+                      <tr 
+                        key={`contradiction-${index}-${contradiction.course_id}-${contradiction.day}-${contradiction.time}`}
+                        className={selectedCourseSlots.includes(`${contradiction.day} ${contradiction.time}`) ? "table-warning" : ""}
+                      >
                         <td> {contradiction.course_id} </td>
                         <td> {contradiction.section} </td>
                         <td> {contradiction.room} </td>
@@ -426,11 +452,14 @@ export default function SessionalSchedule() {
                         </tr>
                       </thead>
                       <tbody>
-                        {teacher.schedule.map((slot) => (
-                          <tr className={selectedCourseSlots.includes(`${slot.day} ${slot.time}`) || 
-                          selectedCourseSlots.includes(`${slot.day} ${(slot.time - 1) % 12}`) ||
-                          selectedCourseSlots.includes(`${slot.day} ${(slot.time - 2) % 12}`)
-                          ? "table-danger" : ""}>
+                        {teacher.schedule.map((slot, index) => (
+                          <tr 
+                            key={`teacher-${teacher.initial}-slot-${index}-${slot.course_id}-${slot.day}-${slot.time}`}
+                            className={selectedCourseSlots.includes(`${slot.day} ${slot.time}`) || 
+                            selectedCourseSlots.includes(`${slot.day} ${(slot.time - 1) % 12}`) ||
+                            selectedCourseSlots.includes(`${slot.day} ${(slot.time - 2) % 12}`)
+                            ? "table-warning" : ""}
+                          >
                             <td> {slot.course_id} </td>
                             <td> {slot.section} </td>
                             <td> {slot.day} </td>

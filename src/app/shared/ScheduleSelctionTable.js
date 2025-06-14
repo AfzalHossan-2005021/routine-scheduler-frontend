@@ -35,21 +35,21 @@ export default function ScheduleSelectionTable({
   };
 
   return (
-    <table class="table routine-table">
+    <table className="table routine-table">
       <thead>
         <tr>
           <th scope="col" className="col-2">
             Day \ Time
           </th>
           {times.map((time) => (
-            <th scope="col">{time}</th>
+            <th key={time} scope="col">{time}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {days.map((day) => (
-          <tr>
-            <th scope="row" className="col-2">
+          <tr key={day}>
+            <th key={`${day}-header`} scope="row" className="col-2">
               {day}
             </th>
             {times
@@ -59,9 +59,9 @@ export default function ScheduleSelectionTable({
                   !labTimes.has(`${day} ${(time - 2 + 12) % 12}`)
               )
               .map((time) => (
-                <td colSpan={labTimes.has(`${day} ${time}`) ? 3 : 1}>
+                <td key={`${day}-${time}`} colSpan={labTimes.has(`${day} ${time}`) ? 3 : 1}>
                   <input
-                    class="big-checkbox"
+                    className="big-checkbox"
                     type="checkbox"
                     checked={
                       dualCheck.has(`${day} ${time}`)
@@ -72,7 +72,7 @@ export default function ScheduleSelectionTable({
                     onChange={(e) =>
                       changedOnChange(day, time, e.target.checked, 0)
                     }
-                    title={break_times.has(time)}
+                    title={break_times.has(time) ? "Break Time" : undefined}
                     disabled={
                       dualCheck.has(`${day} ${time}`)
                         ? filled.count(`${day} ${time}`) === 2
@@ -83,7 +83,7 @@ export default function ScheduleSelectionTable({
                   />
                   {dualCheck.has(`${day} ${time}`) && (
                     <input
-                      class="big-checkbox ml-2"
+                      className="big-checkbox ml-2"
                       type="checkbox"
                       checked={filled.has(`${day} ${time}`)}
                       onChange={(e) =>

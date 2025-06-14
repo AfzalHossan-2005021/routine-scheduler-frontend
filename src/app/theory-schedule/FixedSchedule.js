@@ -40,14 +40,31 @@ export default function TheorySchedule() {
   useEffect(() => {
     if (selectedSection) {
       const [batch, section, department] = selectedSection.split(" ");
-      getSchedules(batch, section).then((res) => {
-        res = res.filter(s => s.department === department)
-        setSchedules(res);
+      getSchedules(batch, section).then((res) => {        
+        // Handle the new structure with main section and subsections
+        let allSchedules = [];
+        
+        // Include main section schedules
+        if (res.mainSection) {
+          allSchedules = [
+            ...res.mainSection.filter(s => s.department === department)
+          ];
+        }
+        
+        // Include subsection schedules
+        if (res.subsections) {
+          Object.values(res.subsections).forEach(subsection => {
+            allSchedules = [
+              ...allSchedules,
+              ...subsection.filter(s => s.department === department)
+            ];
+          });
+        }
+        
+        setSchedules(allSchedules);
       });
     }
   }, [selectedSection]);
-
-  console.log(sections, courses, schedules);
   
 
   return (
@@ -75,11 +92,19 @@ export default function TheorySchedule() {
               <ScheduleSelectionTable
                 filled={
                   new Set([
-                    ...days.map((day) => `${day} 2`),
                     ...schedules
                       .filter((s) => !selectedCourse || s.course_id !== selectedCourse.course_id)
                       .map((slot) => `${slot.day} ${slot.time}`),
                   ])
+                }
+                labTimes={
+                  // Create an array of slots that should be treated as lab times (merge 3 cells)
+                  new Set(
+                    schedules
+                      .filter((s) => s.type === 1 && 
+                                    (s.time === 2 || s.time === 8 || s.time === 11))
+                      .map((slot) => `${slot.day} ${slot.time}`)
+                  )
                 }
                 selected={selectedSlots}
                 onChange={(day, time, checked) => {
@@ -120,6 +145,7 @@ export default function TheorySchedule() {
               <Form>
                 <Form.Select
                   className="form-control-sm btn-block"
+                  value={selectedSection || ""}
                   onChange={(e) => {
                     if (
                       e.target.value !== selectedSection &&
@@ -128,7 +154,6 @@ export default function TheorySchedule() {
                         "You have unsaved changes. Are you sure you want to continue?"
                       )
                     ) {
-                      e.target.value = selectedSection;
                       return;
                     }
                     setSelectedSection(e.target.value);
@@ -137,17 +162,14 @@ export default function TheorySchedule() {
                     setSelectedSlots(new Set([]));
                   }}
                 >
-                  <option value={null} selected={selectedSection === null} disabled>
+                  <option value="" disabled={true}>
                     {" "}
                     Select Section{" "}
                   </option>
                   {sections.map((section) => (
                     <option
+                      key={`${section.batch}-${section.section}-${section.department}`}
                       value={`${section.batch} ${section.section} ${section.department}`}
-                      selected={
-                        selectedSection ===
-                        `${section.batch} ${section.section} ${section.department}`
-                      }
                     >
                       {section.level_term} {section.department} - Section {section.section}
                     </option>
@@ -163,12 +185,13 @@ export default function TheorySchedule() {
                   />
                   <label
                     className="form-check-label mb-2"
-                    for="flexCheckDefault"
+                    htmlFor="flexCheckDefault"
                   >
                     Non-departmental only
                   </label>
                   <Form.Select
                     className="form-control-sm btn-block"
+                    value={selectedCourse ? selectedCourse.course_id : ""}
                     onChange={(e) => {
                       if (
                         selectedCourse &&
@@ -178,7 +201,6 @@ export default function TheorySchedule() {
                           "You have unsaved changes. Are you sure you want to continue?"
                         )
                       ) {
-                        e.target.value = selectedCourse.course_id;
                         return;
                       }
                       setSelectedCourse(
@@ -194,12 +216,12 @@ export default function TheorySchedule() {
                       );
                     }}
                   >
-                    <option value={null} selected={selectedCourse === null} disabled>
+                    <option value="" disabled={true}>
                       {" "}
                       Select Course{" "}
                     </option>
                     {selectedSection && (
-                      <option value={`CT`} selected={selectedCourse === `CT`}>
+                      <option key="CT" value={`CT`}>
                         {" "}
                         CT{" "}
                       </option>
@@ -215,8 +237,8 @@ export default function TheorySchedule() {
                         )
                         .map((course) => (
                           <option
+                            key={course.course_id}
                             value={course.course_id}
-                            selected={selectedCourse === course.course_id}
                           >
                             {course.course_id}
                           </option>
@@ -253,7 +275,31 @@ export default function TheorySchedule() {
                     ).then((res) => {
                       toast.success("Schedule saved");
                       setIsChanged(false);
-                      getSchedules(batch, section).then(setSchedules);
+                      // Get the department from the selectedSection
+                      const [_, __, department] = selectedSection.split(" ");
+                      getSchedules(batch, section).then((res) => {
+                        // Handle the new structure with main section and subsections
+                        let allSchedules = [];
+                        
+                        // Include main section schedules
+                        if (res.mainSection) {
+                          allSchedules = [
+                            ...res.mainSection.filter(s => s.department === department)
+                          ];
+                        }
+                        
+                        // Include subsection schedules
+                        if (res.subsections) {
+                          Object.values(res.subsections).forEach(subsection => {
+                            allSchedules = [
+                              ...allSchedules,
+                              ...subsection.filter(s => s.department === department)
+                            ];
+                          });
+                        }
+                        
+                        setSchedules(allSchedules);
+                      });
                     });
                   }}
                 >
