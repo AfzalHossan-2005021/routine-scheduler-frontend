@@ -11,7 +11,7 @@ import {
 } from "../api/db-crud";
 
 const initial_regex = /^[A-Z]{2,6}$/;
-const email_regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,}$/;
+const email_regex = /^[\w-.]+@([\w-]+\.)+[\w-]{2,}$/;
 
 const validate = (teacher) => {
   if (teacher.initial === "") {

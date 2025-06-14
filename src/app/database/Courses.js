@@ -75,13 +75,13 @@ export default function Courses() {
         sections: selectedCheckboxes,
       }));
     }
-  }, [selectedCheckboxes]);
+  }, [selectedCheckboxes, selectedCourse]);
 
   useEffect(() => {
     if (selectedCourse) {
       setSelectedCheckboxes(selectedCourse.sections);
     }
-  }, [selectedCourse]);
+  }, [selectedCourse, setSelectedCheckboxes]);
 
   return (
     <div>
@@ -326,7 +326,7 @@ export default function Courses() {
                             s.batch === selectedCourse.batch &&
                             s.type === selectedCourse.type &&
                             s.session === selectedCourse.session && 
-                            s.department == selectedCourse.to
+                            s.department === selectedCourse.to
                         )
                         .map((section, index) => (
                           <div className=" form-check-inline">

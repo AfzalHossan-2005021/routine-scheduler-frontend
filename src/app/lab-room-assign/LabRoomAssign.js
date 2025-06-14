@@ -10,31 +10,19 @@ import Genetic from "genetic-js";
 import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
 
 export default function LabRoomAssign() {
-  const [offeredCourse, setOfferedCourse] = useState([
-    // { course_id: "CSE 101", name: "Introduction to Computer Science" },
-    // { course_id: "CSE 102", name: "Introduction to Programming" },
-    // { course_id: "CSE 103", name: "Discrete Mathematics" },
-  ]);
-  const [nonDeptCourses, setNonDeptCourses] = useState([]);
+  const [offeredCourse, setOfferedCourse] = useState([]);
+  const [nonDeptCourses] = useState([]);
 
   const [savedConstraints, setSavedConstraints] = useState(false);
   const [viewRoomAssignment, setViewRoomAssignment] = useState(false);
   const [viewCourseAssignment, setViewCourseAssignment] = useState(false);
   const [viewLevelTermAssignment, setViewLevelTermAssignment] = useState(false);
 
-  const [rooms, setRooms] = useState([
-    // { room: "MCL" },
-    // { room: "MML" },
-    // { room: "CL" },
-    // { room: "SEL" },
-    // { room: "NL" },
-  ]);
-  const [nonDeptRooms, setNonDeptRooms] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [nonDeptRooms] = useState([]);
   const [nonDeptCourseRoom, setNonDeptCourseRoom] = useState([]);
 
-  const [courseRoom, setCourseRoom] = useState([
-    // { course_id: "CSE 101", rooms: ["MCL", "MML"] },
-  ]);
+  const [courseRoom, setCourseRoom] = useState([]);
   const [uniqueNamedCourses, setUniqueNamedCourses] = useState([]);
   const [fixedRoomAllocation, setFixedRoomAllocation] = useState([]);
 
@@ -45,12 +33,10 @@ export default function LabRoomAssign() {
   useEffect(() => {
     let rooms_, courses_;
     const labs = getLabRooms().then((res) => {
-      // console.log(res);
       rooms_ = res;
       setRooms(res);
     });
     const courses = getLabCourses().then((res) => {
-      // console.log(res);
       courses_ = res;
       setOfferedCourse(res);
     });
@@ -64,7 +50,7 @@ export default function LabRoomAssign() {
               .filter((obj) => obj.room === room.room)
               .map((obj) => {
                 return courses_.find(
-                  (course) => course.course_id === obj.course_id
+                  (course) => course.course_id === obj.course_id && course.section === obj.section
                 );
               });
             return {
@@ -80,28 +66,20 @@ export default function LabRoomAssign() {
     });
   }, []);
 
-  console.log(nonDeptRooms, nonDeptCourses, nonDeptCourseRoom);
-
-  const uniqueNames = {};
-
-  // Filter and show only the unique named courses
-  let uniqueCourses = offeredCourse.filter((obj) => {
-    if (!uniqueNames[obj.name]) {
-      uniqueNames[obj.name] = true;
-      return true;
-    }
-    return false;
-  });
-
   useEffect(() => {
+    const uniqueNames = {};
+    const uniqueCourses = offeredCourse.filter((obj) => {
+      if (!uniqueNames[obj.name]) {
+        uniqueNames[obj.name] = true;
+        return true;
+      }
+      return false;
+    });
     setUniqueNamedCourses(uniqueCourses);
-    // console.log(uniqueNamedCourses);
   }, [offeredCourse]);
 
   useEffect(() => {
     setNonDeptCourseRoom(prev => {
-      console.log("here", nonDeptCourses);
-      
       return nonDeptCourses.map((course) => {
         return {
           course_id: course.course_id,
@@ -140,7 +118,9 @@ export default function LabRoomAssign() {
       );
       chromosome[course] = roomAssignments[course][chromosome[course]];
       if (chromosome[course] === undefined) {
-        console.log(course);
+        chromosome[course] = roomAssignments[course][
+          Math.floor(Math.random() * roomAssignments[course].length)
+        ];
       }
       return chromosome;
     };
@@ -163,7 +143,6 @@ export default function LabRoomAssign() {
 
     genetic.fitness = function (chromosome) {
       const { courses, rooms } = this.userData;
-      // standard deviation of room used
       const roomUsed = {};
       rooms.forEach((room) => (roomUsed[room] = 0));
       courses.forEach((course) => {
@@ -184,10 +163,6 @@ export default function LabRoomAssign() {
       return sd;
     };
 
-    // genetic.generation = function (pop, generation, stats) {
-    //   return true;
-    // };
-
     genetic.notification = function (pop, generation, stats, isFinished) {
       if (isFinished) {
         const solution = pop[0].entity;
@@ -206,8 +181,6 @@ export default function LabRoomAssign() {
           room.count += 1;
         }
         const roomUsed = Object.values(roomStats);
-        console.log(`Finished`);
-        console.log(roomUsed);
         setSavedConstraints(true);
         setFixedRoomAllocation(roomUsed);
       }
@@ -278,13 +251,6 @@ export default function LabRoomAssign() {
       return a.level_term.localeCompare(b.level_term);
     });
 
-  // .reduce((arr, room, level_term) => {
-  //   arr.push({ level_term, rooms: Array.from(room) });
-  //   return arr;
-  // }, []);
-
-  // console.log(levelTermAllocationArray);
-
   return (
     <div>
       <div className="page-header">
@@ -304,64 +270,64 @@ export default function LabRoomAssign() {
         bgColor={alreadySaved ? "success" : "info"}
         icon={"mdi-autorenew"}
         disabled={true}
-        onClick={(e) => {}}
+        onClick={(e) => { }}
       />
 
       {!alreadySaved && (
-      <div className="row">
-        <div className="col-12 grid-margin">
-          <div className="card">
-            <div className="card-body">
-              <h4 className="card-title">Non-departmental Lab room assignment</h4>
-              <div className="table-responsive">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <td>Course</td>
-                      <td>Section</td>
-                      <td>Room</td>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {nonDeptCourses.map((course, index) => (
-                      <tr key={index}>
-                        <td>{course.course_id}</td>
-                        <td>{course.section}</td>
-                        <td>
-                          <FormGroup>
-                            <Form.Select
-                              size="lg"
-                              onChange={(e) => {
-                                setNonDeptCourseRoom(prev => {
-                                  return prev.map((cr, i) => {
-                                    if(i === index){
-                                      return {
-                                        ...cr,
-                                        room: e.target.value,
-                                      }
-                                    }
-                                    return cr;
-                                  })
-                                })
-                              }}
-                            > 
-                              <option value="None"></option>
-                              {nonDeptRooms.map((room, index) => (
-                                <option value={room.room}>{room.room}</option>
-                              ))}
-                            </Form.Select>
-                          </FormGroup>
-                        </td>
+        <div className="row">
+          <div className="col-12 grid-margin">
+            <div className="card">
+              <div className="card-body">
+                <h4 className="card-title">Non-departmental Lab room assignment</h4>
+                <div className="table-responsive">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <td>Course</td>
+                        <td>Section</td>
+                        <td>Room</td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {nonDeptCourses.map((course, index) => (
+                        <tr key={index}>
+                          <td>{course.course_id}</td>
+                          <td>{course.section}</td>
+                          <td>
+                            <FormGroup>
+                              <Form.Select
+                                size="lg"
+                                onChange={(e) => {
+                                  setNonDeptCourseRoom(prev => {
+                                    return prev.map((cr, i) => {
+                                      if (i === index) {
+                                        return {
+                                          ...cr,
+                                          room: e.target.value,
+                                        }
+                                      }
+                                      return cr;
+                                    })
+                                  })
+                                }}
+                              >
+                                <option key="none" value="None"></option>
+                                {nonDeptRooms.map((room, index) => (
+                                  <option key={index} value={room.room}>{room.room}</option>
+                                ))}
+                              </Form.Select>
+                            </FormGroup>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>)}
-      
+        </div>)}
+
       {!alreadySaved && (
         <div className="row">
           <div className="col-12 grid-margin">
@@ -446,14 +412,14 @@ export default function LabRoomAssign() {
                   <div className="row align-items-end">
                     <div className="col-5">
                       <select
-                        class="form-select text-dark"
+                        className="form-select text-dark"
                         multiple
                         aria-label="multiple select example"
                         style={{ height: 300, width: "100%" }}
                         ref={selectedCourseRef}
                       >
-                        {uniqueNamedCourses.map((course) => (
-                          <option className="p-1" value={course.course_id}>
+                        {uniqueNamedCourses.map((course, index) => (
+                          <option key={course.course_id || index} className="p-1" value={course.course_id}>
                             {course.course_id} - {course.name}
                           </option>
                         ))}
@@ -487,7 +453,7 @@ export default function LabRoomAssign() {
                                 rooms.find((room) => room.room === room_id)
                               );
 
-                            selectedCourseOptions.map((course) => {
+                            selectedCourseOptions.forEach((course) => {
                               setUniqueNamedCourses(
                                 uniqueNamedCourses.filter(
                                   (c) => c.course_id !== course.course_id
@@ -513,14 +479,14 @@ export default function LabRoomAssign() {
 
                     <div className="col-5">
                       <select
-                        class="form-select text-dark"
+                        className="form-select text-dark"
                         multiple
                         aria-label="multiple select example"
                         style={{ height: 300, width: "100%" }}
                         ref={selectedRoomRef}
                       >
-                        {rooms.map((room) => (
-                          <option className="p-1" value={room.room}>
+                        {rooms.map((room, index) => (
+                          <option key={room.room || index} className="p-1" value={room.room}>
                             {room.room}
                           </option>
                         ))}
@@ -651,12 +617,12 @@ export default function LabRoomAssign() {
                               <td> {course.level_term} </td>
                               <td> {course.section} </td>
                               {fixedRoomAllocation.map(
-                                (room, index) =>
+                                (room, roomIndex) =>
                                   room.courses.find(
                                     (c) =>
                                       c.course_id === course.course_id &&
                                       c.section === course.section
-                                  ) && <td> {room.room} </td>
+                                  ) && <td key={roomIndex}> {room.room} </td>
                               )}
                             </tr>
                           ))}
@@ -774,51 +740,52 @@ export default function LabRoomAssign() {
                       View Level-Term Assignment
                     </Button>
                   </div>
-                  <Button
-                    variant="outline-danger"
-                    size="md"
-                    className="btn-block btn-rounded mt-5"
-                    onClick={() => {
-                      //initialize all states
-                      setSavedConstraints(false);
-                      setViewRoomAssignment(false);
-                      setViewCourseAssignment(false);
-                      setFixedRoomAllocation([]);
-                      setProgress(-1);
-                    }}
-                  >
-                    Reschedule
-                  </Button>
                 </div>
-                <div className="mt-5">
-                  <Button
-                    variant="success"
-                    size="md"
-                    className="btn-block btn-rounded"
-                    onClick={() => {
-                      let data = [];
-                      data = data.concat(nonDeptCourseRoom);
-                      fixedRoomAllocation.forEach((room) => {
-                        room.courses.forEach((course) => {
-                          data.push({
-                            course_id: course.course_id,
-                            batch: course.batch,
-                            section: course.section,
-                            room: room.room,
+                {
+                  !alreadySaved &&
+                  <div className="mt-5">
+                    <Button
+                      variant="outline-danger"
+                      size="md"
+                      className="btn-block btn-rounded mt-5"
+                      onClick={() => {
+                        //initialize all states
+                        setSavedConstraints(false);
+                        setViewRoomAssignment(false);
+                        setViewCourseAssignment(false);
+                        setFixedRoomAllocation([]);
+                        setProgress(-1);
+                      }}
+                    >
+                      Reschedule
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="md"
+                      className="btn-block btn-rounded"
+                      onClick={() => {
+                        let data = [];
+                        data = data.concat(nonDeptCourseRoom);
+                        fixedRoomAllocation.forEach((room) => {
+                          room.courses.forEach((course) => {
+                            data.push({
+                              course_id: course.course_id,
+                              batch: course.batch,
+                              section: course.section,
+                              room: room.room,
+                            });
                           });
                         });
-                      });
-                      console.log(data);
-                      
-                      setRoomAssign(data).then((res) => {
-                        toast.success("Lab Room Assignment Saved");
-                        setAlreadySaved(true);
-                      });
-                    }}
-                  >
-                    Continue With This Assignment
-                  </Button>
-                </div>
+                        setRoomAssign(data).then((res) => {
+                          toast.success("Lab Room Assignment Saved");
+                          setAlreadySaved(true);
+                        });
+                      }}
+                    >
+                      Continue With This Assignment
+                    </Button>
+                  </div>
+                }
               </div>
             </div>
           </div>

@@ -21,8 +21,6 @@ function App(props) {
 
   const [user, setUser] = useState({loggedIn: Boolean(localStorage.getItem("token"))});
 
-  console.log("user: ", user);
-
   axios.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -62,7 +60,6 @@ function App(props) {
       "/form/"
     ];
     const isFullPageLayout = fullPageLayoutRoutes.some(l => location.pathname.startsWith(l))
-    console.log("isFullPageLayout: ", isFullPageLayout, location.pathname);
     setIsFullPageLayout(isFullPageLayout);
 
     if (isFullPageLayout) {

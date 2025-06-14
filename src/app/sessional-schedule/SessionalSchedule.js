@@ -108,7 +108,7 @@ export default function SessionalSchedule() {
 
   useEffect(() => {
     if (selectedCourse) {
-      const [batch, section, department] = selectedSection.split(" ");
+      const [batch, section] = selectedSection.split(" ");
       const course_id = selectedCourse.course_id;
       roomContradiction(batch, section, course_id).then((res) => {
         setRoomContradictions(
@@ -259,10 +259,7 @@ export default function SessionalSchedule() {
                     Select Batch{" "}
                   </option>
                   {batches.map((batch) => (
-                    // <option value={batch} selected={selectedBatch === batch}>
-                    //   {batch.split(" ")[1]}
-                    // </option>
-                    <option value={batch} selected={selectedBatch === batch}>
+                    <option key={batch} value={batch} selected={selectedBatch === batch}>
                       {batch}
                     </option>
                   ))}
@@ -296,6 +293,7 @@ export default function SessionalSchedule() {
                   </option>
                   {sectionsForBatch.map((section) => (
                     <option
+                      key={`${section.batch}-${section.section}-${section.department}`}
                       value={`${section.batch} ${section.section} ${section.department}`}
                       selected={
                         selectedSection ===
@@ -332,6 +330,7 @@ export default function SessionalSchedule() {
                         )
                         .map((course) => (
                           <option
+                            key={course.course_id}
                             value={course.course_id}
                             selected={selectedCourse === course.course_id}
                           >

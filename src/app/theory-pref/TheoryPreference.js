@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { finalize, getStatus, initiate, setTeacherAssignment,resendTheoryPrefMail, saveReorderedTeacherPreference } from "../api/theory-assign";
 import { toast } from "react-hot-toast";
 import { getTeachers } from "../api/db-crud";
@@ -19,7 +19,7 @@ export default function TheoryPreference() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState("");
   const [selectedTeacherRow, setSelectedTeacherRow] = useState(null);
-  const [allCourses, setAllCourses] = useState([]);
+  const [allCourses] = useState([]);
   const [showAssignConfirm, setShowAssignConfirm] = useState(false);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function TheoryPreference() {
     });
   }, []);
 
-  const selectedCourseRef = useRef();
+  // const selectedCourseRef = useRef(); // Commented out as it's unused
 
   // Helper to get courses not in selectedCourse
   const getOfferedCourses = () => allCourses.filter(c => !selectedCourse.includes(c));
@@ -82,7 +82,9 @@ export default function TheoryPreference() {
     }
   };
 
+  // These functions are not currently used, but kept in case they are needed in the future
   // Add course to preference (at end)
+  /*
   const addToPreference = (course) => {
     if (!selectedCourse.includes(course)) {
       setSelectedCourse([...selectedCourse, course]);
@@ -95,6 +97,7 @@ export default function TheoryPreference() {
     newPref.splice(index, 1);
     setSelectedCourse(newPref);
   };
+  */
 
   return (
     <div>
@@ -251,7 +254,6 @@ export default function TheoryPreference() {
                                   ...teacher,
                                 });
                                 setSelectedCourse(teacher.response);
-                                console.log(selectedTeacher);
                               }}
                             >
                               Edit Preference
@@ -465,12 +467,14 @@ export default function TheoryPreference() {
                       </tr>
                     </thead>
                     <tbody>
-                      {status.assignment.map((course, index) => (
+                      {status.assignment.map((course, index) => {
+                        return (
                         <tr key={index}>
                           <td> {course.course_id} </td>
                           <td> {course.name} </td>
                           {/* Teacher Dropdowns - Using loop for all three teachers */}
-                          {[0, 1, 2].map((teacherIndex) => (
+                          {[0, 1, 2].map((teacherIndex) => {
+                            return (
                             <td key={teacherIndex}>
                               <FormGroup>
                                 <Form.Select
@@ -521,17 +525,21 @@ export default function TheoryPreference() {
                                   }}
                                 >
                                   <option value="None" style={{fontWeight: "500"}}>Select Teacher</option>
-                                  {allTeachers?.map(t => (
-                                    <option key={t.initial} value={`${t.initial}|${t.name}`} style={{padding: "8px"}}>
-                                      {t.initial} - {t.name}
-                                    </option>
-                                  ))}
+                                  {allTeachers?.map(t => {
+                                    return (
+                                      <option key={t.initial} value={`${t.initial}|${t.name}`} style={{padding: "8px"}}>
+                                        {t.initial} - {t.name}
+                                      </option>
+                                    );
+                                  })}
                                 </Form.Select>
                               </FormGroup>
                             </td>
-                          ))}
+                          );
+                          })}
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

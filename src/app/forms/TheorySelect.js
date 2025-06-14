@@ -1,16 +1,14 @@
 import { useEffect } from "react";
-import { useRef } from "react";
 import { useState } from "react";
 import { Button } from "react-bootstrap";
 import { toast } from "react-hot-toast";
-import { useParams, useHistory } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { getTheoryPreferencesForm, submitTheoryPreferencesForm } from "../api/form";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Modal } from "react-bootstrap";
 
 export default function TheorySelect() {
   const { initial } = useParams();
-  const history = useHistory();
 
   const [teacher, setTeacher] = useState({
     initial: "...",
@@ -22,8 +20,7 @@ export default function TheorySelect() {
 
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const offeredCourseRef = useRef();
-  const selectedCourseRef = useRef();
+  // Removed unused refs
 
   useEffect(() => {
     getTheoryPreferencesForm(initial).then((form) => {

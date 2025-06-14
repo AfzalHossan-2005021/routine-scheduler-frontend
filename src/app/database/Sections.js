@@ -62,14 +62,8 @@ export default function Sections() {
     });
   }, []);
 
-
-
-  // type 0 = theory, 1 = lab
-
   const [selectedSection, setSelectedSection] = useState(null);
   const [deleteSectionSelected, setDeleteSectionSelected] = useState(null);
-
-  console.log(deleteSectionSelected);
 
   return (
     <div>

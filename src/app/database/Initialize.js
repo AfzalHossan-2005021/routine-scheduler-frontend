@@ -14,7 +14,7 @@ export default function Initialize(){
             .then((res) => {
                 console.log(res.message);
                 setLevelTerms(res.data);
-                console.log(levelTerms);
+                // Removed console.log(levelTerms) as it would show stale data
             })
             .catch((error) => {
                 console.error("Error fetching level terms:", error);
@@ -24,8 +24,6 @@ export default function Initialize(){
                 setLevelTerms([]);
             });
     }, [])
-
-    console.log(levelTerms);
 
     const handleToggle = (index) => {
         setLevelTerms(prev => {
