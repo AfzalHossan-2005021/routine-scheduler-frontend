@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useState } from "react";
 import { Button, ProgressBar } from "react-bootstrap";
 import { Form} from "react-bootstrap";
-import ScheduleSelectionTable, { days } from "../shared/ScheduleSelctionTable";
+import ScheduleSelectionTable from "../shared/ScheduleSelctionTable";
 import { getCourses, getSections } from "../api/db-crud";
 import { toast } from "react-hot-toast";
 import {
@@ -276,7 +276,7 @@ export default function TheorySchedule() {
                       toast.success("Schedule saved");
                       setIsChanged(false);
                       // Get the department from the selectedSection
-                      const [_, __, department] = selectedSection.split(" ");
+                      const department = selectedSection.split(" ")[2];
                       getSchedules(batch, section).then((res) => {
                         // Handle the new structure with main section and subsections
                         let allSchedules = [];

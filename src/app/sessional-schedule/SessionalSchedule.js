@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useState } from "react";
 import { Button, ProgressBar } from "react-bootstrap";
 import { Form } from "react-bootstrap";
@@ -30,6 +30,7 @@ export default function SessionalSchedule() {
 
   const [roomContradictions, setRoomContradictions] = useState([]);
   const [teacherContradictions, setTeacherContradictions] = useState([]);
+  const [labSlots, setLabSlots] = useState(new Set());
   const [labTimes, setLabTimes] = useState([]);
 
   const batches = [
@@ -42,29 +43,32 @@ export default function SessionalSchedule() {
     (section) => `${section.batch} ${section.level_term} ${section.department}` === selectedBatch
   );
 
-  const filledTheorySlots = new Set(
+  const filledTheorySlots = useMemo(() => new Set(
     theorySchedules.map((slot) => `${slot.day} ${slot.time}`)
-  );
+  ), [theorySchedules]);
 
-  const computedLabTimes = [];
-  days.forEach((day) => {
-    possibleLabTimes.forEach((time) => {
-      if (
-        !filledTheorySlots.has(`${day} ${time}`) &&
-        !filledTheorySlots.has(`${day} ${(time + 1) % 12}`) &&
-        !filledTheorySlots.has(`${day} ${(time + 2) % 12}`)
-      ) {
-        computedLabTimes.push(`${day} ${time}`);
-      }
+  const computedLabTimes = useMemo(() => {
+    const result = [];
+    days.forEach((day) => {
+      possibleLabTimes.forEach((time) => {
+        if (
+          !filledTheorySlots.has(`${day} ${time}`) &&
+          !filledTheorySlots.has(`${day} ${(time + 1) % 12}`) &&
+          !filledTheorySlots.has(`${day} ${(time + 2) % 12}`)
+        ) {
+          result.push(`${day} ${time}`);
+        }
+      });
     });
-  });
+    
+    // Add special lab time slots from theory schedules
+    return [...result, ...Array.from(labSlots)];
+  }, [filledTheorySlots, labSlots]);
   
   // Initialize labTimes if not already set
   useEffect(() => {
-    if (labTimes.length === 0) {
-      setLabTimes(computedLabTimes);
-    }
-  }, [computedLabTimes.length]);
+    setLabTimes(computedLabTimes);
+  }, [computedLabTimes]);
 
   const selectedLabSlots = labSchedules
     .filter((slot) => slot.course_id !== selectedCourse?.course_id)
@@ -103,17 +107,15 @@ export default function SessionalSchedule() {
         setTheorySchedules(allSchedules);
         
         // Update labTimes based on type 1 courses
-        const labTimeSlots = new Set();
+        const newLabSlots = new Set();
         allSchedules.forEach(schedule => {
           if (schedule.type === 1 && (schedule.time === 2 || schedule.time === 8 || schedule.time === 11)) {
-            labTimeSlots.add(`${schedule.day} ${schedule.time}`);
+            newLabSlots.add(`${schedule.day} ${schedule.time}`);
           }
         });
         
-        // Update labTimes state if needed
-        if (labTimeSlots.size > 0) {
-          setLabTimes([...computedLabTimes, ...labTimeSlots]);
-        }
+        // Store these special slots separately
+        setLabSlots(newLabSlots);
       });
       getSessionalSchedules(batch, section).then((res) => {
         // Filter by department and ensure exact section matches
