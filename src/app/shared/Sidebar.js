@@ -34,6 +34,7 @@ class Sidebar extends Component {
     const dropdownPaths = [
       {path:'/apps', state: 'appsMenuOpen'},
       {path:'/database', state: 'dbUiMenuOpen'},
+      {path:'/teachers', state: 'teachersMenuOpen'},
       {path:'/advanced-ui', state: 'advancedUiMenuOpen'},
       {path:'/theory-schedule', state: 'theoryScheduleMenuOpen'},
       {path:'/tables', state: 'tablesMenuOpen'},
@@ -92,6 +93,12 @@ class Sidebar extends Component {
                 <li className="nav-item"> <Link className={ this.isPathActive('/database/sections') ? 'nav-link active' : 'nav-link' } to="/database/sections">Sections</Link></li>
               </ul>
             </Collapse>
+          </li>
+          <li className={ this.isPathActive('/teachers') ? 'nav-item active' : 'nav-item' }>
+            <Link className="nav-link" to="/teachers">
+              <span className="menu-title">Teachers</span>
+              <i className="mdi mdi-account-group menu-icon"></i>
+            </Link>
           </li>
           <li className={ this.isPathActive('/theory-assign') ? 'nav-item active' : 'nav-item' }>
             <Link className="nav-link" to="/theory-assign">

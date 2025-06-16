@@ -7,6 +7,8 @@ import { UserContext } from "./App";
 
 const Dashboard = lazy(() => import("./dashboard/Dashboard"));
 const Teachers = lazy(() => import("./database/Teachers"));
+const TeachersList = lazy(() => import("./teachers/TeachersList"));
+const TeacherDetails = lazy(() => import("./teachers/TeacherDetails"));
 const Sections = lazy(() => import("./database/Sections"));
 const Rooms = lazy(() => import("./database/Rooms"));
 const Courses = lazy(() => import("./database/Courses"));
@@ -43,6 +45,8 @@ export default function AppRoutes() {
           <Switch>
             <Route exact path="/dashboard" component={Dashboard} />
             <Route path="/database/teachers" component={Teachers} />
+            <Route exact path="/teachers" component={TeachersList} />
+            <Route path="/teachers/:teacherId" component={TeacherDetails} />
             <Route path="/database/sections" component={Sections} />
             <Route path="/database/rooms" component={Rooms} />
             <Route path="/database/courses" component={Courses} />
