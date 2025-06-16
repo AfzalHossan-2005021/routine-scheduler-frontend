@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getTeacher, getTeachers } from '../api/db-crud';
-import { getTheoryAssignement, setTeacherAssignment } from '../api/theory-assign';
+import { getTheoryAssignement, setTeacherAssignment, getSessionalStatus, setTeacherSessionalAssignment } from '../api/theory-assign';
 import { times, days } from '../shared/ScheduleSelctionTable';
 import { getCourses } from '../api/db-crud';
 import { getAllSchedule } from '../api/theory-schedule';
@@ -51,10 +51,15 @@ export default function TeacherDetails() {
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState([]);
+  const [sessionalAssignments, setSessionalAssignments] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [sessionalCourses, setSessionalCourses] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedSessionalCourse, setSelectedSessionalCourse] = useState('');
+  const [selectedSessionalSection, setSelectedSessionalSection] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [submittingSessional, setSubmittingSessional] = useState(false);
   
   // State for the scheduling modal
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -69,7 +74,7 @@ export default function TeacherDetails() {
         const allAssignments = await getTheoryAssignement();
         const allTeachers = await getTeachers();
         const allSchedules = await getAllSchedule();
-        
+        const sessionalStatus = await getSessionalStatus();
         
         setTeacher(teacherData);
         setSchedules(allSchedules || []);
@@ -104,6 +109,17 @@ export default function TeacherDetails() {
           });
           
         setCourses(theoryCourses);
+        
+        // Filter for sessional courses
+        const filteredSessionalCourses = coursesData
+          .filter(course => course.type === 1 && course.from === 'CSE')
+          .map(course => ({
+            ...course,
+            // Get sections from the course data if available
+            sections: Array.isArray(course.sections) ? course.sections : []
+          }));
+        
+        setSessionalCourses(filteredSessionalCourses);
         
         // Filter assignments for this teacher and add course titles
         const teacherAssignments = allAssignments
@@ -143,6 +159,38 @@ export default function TeacherDetails() {
           });
         
         setAssignments(teacherAssignments);
+        
+        // Process sessional assignments if available
+        if (sessionalStatus && sessionalStatus.assignment) {
+          // Filter for sessional courses assigned to this teacher
+          const sessionalCourses = sessionalStatus.assignment
+            .filter(course => {
+              // Check if the teacher is in the teachers array of this course
+              return course.teachers && course.teachers.some(teacher => teacher.initial === teacherId);
+            })
+            .map(course => {
+              // Extract section information for this teacher
+              const teacherInfo = course.teachers.find(t => t.initial === teacherId);
+              return {
+                course_id: course.course_id,
+                course_title: course.name,
+                section: teacherInfo ? teacherInfo.section : '',
+                // Find session from the first teacher record if available
+                session: course.teachers && course.teachers.length > 0 ? 
+                  (course.teachers[0].session || 'Current') : 'Current',
+                // Find other teachers for the course (excluding current teacher)
+                otherTeachers: course.teachers
+                  .filter(t => t.initial !== teacherId)
+                  .map(t => ({
+                    initial: t.initial,
+                    name: t.name || t.initial,
+                    section: t.section
+                  }))
+              };
+            });
+            
+          setSessionalAssignments(sessionalCourses);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Failed to load teacher data');
@@ -394,6 +442,83 @@ export default function TeacherDetails() {
     }
   };
 
+  const handleSessionalCourseAssign = async () => {
+    if (!selectedSessionalCourse) {
+      toast.error('Please select a sessional course to assign');
+      return;
+    }
+
+    if (!selectedSessionalSection) {
+      toast.error('Please select a section for the sessional course');
+      return;
+    }
+
+    try {
+      setSubmittingSessional(true);
+      
+      // Find the course to get batch information
+      const selectedCourseInfo = sessionalCourses.find(c => c.course_id === selectedSessionalCourse);
+      const batch = selectedCourseInfo?.batch || '19'; // Default to batch 19 if not specified
+      
+      // Create the assignment object
+      const assignment = {
+        initial: teacherId,
+        course_id: selectedSessionalCourse,
+        batch: batch,
+        section: selectedSessionalSection
+      };
+      
+      // Submit the assignment
+      await setTeacherSessionalAssignment(assignment);
+      toast.success('Sessional course assigned successfully');
+      
+      // Reload all data
+      const sessionalStatus = await getSessionalStatus();
+      
+      // Process sessional assignments if available
+      if (sessionalStatus && sessionalStatus.assignment) {
+        // Filter for sessional courses assigned to this teacher
+        const sessionalCourses = sessionalStatus.assignment
+          .filter(course => {
+            // Check if the teacher is in the teachers array of this course
+            return course.teachers && course.teachers.some(teacher => teacher.initial === teacherId);
+          })
+          .map(course => {
+            // Extract section information for this teacher
+            const teacherInfo = course.teachers.find(t => t.initial === teacherId);
+            return {
+              course_id: course.course_id,
+              course_title: course.name,
+              section: teacherInfo ? teacherInfo.section : '',
+              // Find session from the first teacher record if available
+              session: course.teachers && course.teachers.length > 0 ? 
+                (course.teachers[0].session || 'Current') : 'Current',
+              // Find other teachers for the course (excluding current teacher)
+              otherTeachers: course.teachers
+                .filter(t => t.initial !== teacherId)
+                .map(t => ({
+                  initial: t.initial,
+                  name: t.name || t.initial,
+                  section: t.section
+                }))
+            };
+          });
+          
+        setSessionalAssignments(sessionalCourses);
+      }
+      
+      // Reset selection
+      setSelectedSessionalCourse('');
+      setSelectedSessionalSection('');
+      
+    } catch (error) {
+      console.error('Error assigning sessional course:', error);
+      toast.error('Failed to assign sessional course. Please try again.');
+    } finally {
+      setSubmittingSessional(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
@@ -572,6 +697,136 @@ export default function TeacherDetails() {
                         disabled={submitting || !selectedCourse}
                       >
                         {submitting ? 'Assigning...' : 'Assign Course'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Sessional Courses Assignment Table */}
+          <div className="col-12 grid-margin">
+            <div className="card">
+              <div className="card-body">
+                <h4 className="card-title">Sessional Course Assignments</h4>
+                
+                {sessionalAssignments.length > 0 ? (
+                  <div className="table-responsive">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Course ID</th>
+                          <th>Course Title</th>
+                          <th>Section</th>
+                          <th>Session</th>
+                          <th>Other Teachers</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sessionalAssignments.map((assignment) => (
+                          <tr key={`${assignment.course_id}-${assignment.section}`}>
+                            <td>{assignment.course_id}</td>
+                            <td>{assignment.course_title || 'Unknown'}</td>
+                            <td>{assignment.section || 'Not specified'}</td>
+                            <td>{assignment.session || 'Current'}</td>
+                            <td>
+                              {assignment.otherTeachers && assignment.otherTeachers.length > 0 ? (
+                                <div>
+                                  {assignment.otherTeachers.map((teacher, index) => (
+                                    <div key={`${teacher.initial}-${teacher.section}`}>
+                                      <Link to={`/teachers/${teacher.initial}`} className="text-decoration-none">
+                                        {teacher.name || teacher.initial}
+                                        {teacher.section && ` (Section: ${teacher.section})`}
+                                        {index < assignment.otherTeachers.length - 1 ? ',' : ''}
+                                      </Link>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-muted">No other teachers assigned</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="mt-3 mb-4">
+                    <p className="text-muted">No sessional courses are currently assigned to this teacher.</p>
+                  </div>
+                )}
+                
+                {sessionalAssignments.length === 0 && (
+                  <div className="row mt-4">
+                    <div className="col-md-4">
+                      <Form.Group>
+                        <Form.Label>Select Sessional Course</Form.Label>
+                        <Form.Control
+                          as="select"
+                          value={selectedSessionalCourse}
+                          onChange={(e) => setSelectedSessionalCourse(e.target.value)}
+                          disabled={submittingSessional}
+                        >
+                          <option value="">Select a course...</option>
+                          {sessionalCourses.map((course) => (
+                            <option key={course.course_id} value={course.course_id}>
+                              {course.course_id} - {course.name || 'Untitled'}
+                            </option>
+                          ))}
+                        </Form.Control>
+                      </Form.Group>
+                    </div>
+                    
+                    <div className="col-md-4">
+                      <Form.Group>
+                        <Form.Label>Select Section</Form.Label>
+                        <Form.Control
+                          as="select"
+                          value={selectedSessionalSection}
+                          onChange={(e) => setSelectedSessionalSection(e.target.value)}
+                          disabled={submittingSessional || !selectedSessionalCourse}
+                        >
+                          <option value="">Select a section...</option>
+                          {selectedSessionalCourse && (() => {
+                            // Find the selected course to get its sections
+                            const selectedCourseInfo = sessionalCourses.find(
+                              c => c.course_id === selectedSessionalCourse
+                            );
+                            
+                            // If the course has defined sections, use those
+                            if (selectedCourseInfo && selectedCourseInfo.sections && 
+                                Array.isArray(selectedCourseInfo.sections) && 
+                                selectedCourseInfo.sections.length > 0) {
+                              return selectedCourseInfo.sections.map(section => (
+                                <option key={section} value={section}>
+                                  Section {section}
+                                </option>
+                              ));
+                            }
+                            
+                            // Otherwise, fallback to default options
+                            return (
+                              <>
+                                <option value="A">Section A</option>
+                                <option value="B">Section B</option>
+                                <option value="C">Section C</option>
+                                <option value="D">Section D</option>
+                              </>
+                            );
+                          })()}
+                        </Form.Control>
+                      </Form.Group>
+                    </div>
+                    
+                    <div className="col-md-4 d-flex align-items-end">
+                      <button 
+                        className="btn btn-primary"
+                        onClick={handleSessionalCourseAssign}
+                        disabled={submittingSessional || !selectedSessionalCourse || !selectedSessionalSection}
+                      >
+                        {submittingSessional ? 'Assigning...' : 'Assign Sessional Course'}
                       </button>
                     </div>
                   </div>
