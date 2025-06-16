@@ -18,22 +18,36 @@ export default function TeacherDetails() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch teacher details
+        // Fetch all data needed
         const teacherData = await getTeacher(teacherId);
+        const coursesData = await getCourses();
+        const allAssignments = await getTheoryAssignement();
+        const allTeachers = await getTeachers();
+        
         setTeacher(teacherData);
         
-        // Fetch all courses and filter for theory courses
-        const coursesData = await getCourses();
-        const theoryCourses = coursesData.filter(
-          course => course.type === 0 && course.from === 'CSE'
-        );
+        // Filter for theory courses and add teacher assignment information
+        const theoryCourses = coursesData
+          .filter(course => course.type === 0 && course.from === 'CSE')
+          .map(course => {
+            // Find all teachers assigned to this course
+            const assignedTeachers = allAssignments
+              .filter(assignment => assignment.course_id === course.course_id)
+              .map(assignment => {
+                const teacherInfo = allTeachers.find(t => t.initial === assignment.initial);
+                return {
+                  initial: assignment.initial,
+                  name: teacherInfo ? `${teacherInfo.name} ${teacherInfo.surname || ''}` : assignment.initial
+                };
+              });
+              
+            return {
+              ...course,
+              assignedTeachers
+            };
+          });
+          
         setCourses(theoryCourses);
-        
-        // Fetch course assignments
-        const allAssignments = await getTheoryAssignement();
-        
-        // Get list of teachers for lookup
-        const allTeachers = await getTeachers();
         
         // Filter assignments for this teacher and add course titles
         const teacherAssignments = allAssignments
@@ -95,12 +109,12 @@ export default function TeacherDetails() {
       await setTeacherAssignment(assignment);
       toast.success('Course assigned successfully');
       
-      // Refresh assignments with course titles and other teachers
+      // Reload all data
       const allAssignments = await getTheoryAssignement();
-      const coursesData = await getCourses(); // Re-fetch courses
-      const allTeachers = await getTeachers(); // Get all teachers for lookup
+      const coursesData = await getCourses(); 
+      const allTeachers = await getTeachers();
       
-      // Filter assignments for this teacher and add course titles and other teachers
+      // Update assignments for this teacher
       const teacherAssignments = allAssignments
         .filter(assignment => assignment.initial === teacherId)
         .map(assignment => {
@@ -129,6 +143,29 @@ export default function TeacherDetails() {
             otherTeachers
           };
         });
+      
+      // Update course dropdown to show teacher assignments
+      const theoryCourses = coursesData
+        .filter(course => course.type === 0 && course.from === 'CSE')
+        .map(course => {
+          // Find all teachers assigned to this course
+          const assignedTeachers = allAssignments
+            .filter(assignment => assignment.course_id === course.course_id)
+            .map(assignment => {
+              const teacherInfo = allTeachers.find(t => t.initial === assignment.initial);
+              return {
+                initial: assignment.initial,
+                name: teacherInfo ? `${teacherInfo.name} ${teacherInfo.surname || ''}` : assignment.initial
+              };
+            });
+            
+          return {
+            ...course,
+            assignedTeachers
+          };
+        });
+      
+      setCourses(theoryCourses);
       
       setAssignments(teacherAssignments);
       setSelectedCourse('');
@@ -248,11 +285,38 @@ export default function TeacherDetails() {
                             disabled={submitting}
                           >
                             <option value="">Select a course...</option>
-                            {courses.map((course) => (
-                              <option key={course.course_id} value={course.course_id}>
-                                {course.course_id} - {course.name || 'Untitled'}
-                              </option>
-                            ))}
+                            {courses.map((course) => {
+                              // Create base course information
+                              let courseLabel = `${course.course_id} - ${course.name || 'Untitled'}`;
+                              
+                              // Check if teachers are assigned
+                              const hasAssignedTeachers = course.assignedTeachers && course.assignedTeachers.length > 0;
+                              
+                              // Add teacher information if available
+                              let teachersInfo = '';
+                              if (hasAssignedTeachers) {
+                                teachersInfo = ` (Assigned to: ${course.assignedTeachers.map(t => t.initial).join(', ')})`;
+                              }
+                              
+                              return (
+                                <option 
+                                  key={course.course_id} 
+                                  value={course.course_id}
+                                  style={{
+                                    backgroundColor: hasAssignedTeachers ? '#f8f9fa' : 'white',
+                                    fontWeight: hasAssignedTeachers ? 'bold' : 'normal',
+                                    color: hasAssignedTeachers ? '#6c757d' : 'black'
+                                  }}
+                                >
+                                  {courseLabel}
+                                  {teachersInfo && (
+                                    <span style={{ fontStyle: 'italic', color: '#6c757d' }}>
+                                      {teachersInfo}
+                                    </span>
+                                  )}
+                                </option>
+                              );
+                            })}
                           </Form.Control>
                         </Form.Group>
                       </div>
