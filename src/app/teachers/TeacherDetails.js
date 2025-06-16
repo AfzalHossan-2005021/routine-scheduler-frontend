@@ -3,8 +3,47 @@ import { useParams, Link } from 'react-router-dom';
 import { getTeacher, getTeachers } from '../api/db-crud';
 import { getTheoryAssignement, setTeacherAssignment } from '../api/theory-assign';
 import { getCourses } from '../api/db-crud';
+import { getAllSchedule } from '../api/theory-schedule';
 import { toast } from 'react-hot-toast';
 import { Form } from 'react-bootstrap';
+
+// Add some custom styles for the schedule table
+const scheduleTableStyle = {
+  table: {
+    tableLayout: 'fixed',
+    width: '100%',
+  },
+  headerCell: {
+    width: '80px',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    padding: '8px 4px',
+    background: '#f8f9fa',
+  },
+  dayCell: {
+    fontWeight: 'bold',
+    background: '#f8f9fa',
+    width: '100px',
+  },
+  courseCell: {
+    height: '80px',
+    padding: '4px',
+    fontSize: '0.85rem',
+    verticalAlign: 'middle',
+    overflow: 'auto',  // Add scrolling for cells with multiple entries
+    maxHeight: '120px',
+  },
+  scheduledCell: {
+    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+    border: '1px solid rgba(40, 167, 69, 0.3)',
+    transition: 'all 0.2s ease-in-out',
+  },
+};
+
+// Constants for days and times
+export const times = [8, 9, 10, 11, 12, 1, 2, 3, 4];
+export const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export const possibleLabTimes = [8, 11, 2];
 
 export default function TeacherDetails() {
   const { teacherId } = useParams();
@@ -12,6 +51,7 @@ export default function TeacherDetails() {
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -23,8 +63,10 @@ export default function TeacherDetails() {
         const coursesData = await getCourses();
         const allAssignments = await getTheoryAssignement();
         const allTeachers = await getTeachers();
+        const allSchedules = await getAllSchedule();
         
         setTeacher(teacherData);
+        setSchedules(allSchedules || []);
         
         // Filter for theory courses and add teacher assignment information
         const theoryCourses = coursesData
@@ -80,10 +122,16 @@ export default function TeacherDetails() {
                 };
               });
             
+            // Find scheduled times for this course
+            const courseSchedules = allSchedules ? allSchedules.filter(
+              schedule => schedule.course_id === assignment.course_id
+            ) : [];
+            
             return {
               ...assignment,
               course_title: matchingCourse ? matchingCourse.name : 'Unknown',
-              otherTeachers
+              otherTeachers,
+              schedules: courseSchedules
             };
           });
         
@@ -121,6 +169,9 @@ export default function TeacherDetails() {
       const allAssignments = await getTheoryAssignement();
       const coursesData = await getCourses(); 
       const allTeachers = await getTeachers();
+      const allSchedules = await getAllSchedule();
+      
+      setSchedules(allSchedules || []);
       
       // Update assignments for this teacher
       const teacherAssignments = allAssignments
@@ -192,6 +243,117 @@ export default function TeacherDetails() {
     }
   };
 
+  // Component for displaying schedule in a table
+  const ScheduleTable = ({ schedules, teacherCourses }) => {
+    // State to track which cell is being hovered (format: "day-time")
+    const [hoveredCell, setHoveredCell] = useState(null);
+    
+    // Create a map of day -> time -> courses (array)
+    const scheduleMap = {};
+    
+    // Initialize schedule map with empty arrays for each cell
+    days.forEach(day => {
+      scheduleMap[day] = {};
+      times.forEach(time => {
+        scheduleMap[day][time] = [];
+      });
+    });
+    
+    // Fill in the schedule map with courses
+    schedules.forEach(schedule => {
+      // Only include schedules for courses assigned to this teacher
+      if (teacherCourses.includes(schedule.course_id)) {
+        const day = schedule.day;
+        // Map the time slot (0-5) to the displayed time (8-4)
+        let displayTime = schedule.time;
+        
+        if (scheduleMap[day] && scheduleMap[day][displayTime]) {
+          // Find the batch information from the section field if available
+          let batch = '';
+          let section = schedule.section || '';
+          
+          // Section is often in the format "A" or "1A" - extract batch if possible
+          const sectionMatch = section.match(/^(\d+)([A-Za-z]+)$/);
+          if (sectionMatch) {
+            batch = sectionMatch[1]; // The number part is the batch
+            section = sectionMatch[2]; // The letter part is the section
+          }
+          
+          // Add this course to the array for this time slot
+          scheduleMap[day][displayTime].push({
+            course_id: schedule.course_id,
+            section: section,
+            batch: batch || schedule.batch || '',
+            department: schedule.department || ''
+          });
+        }
+      }
+    });
+    
+  return (
+    <div className="table-responsive">
+      <table className="table table-bordered" style={scheduleTableStyle.table}>
+        <thead>
+          <tr>
+            <th style={scheduleTableStyle.dayCell}>Day / Time</th>
+            {times.map(time => (
+              <th key={time} style={scheduleTableStyle.headerCell}>
+                {time}:00 
+                {time === 12 && <span className="ms-1">(PM)</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {days.map(day => (
+            <tr key={day}>
+              <th style={scheduleTableStyle.dayCell}>{day}</th>
+              {times.map(time => {
+                const courseInfoArray = scheduleMap[day][time];
+                const hasSchedules = courseInfoArray.length > 0;
+                const cellKey = `${day}-${time}`;
+                const isHovered = hoveredCell === cellKey;
+                
+                const cellStyle = {
+                  ...scheduleTableStyle.courseCell,
+                  ...(hasSchedules ? scheduleTableStyle.scheduledCell : {}),
+                };
+                
+                // Apply simple hover effect
+                if (isHovered) {
+                  cellStyle.opacity = 0.8;
+                }
+                
+                return (
+                  <td 
+                    key={`${day}-${time}`}
+                    style={cellStyle}
+                    className="text-center"
+                    onMouseEnter={() => hasSchedules && setHoveredCell(cellKey)}
+                    onMouseLeave={() => hasSchedules && setHoveredCell(null)}
+                  >
+                    {hasSchedules && (
+                      <div className="text-center">
+                        {courseInfoArray.map((courseInfo, idx) => (
+                          <div key={idx} className="mb-1">
+                            <span style={{ color: 'black', fontSize: '16px', fontWeight: '500' }}>
+                              Section - {courseInfo.section}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
@@ -245,6 +407,62 @@ export default function TeacherDetails() {
           <div className="col-12 grid-margin">
             <div className="card">
               <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h4 className="card-title mb-0">Weekly Schedule</h4>
+                  <div>
+                    <span className="badge bg-primary me-2">
+                      {assignments.length} Assigned Course(s)
+                    </span>
+                    <span className="badge bg-success">
+                      {schedules.filter(s => assignments.some(a => a.course_id === s.course_id)).length} Scheduled Class(es)
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="mb-3">
+                  <div className="alert alert-light border p-2">
+                    <div className="d-flex align-items-center">
+                      <i className="mdi mdi-information-outline text-primary me-2"></i>
+                      <div>
+                        <strong>Viewing schedule for:</strong> {teacher.name} ({teacher.initial}) - {teacher.designation || 'Faculty'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {assignments.length > 0 && schedules.length > 0 ? (
+                  <>
+                    <ScheduleTable 
+                      schedules={schedules} 
+                      teacherCourses={assignments.map(a => a.course_id)} 
+                    />
+                    <div className="mt-3 p-2 border-top">
+                      <div className="d-flex flex-wrap mt-2">
+                        <div className="me-4 mb-2">
+                          <i className="mdi mdi-check-circle text-success me-1" style={{ fontSize: '24px' }}></i>
+                          <small className="text-muted">Scheduled Time Slot</small>
+                        </div>
+                        <div className="mb-2">
+                          <div className="border p-3" style={{ backgroundColor: 'white' }}></div>
+                          <small className="text-muted">Free Period</small>
+                        </div>
+                      </div>
+                      <small className="text-muted d-block mt-2">
+                        <i className="mdi mdi-information-outline me-1"></i>
+                        This schedule shows when the teacher has scheduled theory classes. Empty cells represent free periods.
+                      </small>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-muted">No scheduled classes found for this teacher.</p>
+                )}
+              </div>
+            </div>
+          </div>
+            
+          <div className="col-12 grid-margin">
+            <div className="card">
+              <div className="card-body">
                 <h4 className="card-title">Theory Course Assignments</h4>
                 
                 {assignments.length > 0 ? (
@@ -256,6 +474,7 @@ export default function TeacherDetails() {
                           <th>Course Title</th>
                           <th>Session</th>
                           <th>Other Assigned Teachers</th>
+                          <th>Schedule</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -280,6 +499,19 @@ export default function TeacherDetails() {
                                 <span className="text-muted">No other teachers assigned</span>
                               )}
                             </td>
+                            <td>
+                              {schedules
+                                .filter(schedule => schedule.course_id === assignment.course_id)
+                                .length > 0 ? (
+                                  <div>
+                                    <a href="#theory-schedule" className="text-success text-decoration-none">
+                                      <i className="mdi mdi-check-circle"></i> Scheduled
+                                    </a>
+                                  </div>
+                                ) : (
+                                  <span className="text-warning">Not scheduled</span>
+                                )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -288,73 +520,93 @@ export default function TeacherDetails() {
                 ) : (
                   <div className="mt-3 mb-4">
                     <p className="text-muted">No theory courses are currently assigned to this teacher.</p>
-                    
-                    <div className="row mt-4">
-                      <div className="col-md-8">
-                        <Form.Group>
-                          <Form.Label>Assign a Theory Course</Form.Label>
-                          <Form.Control
-                            as="select"
-                            value={selectedCourse}
-                            onChange={(e) => setSelectedCourse(e.target.value)}
-                            disabled={submitting}
-                          >
-                            <option value="">Select a course...</option>
-                            {courses
-                              // Filter to only show courses that can accept more teacher assignments
-                              .filter(course => course.canAssignMore)
-                              .map((course) => {
-                                // Create base course information
-                                let courseLabel = `${course.course_id} - ${course.name || 'Untitled'}`;
-                                
-                                // Check if teachers are assigned
-                                const hasAssignedTeachers = course.assignedTeachers && course.assignedTeachers.length > 0;
-                                
-                                // Calculate remaining slots
-                                const assignedCount = (course.assignedTeachers || []).length;
-                                const totalSections = course.sectionCount || 1;
-                                const remainingSlots = totalSections - assignedCount;
-                                
-                                // Add teacher and section information
-                                let infoText = '';
-                                if (hasAssignedTeachers) {
-                                  infoText = ` (${assignedCount}/${totalSections} assigned: ${course.assignedTeachers.map(t => t.initial).join(', ')})`;
-                                } else {
-                                  infoText = ` (0/${totalSections} assigned)`;
-                                }
-                                
-                                return (
-                                  <option 
-                                    key={course.course_id} 
-                                    value={course.course_id}
-                                    style={{
-                                      backgroundColor: hasAssignedTeachers ? '#f8f9fa' : 'white',
-                                      fontWeight: remainingSlots === 1 ? 'bold' : 'normal', // Bold if last remaining slot
-                                      color: remainingSlots > 1 ? 'black' : '#007bff' // Blue if last remaining slot
-                                    }}
-                                  >
-                                    {courseLabel}{infoText}
-                                  </option>
-                                );
-                              })}
-                          </Form.Control>
-                        </Form.Group>
-                      </div>
-                      <div className="col-md-4 d-flex align-items-end">
-                        <button 
-                          className="btn btn-primary"
-                          onClick={handleCourseAssign}
-                          disabled={submitting || !selectedCourse}
+                  </div>
+                )}
+                
+                {assignments.length === 0 && (
+                  <div className="row mt-4">
+                    <div className="col-md-8">
+                      <Form.Group>
+                        <Form.Label>Assign a Theory Course</Form.Label>
+                        <Form.Control
+                          as="select"
+                          value={selectedCourse}
+                          onChange={(e) => setSelectedCourse(e.target.value)}
+                          disabled={submitting}
                         >
-                          {submitting ? 'Assigning...' : 'Assign Course'}
-                        </button>
-                      </div>
+                          <option value="">Select a course...</option>
+                          {courses
+                            // Filter to only show courses that can accept more teacher assignments
+                            .filter(course => course.canAssignMore)
+                            .map((course) => {
+                              // Create base course information
+                              let courseLabel = `${course.course_id} - ${course.name || 'Untitled'}`;
+                              
+                              // Check if teachers are assigned
+                              const hasAssignedTeachers = course.assignedTeachers && course.assignedTeachers.length > 0;
+                              
+                              // Calculate remaining slots
+                              const assignedCount = (course.assignedTeachers || []).length;
+                              const totalSections = course.sectionCount || 1;
+                              const remainingSlots = totalSections - assignedCount;
+                              
+                              // Add teacher and section information
+                              let infoText = '';
+                              if (hasAssignedTeachers) {
+                                infoText = ` (${assignedCount}/${totalSections} assigned: ${course.assignedTeachers.map(t => t.initial).join(', ')})`;
+                              } else {
+                                infoText = ` (0/${totalSections} assigned)`;
+                              }
+                              
+                              return (
+                                <option 
+                                  key={course.course_id} 
+                                  value={course.course_id}
+                                  style={{
+                                    backgroundColor: hasAssignedTeachers ? '#f8f9fa' : 'white',
+                                    fontWeight: remainingSlots === 1 ? 'bold' : 'normal', // Bold if last remaining slot
+                                    color: remainingSlots > 1 ? 'black' : '#007bff' // Blue if last remaining slot
+                                  }}
+                                >
+                                  {courseLabel}{infoText}
+                                </option>
+                              );
+                            })}
+                        </Form.Control>
+                      </Form.Group>
+                    </div>
+                    <div className="col-md-4 d-flex align-items-end">
+                      <button 
+                        className="btn btn-primary"
+                        onClick={handleCourseAssign}
+                        disabled={submitting || !selectedCourse}
+                      >
+                        {submitting ? 'Assigning...' : 'Assign Course'}
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
             </div>
           </div>
+          
+          {/* Only show Theory Schedule section if teacher has assigned courses with schedules */}
+          {assignments.length > 0 && schedules.some(schedule => 
+            assignments.some(assignment => assignment.course_id === schedule.course_id)
+          ) && (
+            <div id="theory-schedule" className="col-12 grid-margin">
+              <div className="card">
+                <div className="card-body">
+                  <h4 className="card-title">Theory Schedule</h4>
+                  <ScheduleTable schedules={schedules} teacherCourses={assignments.map(a => a.course_id)} />
+                  <small className="text-muted d-block mt-2">
+                    <i className="mdi mdi-information-outline me-1"></i>
+                    This schedule shows which sections are scheduled for the teacher. Empty cells represent free periods.
+                  </small>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
