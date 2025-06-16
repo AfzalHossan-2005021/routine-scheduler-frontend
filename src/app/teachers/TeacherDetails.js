@@ -2,16 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getTeacher, getTeachers } from '../api/db-crud';
 import { getTheoryAssignement, setTeacherAssignment } from '../api/theory-assign';
+import { times, days } from '../shared/ScheduleSelctionTable';
 import { getCourses } from '../api/db-crud';
 import { getAllSchedule } from '../api/theory-schedule';
 import { toast } from 'react-hot-toast';
 import { Form } from 'react-bootstrap';
+import ScheduleModal from './ScheduleModal';
 
 // Add some custom styles for the schedule table
 const scheduleTableStyle = {
   table: {
     tableLayout: 'fixed',
     width: '100%',
+    borderCollapse: 'collapse',
+    border: '1px solid #dee2e6',
   },
   headerCell: {
     width: '80px',
@@ -19,14 +23,17 @@ const scheduleTableStyle = {
     fontWeight: 'bold',
     padding: '8px 4px',
     background: '#f8f9fa',
+    border: '1px solid #dee2e6',
   },
   dayCell: {
     fontWeight: 'bold',
     background: '#f8f9fa',
     width: '100px',
+    border: '1px solid #dee2e6',
   },
   courseCell: {
     height: '80px',
+    border: '1px solid #dee2e6',
     padding: '4px',
     fontSize: '0.85rem',
     verticalAlign: 'middle',
@@ -35,15 +42,9 @@ const scheduleTableStyle = {
   },
   scheduledCell: {
     backgroundColor: 'rgba(40, 167, 69, 0.1)',
-    border: '1px solid rgba(40, 167, 69, 0.3)',
-    transition: 'all 0.2s ease-in-out',
+    border: '2px solid #28a745',
   },
 };
-
-// Constants for days and times
-export const times = [8, 9, 10, 11, 12, 1, 2, 3, 4];
-export const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
-export const possibleLabTimes = [8, 11, 2];
 
 export default function TeacherDetails() {
   const { teacherId } = useParams();
@@ -54,6 +55,10 @@ export default function TeacherDetails() {
   const [schedules, setSchedules] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  
+  // State for the scheduling modal
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedulingCourse, setSchedulingCourse] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,6 +69,7 @@ export default function TeacherDetails() {
         const allAssignments = await getTheoryAssignement();
         const allTeachers = await getTeachers();
         const allSchedules = await getAllSchedule();
+        
         
         setTeacher(teacherData);
         setSchedules(allSchedules || []);
@@ -130,6 +136,7 @@ export default function TeacherDetails() {
             return {
               ...assignment,
               course_title: matchingCourse ? matchingCourse.name : 'Unknown',
+              credits: matchingCourse ? matchingCourse.credits : 3, // Store course credits
               otherTeachers,
               schedules: courseSchedules
             };
@@ -354,6 +361,39 @@ export default function TeacherDetails() {
     );
   };
 
+  const handleSchedule = async (courseId) => {
+    // Find more detailed course information from the courses array
+    const courseDetails = courses.find(course => course.course_id === courseId);
+    if (!courseDetails) {
+      toast.error('Course details not found');
+      return;
+    }
+    
+    // Set the course for scheduling
+    setSchedulingCourse({
+      id: courseDetails.course_id,
+      title: courseDetails.name,
+      type: courseDetails.type,
+      batch: courseDetails.batch,
+      sections: courseDetails.sections,
+      credits: courseDetails.class_per_week
+    });
+    
+    // Show the modal
+    setShowScheduleModal(true);
+  };
+
+  const handleScheduleComplete = async () => {
+    // Reload the schedules after a successful scheduling
+    try {
+      const allSchedules = await getAllSchedule();
+      setSchedules(allSchedules || []);
+      toast.success('Schedule updated successfully');
+    } catch (error) {
+      console.error('Error refreshing schedules:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
@@ -452,7 +492,14 @@ export default function TeacherDetails() {
                                     </a>
                                   </div>
                                 ) : (
-                                  <span className="text-warning">Not scheduled</span>
+                                  <div className="d-flex align-items-center">
+                                    <button 
+                                      className="btn btn-outline-primary btn-sm"
+                                      onClick={() => handleSchedule(assignment.course_id)}
+                                    >
+                                      <i className="mdi mdi-calendar-plus"></i> Schedule
+                                    </button>
+                                  </div>
                                 )}
                             </td>
                           </tr>
@@ -551,6 +598,23 @@ export default function TeacherDetails() {
             </div>
           )}
         </div>
+      )}
+      
+      {/* Schedule Modal */}
+      {schedulingCourse && (
+        <ScheduleModal
+          show={showScheduleModal}
+          onHide={() => setShowScheduleModal(false)}
+          courseId={schedulingCourse.id}
+          courseTitle={schedulingCourse.title}
+          courseType={schedulingCourse.type}
+          courseBatch={schedulingCourse.batch}
+          courseSections={schedulingCourse.sections}
+          courseCredits={schedulingCourse.credits}
+          existingSchedules={schedules.filter(schedule => schedule.batch === schedulingCourse.batch)}
+          teacherId={teacherId}
+          onScheduleComplete={handleScheduleComplete}
+        />
       )}
     </div>
   );
