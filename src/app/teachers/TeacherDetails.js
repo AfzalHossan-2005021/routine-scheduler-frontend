@@ -42,7 +42,7 @@ const scheduleTableStyle = {
 
 // Constants for days and times
 export const times = [8, 9, 10, 11, 12, 1, 2, 3, 4];
-export const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+export const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
 export const possibleLabTimes = [8, 11, 2];
 
 export default function TeacherDetails() {
