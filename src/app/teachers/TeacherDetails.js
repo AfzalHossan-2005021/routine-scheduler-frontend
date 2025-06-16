@@ -41,9 +41,17 @@ export default function TeacherDetails() {
                 };
               });
               
+            // Get the number of sections directly from the course data
+            const sectionCount = course.sections && Array.isArray(course.sections) 
+              ? course.sections.length 
+              : 1;
+            
             return {
               ...course,
-              assignedTeachers
+              assignedTeachers,
+              sectionCount,
+              // Flag to indicate if this course can accept more teacher assignments
+              canAssignMore: assignedTeachers.length < sectionCount
             };
           });
           
@@ -158,15 +166,22 @@ export default function TeacherDetails() {
                 name: teacherInfo ? `${teacherInfo.name} ${teacherInfo.surname || ''}` : assignment.initial
               };
             });
+          
+          // Get the number of sections directly from the course data
+          const sectionCount = course.sections && Array.isArray(course.sections) 
+            ? course.sections.length 
+            : 1;
             
           return {
             ...course,
-            assignedTeachers
+            assignedTeachers,
+            sectionCount,
+            // Flag to indicate if this course can accept more teacher assignments
+            canAssignMore: assignedTeachers.length < sectionCount
           };
         });
       
       setCourses(theoryCourses);
-      
       setAssignments(teacherAssignments);
       setSelectedCourse('');
     } catch (error) {
@@ -285,38 +300,43 @@ export default function TeacherDetails() {
                             disabled={submitting}
                           >
                             <option value="">Select a course...</option>
-                            {courses.map((course) => {
-                              // Create base course information
-                              let courseLabel = `${course.course_id} - ${course.name || 'Untitled'}`;
-                              
-                              // Check if teachers are assigned
-                              const hasAssignedTeachers = course.assignedTeachers && course.assignedTeachers.length > 0;
-                              
-                              // Add teacher information if available
-                              let teachersInfo = '';
-                              if (hasAssignedTeachers) {
-                                teachersInfo = ` (Assigned to: ${course.assignedTeachers.map(t => t.initial).join(', ')})`;
-                              }
-                              
-                              return (
-                                <option 
-                                  key={course.course_id} 
-                                  value={course.course_id}
-                                  style={{
-                                    backgroundColor: hasAssignedTeachers ? '#f8f9fa' : 'white',
-                                    fontWeight: hasAssignedTeachers ? 'bold' : 'normal',
-                                    color: hasAssignedTeachers ? '#6c757d' : 'black'
-                                  }}
-                                >
-                                  {courseLabel}
-                                  {teachersInfo && (
-                                    <span style={{ fontStyle: 'italic', color: '#6c757d' }}>
-                                      {teachersInfo}
-                                    </span>
-                                  )}
-                                </option>
-                              );
-                            })}
+                            {courses
+                              // Filter to only show courses that can accept more teacher assignments
+                              .filter(course => course.canAssignMore)
+                              .map((course) => {
+                                // Create base course information
+                                let courseLabel = `${course.course_id} - ${course.name || 'Untitled'}`;
+                                
+                                // Check if teachers are assigned
+                                const hasAssignedTeachers = course.assignedTeachers && course.assignedTeachers.length > 0;
+                                
+                                // Calculate remaining slots
+                                const assignedCount = (course.assignedTeachers || []).length;
+                                const totalSections = course.sectionCount || 1;
+                                const remainingSlots = totalSections - assignedCount;
+                                
+                                // Add teacher and section information
+                                let infoText = '';
+                                if (hasAssignedTeachers) {
+                                  infoText = ` (${assignedCount}/${totalSections} assigned: ${course.assignedTeachers.map(t => t.initial).join(', ')})`;
+                                } else {
+                                  infoText = ` (0/${totalSections} assigned)`;
+                                }
+                                
+                                return (
+                                  <option 
+                                    key={course.course_id} 
+                                    value={course.course_id}
+                                    style={{
+                                      backgroundColor: hasAssignedTeachers ? '#f8f9fa' : 'white',
+                                      fontWeight: remainingSlots === 1 ? 'bold' : 'normal', // Bold if last remaining slot
+                                      color: remainingSlots > 1 ? 'black' : '#007bff' // Blue if last remaining slot
+                                    }}
+                                  >
+                                    {courseLabel}{infoText}
+                                  </option>
+                                );
+                              })}
                           </Form.Control>
                         </Form.Group>
                       </div>
