@@ -403,63 +403,6 @@ export default function TeacherDetails() {
               </div>
             </div>
           </div>
-          
-          <div className="col-12 grid-margin">
-            <div className="card">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h4 className="card-title mb-0">Weekly Schedule</h4>
-                  <div>
-                    <span className="badge bg-primary me-2">
-                      {assignments.length} Assigned Course(s)
-                    </span>
-                    <span className="badge bg-success">
-                      {schedules.filter(s => assignments.some(a => a.course_id === s.course_id)).length} Scheduled Class(es)
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="mb-3">
-                  <div className="alert alert-light border p-2">
-                    <div className="d-flex align-items-center">
-                      <i className="mdi mdi-information-outline text-primary me-2"></i>
-                      <div>
-                        <strong>Viewing schedule for:</strong> {teacher.name} ({teacher.initial}) - {teacher.designation || 'Faculty'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {assignments.length > 0 && schedules.length > 0 ? (
-                  <>
-                    <ScheduleTable 
-                      schedules={schedules} 
-                      teacherCourses={assignments.map(a => a.course_id)} 
-                    />
-                    <div className="mt-3 p-2 border-top">
-                      <div className="d-flex flex-wrap mt-2">
-                        <div className="me-4 mb-2">
-                          <i className="mdi mdi-check-circle text-success me-1" style={{ fontSize: '24px' }}></i>
-                          <small className="text-muted">Scheduled Time Slot</small>
-                        </div>
-                        <div className="mb-2">
-                          <div className="border p-3" style={{ backgroundColor: 'white' }}></div>
-                          <small className="text-muted">Free Period</small>
-                        </div>
-                      </div>
-                      <small className="text-muted d-block mt-2">
-                        <i className="mdi mdi-information-outline me-1"></i>
-                        This schedule shows when the teacher has scheduled theory classes. Empty cells represent free periods.
-                      </small>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-muted">No scheduled classes found for this teacher.</p>
-                )}
-              </div>
-            </div>
-          </div>
-            
           <div className="col-12 grid-margin">
             <div className="card">
               <div className="card-body">
