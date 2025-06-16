@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getTeacher } from '../api/db-crud';
+import { getTeacher, getTeachers } from '../api/db-crud';
 import { getTheoryAssignement, setTeacherAssignment } from '../api/theory-assign';
 import { getCourses } from '../api/db-crud';
 import { toast } from 'react-hot-toast';
@@ -30,21 +30,41 @@ export default function TeacherDetails() {
         setCourses(theoryCourses);
         
         // Fetch course assignments
-        const assignmentData = await getTheoryAssignement();
-        console.log('Assignments:', assignmentData);
+        const allAssignments = await getTheoryAssignement();
+        
+        // Get list of teachers for lookup
+        const allTeachers = await getTeachers();
+        
         // Filter assignments for this teacher and add course titles
-        const teacherAssignments = assignmentData
+        const teacherAssignments = allAssignments
           .filter(assignment => assignment.initial === teacherId)
           .map(assignment => {
             // Find matching course to get title
             const matchingCourse = coursesData.find(
               course => course.course_id === assignment.course_id
             );
+            
+            // Find other teachers assigned to the same course
+            const otherTeachers = allAssignments
+              .filter(a => 
+                a.course_id === assignment.course_id && 
+                a.initial !== teacherId
+              )
+              .map(a => {
+                const teacherInfo = allTeachers.find(t => t.initial === a.initial);
+                return {
+                  initial: a.initial,
+                  name: teacherInfo ? `${teacherInfo.name} ${teacherInfo.surname || ''}` : a.initial
+                };
+              });
+            
             return {
               ...assignment,
-              course_title: matchingCourse ? matchingCourse.name : 'Unknown'
+              course_title: matchingCourse ? matchingCourse.name : 'Unknown',
+              otherTeachers
             };
           });
+        
         setAssignments(teacherAssignments);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -75,21 +95,38 @@ export default function TeacherDetails() {
       await setTeacherAssignment(assignment);
       toast.success('Course assigned successfully');
       
-      // Refresh assignments with course titles
-      const assignmentData = await getTheoryAssignement();
-      const coursesData = await getCourses(); // Re-fetch courses to make sure we have updated data
+      // Refresh assignments with course titles and other teachers
+      const allAssignments = await getTheoryAssignement();
+      const coursesData = await getCourses(); // Re-fetch courses
+      const allTeachers = await getTeachers(); // Get all teachers for lookup
       
-      // Filter assignments for this teacher and add course titles
-      const teacherAssignments = assignmentData
+      // Filter assignments for this teacher and add course titles and other teachers
+      const teacherAssignments = allAssignments
         .filter(assignment => assignment.initial === teacherId)
         .map(assignment => {
           // Find matching course to get title
           const matchingCourse = coursesData.find(
             course => course.course_id === assignment.course_id
           );
+          
+          // Find other teachers assigned to the same course
+          const otherTeachers = allAssignments
+            .filter(a => 
+              a.course_id === assignment.course_id && 
+              a.initial !== teacherId
+            )
+            .map(a => {
+              const teacherInfo = allTeachers.find(t => t.initial === a.initial);
+              return {
+                initial: a.initial,
+                name: teacherInfo ? `${teacherInfo.name} ${teacherInfo.surname || ''}` : a.initial
+              };
+            });
+          
           return {
             ...assignment,
-            course_title: matchingCourse ? matchingCourse.name : 'Unknown'
+            course_title: matchingCourse ? matchingCourse.name : 'Unknown',
+            otherTeachers
           };
         });
       
@@ -166,6 +203,7 @@ export default function TeacherDetails() {
                           <th>Course ID</th>
                           <th>Course Title</th>
                           <th>Session</th>
+                          <th>Other Assigned Teachers</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -174,6 +212,22 @@ export default function TeacherDetails() {
                             <td>{assignment.course_id}</td>
                             <td>{assignment.course_title || 'Unknown'}</td>
                             <td>{assignment.session || 'Current'}</td>
+                            <td>
+                              {assignment.otherTeachers && assignment.otherTeachers.length > 0 ? (
+                                <div>
+                                  {assignment.otherTeachers.map((teacher, index) => (
+                                    <div key={teacher.initial}>
+                                      <Link to={`/teachers/${teacher.initial}`} className="text-decoration-none">
+                                        {teacher.name || teacher.initial}
+                                        {index < assignment.otherTeachers.length - 1 ? ',' : ''}
+                                      </Link>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-muted">No other teachers assigned</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
