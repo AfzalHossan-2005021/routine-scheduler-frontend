@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getTeacher, getTeachers } from '../api/db-crud';
 import { getTheoryAssignement, setTeacherAssignment, getSessionalStatus, setTeacherSessionalAssignment } from '../api/theory-assign';
-import { times, days } from '../shared/ScheduleSelctionTable';
+import { times, days, possibleLabTimes } from '../shared/ScheduleSelctionTable';
 import { getCourses } from '../api/db-crud';
 import { getAllSchedule } from '../api/theory-schedule';
+import { getSessionalSchedules } from '../api/sessional-schedule';
 import { toast } from 'react-hot-toast';
 import { Form } from 'react-bootstrap';
 import ScheduleModal from './ScheduleModal';
@@ -28,7 +29,7 @@ const scheduleTableStyle = {
   dayCell: {
     fontWeight: 'bold',
     background: '#f8f9fa',
-    width: '100px',
+    width: '60px',
     border: '1px solid #dee2e6',
   },
   courseCell: {
@@ -44,10 +45,31 @@ const scheduleTableStyle = {
     backgroundColor: 'rgba(40, 167, 69, 0.1)',
     border: '2px solid #28a745',
   },
+  selectableCell: {
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  selectedCell: {
+    backgroundColor: 'rgba(0, 123, 255, 0.2)',
+    border: '2px solid #007bff',
+  },
+  courseItem: {
+    padding: '4px 6px',
+    margin: '2px 0',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  selectedCourseItem: {
+    backgroundColor: 'rgba(0, 123, 255, 0.2)',
+    border: '1px solid #007bff',
+    fontWeight: 'bold',
+  },
 };
 
-export default function TeacherDetails() {
-  const { teacherId } = useParams();
+export default function TeacherDetails(props) {
+  const params = useParams();
+  const teacherId = props.teacherId || params.teacherId;
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState([]);
@@ -55,9 +77,13 @@ export default function TeacherDetails() {
   const [courses, setCourses] = useState([]);
   const [sessionalCourses, setSessionalCourses] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [allSessionalSchedules, setAllSessionalSchedules] = useState([]);
+  const [sessionalSchedules, setSessionalSchedules] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
   const [selectedSessionalCourse, setSelectedSessionalCourse] = useState('');
   const [selectedSessionalSection, setSelectedSessionalSection] = useState('');
+  const [selectedSessionalSchedule, setSelectedSessionalSchedule] = useState(null);
+  const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submittingSessional, setSubmittingSessional] = useState(false);
   
@@ -120,6 +146,41 @@ export default function TeacherDetails() {
           }));
         
         setSessionalCourses(filteredSessionalCourses);
+
+        // Collect all available sessional schedules
+        // This is a simple approach for demonstration - in production, you might want to fetch this from an API
+        // that returns all sessional schedules
+        const fetchAllSessionalSchedules = async () => {
+          setLoadingSchedules(true);
+          try {
+            let allSchedules = [];
+            
+            // For each sessional course, try to fetch schedules for each section
+            for (const course of filteredSessionalCourses) {
+              if (course.batch && Array.isArray(course.sections)) {
+                for (const section of course.sections) {
+                  try {
+                    const sectionSchedules = await getSessionalSchedules(course.batch, section);
+                    if (sectionSchedules && sectionSchedules.length > 0) {
+                      allSchedules = [...allSchedules, ...sectionSchedules];
+                    }
+                  } catch (error) {
+                    console.log(`Could not fetch schedules for batch ${course.batch}, section ${section}`);
+                  }
+                }
+              }
+            }
+            
+            setAllSessionalSchedules(allSchedules);
+          } catch (error) {
+            console.error('Error fetching all sessional schedules:', error);
+          } finally {
+            setLoadingSchedules(false);
+          }
+        };
+        
+        // Start fetching all sessional schedules
+        fetchAllSessionalSchedules();
         
         // Filter assignments for this teacher and add course titles
         const teacherAssignments = allAssignments
@@ -408,6 +469,164 @@ export default function TeacherDetails() {
     </div>
     );
   };
+  
+  // Simple selectable sessional schedule table
+  const SessionalScheduleTable = ({ schedules, selectedSchedule, onSelectSchedule }) => {
+    // Use possibleLabTimes for lab times
+    const labTimes = possibleLabTimes;
+    // Create a map of day -> time -> courses (array)
+    const scheduleMap = {};
+    // Initialize schedule map with empty arrays for each cell
+    days.forEach(day => {
+      scheduleMap[day] = {};
+      labTimes.forEach(time => {
+        scheduleMap[day][time] = [];
+      });
+    });
+    // Fill in the schedule map with courses, avoiding duplicates
+    schedules.forEach(schedule => {
+      const day = schedule.day;
+      const displayTime = schedule.time;
+      if (scheduleMap[day] && scheduleMap[day][displayTime]) {
+        const alreadyExists = scheduleMap[day][displayTime].some(
+          s => s.course_id === schedule.course_id &&
+               (s.section || '') === (schedule.section || '') &&
+               (s.batch || '') === (schedule.batch || '')
+        );
+        if (!alreadyExists) {
+          scheduleMap[day][displayTime].push({
+            ...schedule,
+            course_id: schedule.course_id,
+            section: schedule.section || '',
+            batch: schedule.batch || ''
+          });
+        }
+      }
+    });
+    return (
+      <div className="table-responsive">
+        <table className="table table-bordered" style={scheduleTableStyle.table}>
+          <thead>
+            <tr>
+              <th style={scheduleTableStyle.dayCell}>Day / Time</th>
+              {labTimes.map(time => (
+                <th key={time} style={scheduleTableStyle.headerCell}>
+                  {time}:00
+                  {time === 12 && <span className="ms-1">(PM)</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {days.map(day => {
+              const merged = Array(labTimes.length).fill(false);
+              return (
+                <tr key={day}>
+                  <th style={scheduleTableStyle.dayCell}>{day}</th>
+                  {labTimes.map((time, timeIdx) => {
+                    if (merged[timeIdx]) return null; // Skip merged cells
+                    const courseInfoArray = scheduleMap[day][time];
+                    const hasSchedules = courseInfoArray.length > 0;
+                    if (hasSchedules) {
+                      const courseInfo = courseInfoArray[0];
+                      const mergeLength = 3;
+                      let canMerge = true;
+                      for (let offset = 1; offset < mergeLength; offset++) {
+                        const nextTime = labTimes[timeIdx + offset];
+                        if (!nextTime) { canMerge = false; break; }
+                        const nextCell = scheduleMap[day][nextTime];
+                        if (!nextCell.some(s => s.course_id === courseInfo.course_id && s.section === courseInfo.section && s.batch === courseInfo.batch)) {
+                          canMerge = false;
+                          break;
+                        }
+                      }
+                      if (canMerge) {
+                        for (let offset = 1; offset < mergeLength; offset++) {
+                          if (timeIdx + offset < merged.length) merged[timeIdx + offset] = true;
+                        }
+                        return (
+                          <td
+                            key={`${day}-${time}`}
+                            colSpan={3}
+                            style={{
+                              ...scheduleTableStyle.courseCell,
+                              ...scheduleTableStyle.selectableCell
+                            }}
+                            className="text-center"
+                          >
+                            <div
+                              onClick={() => onSelectSchedule({ ...courseInfo, day, time })}
+                              style={{
+                                ...scheduleTableStyle.courseItem,
+                                ...(selectedSchedule &&
+                                  selectedSchedule.day === day &&
+                                  selectedSchedule.time === time &&
+                                  selectedSchedule.course_id === courseInfo.course_id &&
+                                  selectedSchedule.section === courseInfo.section &&
+                                  selectedSchedule.batch === courseInfo.batch
+                                  ? scheduleTableStyle.selectedCourseItem
+                                  : {})
+                              }}
+                              title={`${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})`}
+                            >
+                              <strong>{courseInfo.course_id}</strong>
+                              <br />
+                              {courseInfo.section && <span>Section: {courseInfo.section}</span>}
+                              {courseInfo.batch && <span> | Batch: {courseInfo.batch}</span>}
+                            </div>
+                          </td>
+                        );
+                      }
+                    }
+                    // If not merging, render as usual
+                    return (
+                      <td
+                        key={`${day}-${time}`}
+                        style={{
+                          ...scheduleTableStyle.courseCell,
+                          ...(hasSchedules ? scheduleTableStyle.selectableCell : {})
+                        }}
+                        className="text-center"
+                      >
+                        {hasSchedules && (
+                          <div className="d-flex flex-column">
+                            {courseInfoArray.map((courseInfo, idx) => {
+                              const isSelected = selectedSchedule &&
+                                selectedSchedule.day === day &&
+                                selectedSchedule.time === time &&
+                                selectedSchedule.course_id === courseInfo.course_id &&
+                                selectedSchedule.section === courseInfo.section &&
+                                selectedSchedule.batch === courseInfo.batch;
+                              return (
+                                <div
+                                  key={`${courseInfo.course_id}-${courseInfo.section}-${idx}`}
+                                  onClick={() => onSelectSchedule({ ...courseInfo, day, time })}
+                                  style={{
+                                    ...scheduleTableStyle.courseItem,
+                                    ...(isSelected ? scheduleTableStyle.selectedCourseItem : {})
+                                  }}
+                                  title={`${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})`}
+                                >
+                                  <strong>{courseInfo.course_id}</strong>
+                                  <br />
+                                  {courseInfo.section && <span>Section: {courseInfo.section}</span>}
+                                  {courseInfo.batch && <span> | Batch: {courseInfo.batch}</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   const handleSchedule = async (courseId) => {
     // Find more detailed course information from the courses array
@@ -441,32 +660,79 @@ export default function TeacherDetails() {
       console.error('Error refreshing schedules:', error);
     }
   };
-
-  const handleSessionalCourseAssign = async () => {
-    if (!selectedSessionalCourse) {
-      toast.error('Please select a sessional course to assign');
-      return;
+  
+  // Function to fetch sessional schedules
+  const fetchSessionalSchedules = async (batch, section) => {
+    if (!batch || !section) return;
+    
+    try {
+      setLoadingSchedules(true);
+      const sessionalSchedulesData = await getSessionalSchedules(batch, section);
+      setAllSessionalSchedules(sessionalSchedulesData || []);
+    } catch (error) {
+      console.error('Error fetching sessional schedules:', error);
+      toast.error('Failed to load sessional schedules');
+      setAllSessionalSchedules([]);
+    } finally {
+      setLoadingSchedules(false);
     }
-
-    if (!selectedSessionalSection) {
-      toast.error('Please select a section for the sessional course');
+  };
+  
+  // Handle selection of a sessional schedule
+  const handleSessionalScheduleSelect = (schedule) => {
+    // If already selected, toggle selection off
+    if (selectedSessionalSchedule && 
+        selectedSessionalSchedule.day === schedule.day &&
+        selectedSessionalSchedule.time === schedule.time &&
+        selectedSessionalSchedule.course_id === schedule.course_id &&
+        selectedSessionalSchedule.section === schedule.section) {
+      setSelectedSessionalSchedule(null);
+      setSelectedSessionalCourse('');
+      setSelectedSessionalSection('');
+    } else {
+      // Otherwise, select this schedule
+      setSelectedSessionalSchedule(schedule);
+      setSelectedSessionalCourse(schedule.course_id);
+      setSelectedSessionalSection(schedule.section);
+    }
+  };
+  
+  // Handle assignment of sessional course
+  const handleSessionalCourseAssign = async () => {
+    // Check if we are using the schedule table or manual selection
+    const usingScheduleTable = Boolean(selectedSessionalSchedule);
+    
+    // Validate selections
+    if (!usingScheduleTable && (!selectedSessionalCourse || !selectedSessionalSection)) {
+      toast.error('Please select a sessional course and section');
       return;
     }
 
     try {
       setSubmittingSessional(true);
       
-      // Find the course to get batch information
-      const selectedCourseInfo = sessionalCourses.find(c => c.course_id === selectedSessionalCourse);
-      const batch = selectedCourseInfo?.batch || '19'; // Default to batch 19 if not specified
+      let assignment = {};
       
-      // Create the assignment object
-      const assignment = {
-        initial: teacherId,
-        course_id: selectedSessionalCourse,
-        batch: batch,
-        section: selectedSessionalSection
-      };
+      if (usingScheduleTable) {
+        // Use the selected schedule to create the assignment
+        assignment = {
+          initial: teacherId,
+          course_id: selectedSessionalSchedule.course_id,
+          batch: selectedSessionalSchedule.batch,
+          section: selectedSessionalSchedule.section
+        };
+      } else {
+        // Use the manually selected course and section
+        const selectedCourseInfo = sessionalCourses.find(c => c.course_id === selectedSessionalCourse);
+        const batch = selectedCourseInfo?.batch || '19'; // Default to batch 19 if not specified
+        
+        assignment = {
+          initial: teacherId,
+          course_id: selectedSessionalCourse,
+          batch: batch,
+          section: selectedSessionalSection
+        };
+      }
       
       // Submit the assignment
       await setTeacherSessionalAssignment(assignment);
@@ -507,9 +773,11 @@ export default function TeacherDetails() {
         setSessionalAssignments(sessionalCourses);
       }
       
-      // Reset selection
+      // Reset selections
       setSelectedSessionalCourse('');
       setSelectedSessionalSection('');
+      setSelectedSessionalSchedule(null);
+      // No need to reset allSessionalSchedules here as they're global for this teacher
       
     } catch (error) {
       console.error('Error assigning sessional course:', error);
@@ -518,7 +786,7 @@ export default function TeacherDetails() {
       setSubmittingSessional(false);
     }
   };
-
+  
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '300px' }}>
@@ -759,75 +1027,53 @@ export default function TeacherDetails() {
                 )}
                 
                 {sessionalAssignments.length === 0 && (
-                  <div className="row mt-4">
-                    <div className="col-md-4">
-                      <Form.Group>
-                        <Form.Label>Select Sessional Course</Form.Label>
-                        <Form.Control
-                          as="select"
-                          value={selectedSessionalCourse}
-                          onChange={(e) => setSelectedSessionalCourse(e.target.value)}
-                          disabled={submittingSessional}
-                        >
-                          <option value="">Select a course...</option>
-                          {sessionalCourses.map((course) => (
-                            <option key={course.course_id} value={course.course_id}>
-                              {course.course_id} - {course.name || 'Untitled'}
-                            </option>
-                          ))}
-                        </Form.Control>
-                      </Form.Group>
-                    </div>
-                    
-                    <div className="col-md-4">
-                      <Form.Group>
-                        <Form.Label>Select Section</Form.Label>
-                        <Form.Control
-                          as="select"
-                          value={selectedSessionalSection}
-                          onChange={(e) => setSelectedSessionalSection(e.target.value)}
-                          disabled={submittingSessional || !selectedSessionalCourse}
-                        >
-                          <option value="">Select a section...</option>
-                          {selectedSessionalCourse && (() => {
-                            // Find the selected course to get its sections
-                            const selectedCourseInfo = sessionalCourses.find(
-                              c => c.course_id === selectedSessionalCourse
-                            );
-                            
-                            // If the course has defined sections, use those
-                            if (selectedCourseInfo && selectedCourseInfo.sections && 
-                                Array.isArray(selectedCourseInfo.sections) && 
-                                selectedCourseInfo.sections.length > 0) {
-                              return selectedCourseInfo.sections.map(section => (
-                                <option key={section} value={section}>
-                                  Section {section}
-                                </option>
-                              ));
-                            }
-                            
-                            // Otherwise, fallback to default options
-                            return (
-                              <>
-                                <option value="A">Section A</option>
-                                <option value="B">Section B</option>
-                                <option value="C">Section C</option>
-                                <option value="D">Section D</option>
-                              </>
-                            );
-                          })()}
-                        </Form.Control>
-                      </Form.Group>
-                    </div>
-                    
-                    <div className="col-md-4 d-flex align-items-end">
-                      <button 
-                        className="btn btn-primary"
-                        onClick={handleSessionalCourseAssign}
-                        disabled={submittingSessional || !selectedSessionalCourse || !selectedSessionalSection}
-                      >
-                        {submittingSessional ? 'Assigning...' : 'Assign Sessional Course'}
-                      </button>
+                  <div className="mt-4">
+                    <h5>Assign Sessional Course</h5>
+                    <div className="card mb-4">
+                      <div className="card-body">
+                        <h6 className="card-title">Choose from Schedule Table</h6>
+                        <p className="text-muted mb-3">
+                          <i className="mdi mdi-information-outline me-1"></i>
+                          Select a sessional course from the table by clicking on it, then click "Assign Sessional Course".
+                        </p>
+                        {loadingSchedules ? (
+                          <div className="text-center py-4">
+                            <div className="spinner-border text-primary" role="status">
+                              <span className="sr-only">Loading...</span>
+                            </div>
+                          </div>
+                        ) : allSessionalSchedules.length > 0 ? (
+                          <div>
+                            <SessionalScheduleTable 
+                              schedules={allSessionalSchedules}
+                              selectedSchedule={selectedSessionalSchedule}
+                              onSelectSchedule={handleSessionalScheduleSelect}
+                            />
+                            {selectedSessionalSchedule && (
+                              <div className="mt-3 alert alert-info">
+                                <strong>Selected Course:</strong> {selectedSessionalSchedule.course_id} | 
+                                Section: {selectedSessionalSchedule.section} | 
+                                Day: {selectedSessionalSchedule.day} | 
+                                Time: {selectedSessionalSchedule.time}:00
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="alert alert-warning">
+                            <i className="mdi mdi-alert-circle-outline me-2"></i>
+                            No schedules found for sessional courses.
+                          </div>
+                        )}
+                        <div className="d-flex justify-content-end mt-3">
+                          <button 
+                            className="btn btn-primary"
+                            onClick={handleSessionalCourseAssign}
+                            disabled={submittingSessional || !selectedSessionalSchedule}
+                          >
+                            {submittingSessional ? 'Assigning...' : 'Assign Sessional Course'}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -842,7 +1088,7 @@ export default function TeacherDetails() {
             <div id="theory-schedule" className="col-12 grid-margin">
               <div className="card">
                 <div className="card-body">
-                  <h4 className="card-title">Theory Schedule</h4>
+                  <h4 className="card-title">Weekly Schedule</h4>
                   <ScheduleTable schedules={schedules} teacherCourses={assignments.map(a => a.course_id)} />
                   <small className="text-muted d-block mt-2">
                     <i className="mdi mdi-information-outline me-1"></i>
