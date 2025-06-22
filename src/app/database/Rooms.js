@@ -77,36 +77,65 @@ export default function Rooms() {
                   <tbody>
                     {rooms.map((room, index) => (
                       <tr key={index}>
-                        <td> {room.room} </td>
-                        <td> {room.type===0? "Theory":"Sessional"} </td>
-                        <td> {room.active? "YES" : "NO"} </td>
-                        <td>
-                          <div
-                            className="btn-group"
-                            role="group"
-                            aria-label="Basic example"
-                          >
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              onClick={() =>
-                                setSelectedRoom({
-                                  ...room,
-                                  index,
-                                  prev_room: room.room,
-                                })
+                        <td style={{ minWidth: '120px' }}>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            style={{ minWidth: '110px', width: '100%' }}
+                            value={room.room}
+                            onChange={e => {
+                              const newRooms = [...rooms];
+                              newRooms[index].room = e.target.value;
+                              setRooms(newRooms);
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                updateRoom(room.prev_room || room.room, { ...room, room: e.target.value })
+                                  .then(() => toast.success("Room updated successfully"))
+                                  .catch(console.log);
                               }
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm"
-                              onClick={() => setDeleteRoomSelected(room.room)}
-                            >
-                              Delete
-                            </button>
-                          </div>
+                            }}
+                          />
+                        </td>
+                        <td style={{ minWidth: '120px' }}>
+                          <select
+                            className="form-control form-control-sm"
+                            value={room.type}
+                            onChange={e => {
+                              const newRooms = [...rooms];
+                              newRooms[index].type = Number(e.target.value);
+                              setRooms(newRooms);
+                              updateRoom(room.prev_room || room.room, { ...room, type: Number(e.target.value) })
+                                .then(() => toast.success("Room updated successfully"))
+                                .catch(console.log);
+                            }}
+                          >
+                            <option value={0}>Theory</option>
+                            <option value={1}>Sessional</option>
+                          </select>
+                        </td>
+                        <td style={{ minWidth: '80px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={room.active === true}
+                            onChange={e => {
+                              const newRooms = [...rooms];
+                              newRooms[index].active = e.target.checked;
+                              setRooms(newRooms);
+                              updateRoom(room.prev_room || room.room, { ...room, active: e.target.checked })
+                                .then(() => toast.success("Room updated successfully"))
+                                .catch(console.log);
+                            }}
+                          />
+                        </td>
+                        <td style={{ minWidth: '120px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm ml-2"
+                            onClick={() => setDeleteRoomSelected(room.room)}
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}
