@@ -128,54 +128,320 @@ export default function Teachers() {
                     </tr>
                   </thead>
                   <tbody>
-                    {teachers.map((teacher, index) => (
-                      <tr key={index}>
-                        <td> {teacher.initial} </td>
-                        <td> {teacher.name} </td>
-                        <td> {teacher.surname} </td>
-                        <td> {teacher.email} </td>
-                        <td> {teacher.seniority_rank} </td>
-                        <td> {teacher.active} </td>
-                        <td> {teacher.theory_courses} </td>
-                        <td> {teacher.sessional_courses} </td>
-                        <td> {teacher.designation} </td>
-                        <td> {teacher.full_time_status ? "FULL" : "PART"} </td>
-                        <td> {teacher.offers_thesis_1 ? "YES" : "NO"} </td>
-                        <td> {teacher.offers_thesis_2 ? "YES" : "NO"} </td>
-                        <td> {teacher.offers_msc ? "YES" : "NO"} </td>
-                        <td> {teacher.teacher_credits_offered} </td>
-                        <td>
-                          <div
-                            className="btn-group"
-                            role="group"
-                            aria-label="Basic example"
-                          >
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm"
-                              onClick={() =>
-                                setSelectedTeacher({
-                                  ...teacher,
-                                  index,
-                                  prev_initial: teacher.initial,
-                                })
-                              }
-                            >
-                              Edit
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm"
-                              onClick={() =>
-                                setDeleteTeacherSelected(teacher.initial)
-                              }
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {teachers
+                      .slice() // copy array to avoid mutating state
+                      .sort((a, b) => a.seniority_rank - b.seniority_rank)
+                      .map((teacher, sortedIndex) => {
+                        // Find the actual index in the teachers array for updating state
+                        const index = teachers.findIndex(
+                          (t) => t.initial === teacher.initial
+                        );
+                        return (
+                          <tr key={teacher.initial}>
+                            <td style={{ minWidth: "120px" }}>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "110px", width: "100%" }}
+                                value={teacher.initial}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].initial = e.target.value;
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      initial: e.target.value
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "140px" }}>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "130px", width: "100%" }}
+                                value={teacher.name}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].name = e.target.value;
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      name: e.target.value
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "140px" }}>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "130px", width: "100%" }}
+                                value={teacher.surname}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].surname = e.target.value;
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      surname: e.target.value
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "200px" }}>
+                              <input
+                                type="email"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "190px", width: "100%" }}
+                                value={teacher.email}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].email = e.target.value;
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      email: e.target.value
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "80px" }}>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "70px", width: "100%" }}
+                                value={teacher.seniority_rank}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].seniority_rank = Number(e.target.value);
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      seniority_rank: Number(e.target.value)
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "60px", textAlign: "center" }}>
+                              <input
+                                type="checkbox"
+                                checked={teacher.active === 1 || teacher.active === true}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].active = e.target.checked ? 1 : 0;
+                                  setTeachers(newTeachers);
+                                  updateTeacher(teacher.prev_initial || teacher.initial, {
+                                    ...teacher,
+                                    active: e.target.checked ? 1 : 0
+                                  })
+                                    .then(() => toast.success("Teacher updated successfully"))
+                                    .catch(console.log);
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "80px" }}>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "70px", width: "100%" }}
+                                value={teacher.theory_courses}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].theory_courses = Number(e.target.value);
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      theory_courses: Number(e.target.value)
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "80px" }}>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "70px", width: "100%" }}
+                                value={teacher.sessional_courses}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].sessional_courses = Number(e.target.value);
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      sessional_courses: Number(e.target.value)
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "120px" }}>
+                              <input
+                                type="text"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "110px", width: "100%" }}
+                                value={teacher.designation}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].designation = e.target.value;
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      designation: e.target.value
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "90px", textAlign: "center" }}>
+                              <input
+                                type="checkbox"
+                                checked={teacher.full_time_status === true}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].full_time_status = e.target.checked;
+                                  setTeachers(newTeachers);
+                                  updateTeacher(teacher.prev_initial || teacher.initial, {
+                                    ...teacher,
+                                    full_time_status: e.target.checked
+                                  })
+                                    .then(() => toast.success("Teacher updated successfully"))
+                                    .catch(console.log);
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "90px", textAlign: "center" }}>
+                              <input
+                                type="checkbox"
+                                checked={teacher.offers_thesis_1 === true}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].offers_thesis_1 = e.target.checked;
+                                  setTeachers(newTeachers);
+                                  updateTeacher(teacher.prev_initial || teacher.initial, {
+                                    ...teacher,
+                                    offers_thesis_1: e.target.checked
+                                  })
+                                    .then(() => toast.success("Teacher updated successfully"))
+                                    .catch(console.log);
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "90px", textAlign: "center" }}>
+                              <input
+                                type="checkbox"
+                                checked={teacher.offers_thesis_2 === true}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].offers_thesis_2 = e.target.checked;
+                                  setTeachers(newTeachers);
+                                  updateTeacher(teacher.prev_initial || teacher.initial, {
+                                    ...teacher,
+                                    offers_thesis_2: e.target.checked
+                                  })
+                                    .then(() => toast.success("Teacher updated successfully"))
+                                    .catch(console.log);
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "90px", textAlign: "center" }}>
+                              <input
+                                type="checkbox"
+                                checked={teacher.offers_msc === true}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].offers_msc = e.target.checked;
+                                  setTeachers(newTeachers);
+                                  updateTeacher(teacher.prev_initial || teacher.initial, {
+                                    ...teacher,
+                                    offers_msc: e.target.checked
+                                  })
+                                    .then(() => toast.success("Teacher updated successfully"))
+                                    .catch(console.log);
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "100px" }}>
+                              <input
+                                type="number"
+                                className="form-control form-control-sm"
+                                style={{ minWidth: "90px", width: "100%" }}
+                                value={teacher.teacher_credits_offered}
+                                onChange={e => {
+                                  const newTeachers = [...teachers];
+                                  newTeachers[index].teacher_credits_offered = Number(e.target.value);
+                                  setTeachers(newTeachers);
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    updateTeacher(teacher.prev_initial || teacher.initial, {
+                                      ...teacher,
+                                      teacher_credits_offered: Number(e.target.value)
+                                    })
+                                      .then(() => toast.success("Teacher updated successfully"))
+                                      .catch(console.log);
+                                  }
+                                }}
+                              />
+                            </td>
+                            <td style={{ minWidth: "120px" }}>
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm ml-2"
+                                onClick={() => setDeleteTeacherSelected(teacher.initial)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
