@@ -15,14 +15,15 @@ export const deleteTeacher = (initial) =>
 export const getCourses = () =>
     axios.get(api_url("/course")).then((res) => res.data);
 
+
 export const addCourse = (course) =>
-    axios.post(api_url("/course"), course).then((res) => res.data);
+  axios.post(api_url("/course"), course).then((res) => res.data);
 
 export const editCourse = (course_id, course) =>
-    axios.put(api_url(`/course/${course_id}`), course).then((res) => res.data);
+  axios.put(api_url(`/course/${course_id}`), course).then((res) => res.data);
 
 export const deleteCourse = (course_id) =>
-    axios.delete(api_url(`/course/${course_id}`)).then((res) => res.data);
+  axios.delete(api_url(`/course/${course_id}`)).then((res) => res.data);
 
 export const getRooms = () =>
   axios.get(api_url("/room")).then((res) => res.data);
@@ -45,12 +46,16 @@ export const updateSection = (batch,section,department, newSection) =>
   axios.put(api_url(`/section/${batch}/${section}/${department}`), newSection).then((res) => res.data);
 export const deleteSection = (batch,section, department) =>
   axios.delete(api_url(`/section/${batch}/${section}/${department}`)).then((res) => res.data);
+export const getSessionalSectionsByDeptAndLevelTerm = (department, level_term) =>
+  axios.get(api_url(`/section/${department}/${level_term}`)).then((res) => res.data);
 
 
 export const getLabRooms = () =>
   axios.get(api_url("/room/labs")).then((res) => res.data);
 export const getLabCourses = () =>
   axios.get(api_url("/course/labs")).then((res) => res.data);
+export const getSessionalCoursesByDeptLevelTerm = (department, level_term) =>
+    axios.get(api_url(`/course/labs/${department}/${level_term}`)).then((res) => res.data);
 export const getNonDeptLabRooms = () =>
   axios.get(api_url("/room/labs/non_dept")).then((res) => res.data);
 export const getNonDeptLabCourses = () =>
@@ -61,5 +66,8 @@ export const getLevelTerms = () =>
   axios.get(api_url("/level_terms")).then((res) => res.data);
 export const setLevelTermsDB = (levelTerms) =>
   axios.put(api_url("/level_terms/set"), levelTerms).then((res) => res.data);
-
+export const getActiveDepartments = () =>
+  axios.get(api_url("/level_terms/active-departments")).then((res) => res.data);
+export const getDepartmentalLevelTermBatches = (department) =>
+  axios.get(api_url(`/level_terms/departmental_level_term_batches/${department}`)).then((res) => res.data);
 
