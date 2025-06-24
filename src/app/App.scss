@@ -193,3 +193,15 @@ input[type="checkbox"].big-checkbox {
     vertical-align: middle;
   }
 }
+
+// Custom hover effect for selected courses table rows
+.hover-row {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    background-color: rgba(75, 0, 130, 0.03) !important;
+    border-left-color: #8E54E9 !important;
+    transform: translateX(2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+}
