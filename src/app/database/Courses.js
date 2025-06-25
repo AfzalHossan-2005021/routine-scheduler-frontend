@@ -147,7 +147,7 @@ export default function Courses() {
                         <td> {course.name} </td>
                         <td> {course.type} </td>
                         <td> {course.batch} </td>
-                        <td> {course.sections.join(", ")} </td>
+                        <td> {(course.sections || []).join(", ")} </td>
                         <td> {course.session} </td>
                         <td> {course.class_per_week} </td>
                         <td>

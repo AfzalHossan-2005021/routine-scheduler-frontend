@@ -18,3 +18,9 @@ export const finalize = () =>
 
 export const getAllSchedule = () =>
     axios.get(api_url("/schedule/all")).then((res) => res.data);
+
+export const getCourseAllSchedule = (course_id) =>
+    axios.get(api_url(`/schedule/${course_id}`)).then((res) => res.data);
+
+export const getCourseSectionalSchedule = (course_id, section) =>
+    axios.get(api_url(`/schedule/${course_id}/${section}`)).then((res) => res.data);

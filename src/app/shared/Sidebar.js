@@ -125,12 +125,6 @@ class Sidebar extends Component {
               </ul>
             </Collapse>
           </li>
-          <li className={ this.isPathActive('/teachers') ? 'nav-item active' : 'nav-item' }>
-            <Link className="nav-link" to="/teachers">
-              <span className="menu-title">Sessional Assign</span>
-              <i className="mdi mdi-account-group menu-icon"></i>
-            </Link>
-          </li>
           <li className={ this.isPathActive('/lab-assign') ? 'nav-item active' : 'nav-item' }>
             <Link className="nav-link" to="/lab-assign">
               <span className="menu-title">Sessional Assign</span>

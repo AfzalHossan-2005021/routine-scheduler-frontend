@@ -409,12 +409,11 @@ export default function SessionalSchedule() {
       
       {/* Control Panel */}
       <div className="row mb-4">
-        <div className="col-md-10">
+        <div className="col-12">
           <div className="card" style={{
-            borderRadius: "16px",
-            boxShadow: "0 8px 24px rgba(154, 77, 226, 0.12), 0 2px 8px rgba(0,0,0,0.05)",
+            borderRadius: "12px",
+            boxShadow: "0 6px 16px rgba(0,0,0,0.1)",
             border: "none",
-            background: "linear-gradient(to right bottom, #ffffff, #f9f5ff)",
             transition: "all 0.3s ease"
           }}>
             <div className="card-body" style={{ padding: "1.5rem" }}>
@@ -440,7 +439,7 @@ export default function SessionalSchedule() {
               </h4>
               <Form>
                 <div className="row">
-                  <div className="col-md-4 mb-3">
+                  <div className="col-md-6 mb-3">
                     <label htmlFor="departmentSelect" className="form-label" style={{ 
                       fontWeight: "600", 
                       marginBottom: "8px",
@@ -496,7 +495,7 @@ export default function SessionalSchedule() {
                     </Form.Select>
                   </div>
                   
-                  <div className="col-md-8 mb-3">
+                  <div className="col-md-6 mb-3">
                     <label htmlFor="levelTermSelect" className="form-label" style={{ 
                       fontWeight: "600", 
                       marginBottom: "8px",

@@ -13,6 +13,9 @@ export const finalize = () =>
 export const getTheoryAssignement = () =>
   axios.get(api_url("/assign/theory/all")).then((res) => res.data);
 
+export const getTeacherTheoryAssigments = (initial) =>
+  axios.get(api_url(`/assign/theory/${initial}`)).then((res) => res.data);
+
 export const getRoomAssign = () =>
   axios.get(api_url("/assign/room/status")).then((res) => res.data);
 
@@ -21,6 +24,15 @@ export const setRoomAssign = (data) =>
 
 export const getSessionalStatus = () =>
   axios.get(api_url("/assign/sessional/status")).then((res) => res.data);
+
+export const getTeacherSessionalAssignment = (initial) =>
+  axios.get(api_url(`/assign/sessional/${initial}`)).then((res) => res.data);
+
+export const getSessionalTeachers = (course_id, section) =>
+  axios.get(api_url(`/assign/sessional/teachers/${course_id}/${section}`)).then((res) => res.data);
+
+export const getAllSessionalAssignment = () =>
+  axios.get(api_url("/assign/sessional/all")).then((res) => res.data);
 
 export const initiateSessional = () =>
   axios.get(api_url("/assign/sessional/initiate")).then((res) => res.data);

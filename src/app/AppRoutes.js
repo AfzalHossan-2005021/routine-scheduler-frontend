@@ -7,8 +7,8 @@ import { UserContext } from "./App";
 
 const Dashboard = lazy(() => import("./dashboard/Dashboard"));
 const Teachers = lazy(() => import("./database/Teachers"));
-const TeachersList = lazy(() => import("./teachers/TeachersList"));
-const TeacherDetails = lazy(() => import("./teachers/TeacherDetails"));
+const TeachersList = lazy(() => import("./sessional-pref//TeachersList"));
+const TeacherDetails = lazy(() => import("./sessional-pref//TeacherDetails"));
 const Sections = lazy(() => import("./database/Sections"));
 const Rooms = lazy(() => import("./database/Rooms"));
 const Courses = lazy(() => import("./database/Courses"));
@@ -23,7 +23,6 @@ const TheorySchedule = lazy(() => import("./theory-schedule/AskForSchedule"));
 const FixedSchedule = lazy(() => import("./theory-schedule/FixedSchedule"));
 
 const LabRoomAssign = lazy(() => import("./lab-room-assign/LabRoomAssign"));
-const SessionalPreference = lazy(() => import("./sessional-pref/SessionalPreference"));
 const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSchedule"));
 
 const Login = lazy(() => import("./user-pages/Login"));
@@ -45,8 +44,6 @@ export default function AppRoutes() {
           <Switch>
             <Route exact path="/dashboard" component={Dashboard} />
             <Route path="/database/teachers" component={Teachers} />
-            <Route exact path="/teachers" component={TeachersList} />
-            <Route path="/teachers/:teacherId" component={TeacherDetails} />
             <Route path="/database/sections" component={Sections} />
             <Route path="/database/rooms" component={Rooms} />
             <Route path="/database/courses" component={Courses} />
@@ -55,7 +52,8 @@ export default function AppRoutes() {
             <Route path="/theory-schedule/ask" component={TheorySchedule} />
             <Route path="/theory-schedule/fixed" component={FixedSchedule} />
             <Route path="/room-assign" component={ LabRoomAssign } />
-            <Route path="/lab-assign" component={ SessionalPreference } />
+            <Route path="/lab-assign" component={ TeachersList } />
+            <Route path="/lab-assign/:teacherId" component={TeacherDetails} />
             <Route path="/lab-schedule" component={ SessionalSchedule } />
             <Route path="/pdf" component={pdfPage} />
             <Redirect to="/dashboard" />
