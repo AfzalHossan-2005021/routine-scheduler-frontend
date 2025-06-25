@@ -30,6 +30,7 @@ const Login = lazy(() => import("./user-pages/Login"));
 const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
 
 const pdfPage = lazy(() => import("./pdf/ShowPdf"));
+const TheoryScheduleDashboardSection = lazy(() => import("./theory-schedule/TheoryScheduleDashboardSection"));
 
 
 export default function AppRoutes() {
@@ -58,6 +59,7 @@ export default function AppRoutes() {
             <Route path="/lab-assign" component={ SessionalPreference } />
             <Route path="/lab-schedule" component={ SessionalSchedule } />
             <Route path="/pdf" component={pdfPage} />
+            <Route path="/theory-schedule/new" component={TheoryScheduleDashboardSection} />
             <Redirect to="/dashboard" />
           </Switch>
         ) : (
