@@ -34,7 +34,17 @@ export default function LabRoomAssign() {
       setOfferedCourse(res);
     });
     getAllSchedule().then((res) => {
-      setSessionalSchedule(res);
+      // Additional validation - ensure we have an array
+      const scheduleData = Array.isArray(res) ? res : [];
+      // Filter out any entries that don't have required fields
+      const validSchedules = scheduleData.filter(item => 
+        item && item.day && item.time && item.course_id && item.section
+      );
+      setSessionalSchedule(validSchedules);
+      
+      // Log data for debugging purposes
+      console.log("Original schedule data:", res);
+      console.log("Filtered schedule data:", validSchedules);
     });
 
     Promise.all([labs, courses]).then(() => {
@@ -157,9 +167,23 @@ export default function LabRoomAssign() {
   const generateRoomAssignments = () => {
     // Create a schedule grid to track room bookings
     // Format: roomBookings[day][time] = [{room: "roomName", course: courseObject}]
-    const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
-    const timeSlots = Array.from({ length: 8 }, (_, i) => i + 1); // 1-8 timeslots
+    const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
+    const timeSlots = [8, 11, 2]
+    
+    // Log available schedule data for debugging
+    console.log("Sessional Schedule Data:", sessionalSchedule);
+    
+    // Check if there are any scheduling issues
+    // const schedulingIssues = sessionalSchedule.filter(schedule => 
+    //   !days.includes(schedule.day) || !timeSlots.includes(Number(schedule.time))
+    // );
+    
+    // if (schedulingIssues.length > 0) {
+    //   console.warn("Found scheduling issues:", schedulingIssues);
+    //   toast.error(`Found ${schedulingIssues.length} invalid schedule entries. Check console for details.`);
+    // }
 
+    // Initialize the roomBookings structure with a safer approach
     const roomBookings = {};
     days.forEach(day => {
       roomBookings[day] = {};
@@ -167,6 +191,13 @@ export default function LabRoomAssign() {
         roomBookings[day][time] = [];
       });
     });
+    
+    // Add a safety method to access roomBookings without causing undefined errors
+    const safeGetRoomBooking = (day, time) => {
+      if (!roomBookings[day]) return [];
+      if (!roomBookings[day][time]) return [];
+      return roomBookings[day][time];
+    };
 
     // Make a copy of rooms array for tracking availability
     const availableRooms = [...rooms];
@@ -176,7 +207,19 @@ export default function LabRoomAssign() {
 
     // Process each scheduled course
     sessionalSchedule.forEach(schedule => {
+      // Defensive programming - Handle cases where schedule might be malformed
+      if (!schedule) {
+        console.warn("Found undefined or null schedule entry");
+        return;
+      }
+      
       const { day, time, course_id, section } = schedule;
+      
+      // Skip if day or time is missing or not valid
+      if (!day || !time || !days.includes(day) || !timeSlots.includes(Number(time))) {
+        console.warn(`Invalid day or time in schedule: ${day} - ${time}`);
+        return;
+      }
 
       // Find the matching course in offered courses
       const course = offeredCourse.find(c =>
@@ -251,9 +294,10 @@ export default function LabRoomAssign() {
     scheduledCourses.forEach(course => {
       const { course_id, section, day, time } = course;
       const courseKey = `${course_id}_${section}`;
-
+      
+      // Use our safe getter to avoid undefined errors
       // Check which rooms are available at this day and time
-      const bookedRoomsAtThisTime = roomBookings[day][time].map(booking => booking.room);
+      const bookedRoomsAtThisTime = safeGetRoomBooking(day, time).map(booking => booking.room);
       const availableRoomsAtThisTime = availableRooms.filter(room =>
         !bookedRoomsAtThisTime.includes(room.room)
       );
@@ -281,6 +325,10 @@ export default function LabRoomAssign() {
 
       // If a room was assigned, add it to bookings and assignments
       if (assignedRoom) {
+        // Make sure the day and time slots exist in roomBookings before pushing
+        if (!roomBookings[day]) roomBookings[day] = {};
+        if (!roomBookings[day][time]) roomBookings[day][time] = [];
+        
         roomBookings[day][time].push({
           room: assignedRoom,
           course: course
