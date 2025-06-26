@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 
 import Spinner from "../app/shared/Spinner";
@@ -26,6 +26,7 @@ const LabRoomAssign = lazy(() => import("./lab-room-assign/LabRoomAssign"));
 const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSchedule"));
 
 const Login = lazy(() => import("./user-pages/Login"));
+const Register = lazy(() => import("./user-pages/Register"));
 const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
 
 const pdfPage = lazy(() => import("./pdf/ShowPdf"));
@@ -61,6 +62,7 @@ export default function AppRoutes() {
         ) : (
           <Switch>
             <Route path="/auth/login" component={Login} />
+            <Route path="/auth/register" component={Register} />
             <Route path="/auth/forgot-password" component={ForgetPassword} />
             <Redirect to="/auth/login" />
           </Switch>

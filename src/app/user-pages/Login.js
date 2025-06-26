@@ -324,14 +324,15 @@ export default function Login() {
                 </div>
 
                 {/* Forgot Password Link */}
-                <div className="d-flex justify-content-end">
+                <div className="d-flex justify-content-between align-items-center">
                   <Link
                     to="/auth/forgot-password"
                     style={{ 
                       color: "rgb(174, 117, 228)", 
                       textDecoration: "none", 
                       fontWeight: "500",
-                      transition: "all 0.2s ease"
+                      transition: "all 0.2s ease",
+                      fontSize: "14px"
                     }}
                     onMouseOver={(e) => {
                       e.target.style.color = "rgb(154, 77, 226)";
@@ -344,6 +345,28 @@ export default function Login() {
                   >
                     <i className="mdi mdi-lock-question" style={{ marginRight: "4px" }}></i>
                     Forgot password?
+                  </Link>
+                  
+                  <Link
+                    to="/auth/register"
+                    style={{ 
+                      color: "rgb(174, 117, 228)", 
+                      textDecoration: "none", 
+                      fontWeight: "500",
+                      transition: "all 0.2s ease",
+                      fontSize: "14px"
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.color = "rgb(154, 77, 226)";
+                      e.target.style.textDecoration = "underline";
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.color = "rgb(174, 117, 228)";
+                      e.target.style.textDecoration = "none";
+                    }}
+                  >
+                    <i className="mdi mdi-account-plus" style={{ marginRight: "4px" }}></i>
+                    Create Account
                   </Link>
                 </div>
               </Form>
