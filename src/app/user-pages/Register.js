@@ -1,13 +1,19 @@
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { UserContext } from "../App";
+import { register } from "../api/auth";
+import AlertModal from "../shared/AlertModal";
 
 export function Register() {
   const usernameRef = useRef();
   const emailRef = useRef();
   const passwordRef = useRef();
+  const { setUser } = useContext(UserContext);
   const [isPwdVisible, setIsPwdVisible] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   // Styles matching Login page
   const styles = {
@@ -80,18 +86,36 @@ export function Register() {
     e.target.style.color = isHover ? "rgb(154, 77, 226)" : "rgb(174, 117, 228)";
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const username = usernameRef.current?.value;
     const email = emailRef.current?.value;
     const password = passwordRef.current?.value;
-    
-    if (!agreeTerms) {
-      alert("Please agree to Terms & Conditions");
+
+    if (!username || !email || !password) {
+      setAlertMessage("All fields are required");
+      setShowAlert(true);
       return;
     }
     
-    console.log("Register:", { username, email, password });
-    // Add your registration logic here
+    if (!agreeTerms) {
+      setAlertMessage("Please agree to Terms & Conditions");
+      setShowAlert(true);
+      return;
+    }
+
+    try {
+      const response = await register(username, email, password);
+      if (response.success) {
+        localStorage.setItem("token", response.token);
+        setUser({ loggedIn: true, user: response.user });
+      } else {
+        setAlertMessage(response.message || "Registration failed. Please try again.");
+        setShowAlert(true);
+      }
+    } catch (error) {
+      setAlertMessage(error.message || "An unexpected error occurred. Please try again.");
+      setShowAlert(true);
+    }
   };
 
   return (
@@ -356,6 +380,7 @@ export function Register() {
                       e.target.style.textDecoration = "none";
                     }}
                   >
+                    <i className="mdi mdi-login me-2" style={{ marginRight: "4px" }}></i>
                     Sign In
                   </Link>
                 </div>
@@ -419,6 +444,16 @@ export function Register() {
           transform: translateY(0px) !important;
         }
       `}</style>
+
+      {/* Alert Modal */}
+      <AlertModal 
+        show={showAlert}
+        onHide={() => setShowAlert(false)}
+        title="Attention Required"
+        message={alertMessage}
+        buttonText="Understood"
+        icon="mdi-alert-circle"
+      />
     </div>
   );
 }
