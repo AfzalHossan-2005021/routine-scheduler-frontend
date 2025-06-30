@@ -12,7 +12,7 @@ function Navbar() {
     document.querySelector(".right-sidebar").classList.toggle("open");
   };
 
-  const { setUser } = useContext(UserContext);
+  const { user, setUser } = useContext(UserContext);
 
   return (
     <nav className="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
@@ -38,7 +38,7 @@ function Navbar() {
         >
           <span className="mdi mdi-menu"></span>
         </button>
-        {/* <div className="search-field d-none d-md-block">
+        <div className="search-field d-none d-md-block">
             <form className="d-flex align-items-center h-100" action="#">
               <div className="input-group">
                 <div className="input-group-prepend bg-transparent">
@@ -47,8 +47,53 @@ function Navbar() {
                 <input type="text" className="form-control bg-transparent border-0" placeholder="Search projects"/>
               </div>
             </form>
-          </div> */}
+          </div>
         <ul className="navbar-nav navbar-nav-right">
+          <li className="nav-item quick-actions d-none d-lg-block">
+            <Dropdown align="end">
+              <Dropdown.Toggle
+                as="button"
+                className="nav-link quick-actions-toggle"
+                type="button"
+              >
+                <i className="mdi mdi-plus-circle-outline"></i>
+                <span className="quick-actions-text">Quick Actions</span>
+              </Dropdown.Toggle>
+              <Dropdown.Menu className="navbar-dropdown quick-actions-menu">
+                <div className="dropdown-header">
+                  <h6 className="quick-actions-title">Quick Actions</h6>
+                </div>
+                <div className="dropdown-divider"></div>
+                <Dropdown.Item
+                  as="button"
+                  type="button"
+                  onClick={e => e.preventDefault()}
+                  className="dropdown-item-enhanced"
+                >
+                  <i className="mdi mdi-account-plus mr-3 text-success"></i>
+                  <span>Add Teacher</span>
+                </Dropdown.Item>
+                <Dropdown.Item
+                  as="button"
+                  type="button"
+                  onClick={e => e.preventDefault()}
+                  className="dropdown-item-enhanced"
+                >
+                  <i className="mdi mdi-door mr-3 text-info"></i>
+                  <span>Add Room</span>
+                </Dropdown.Item>
+                <Dropdown.Item
+                  as="button"
+                  type="button"
+                  onClick={e => e.preventDefault()}
+                  className="dropdown-item-enhanced"
+                >
+                  <i className="mdi mdi-book-open mr-3 text-warning"></i>
+                  <span>Add Course</span>
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+          </li>
           <li className="nav-item nav-profile">
             <Dropdown align="end">
               <Dropdown.Toggle className="nav-link">
@@ -60,7 +105,7 @@ function Navbar() {
                   <span className="availability-status online"></span>
                 </div>
                 <div className="nav-profile-text">
-                  <p className="mb-1 text-black"><b>Saem Hasan</b></p>
+                  <p className="mb-1 text-black"><b>{user?.user?.name || user?.user?.username || 'User'}</b></p>
                 </div>
               </Dropdown.Toggle>
 
@@ -87,7 +132,7 @@ function Navbar() {
               </Dropdown.Menu>
             </Dropdown>
           </li>
-          {/* <li className="nav-item">
+          <li className="nav-item">
               <Dropdown align="end">
                 <Dropdown.Toggle className="nav-link count-indicator">
                   <i className="mdi mdi-email-outline"></i>
@@ -136,7 +181,7 @@ function Navbar() {
                   <h6 className="p-3 mb-0 text-center cursor-pointer">4 new messages</h6>
                 </Dropdown.Menu>
               </Dropdown>
-            </li> */}
+            </li>
           <li className="nav-item">
             <Dropdown align="end">
               <Dropdown.Toggle className="nav-link count-indicator">
