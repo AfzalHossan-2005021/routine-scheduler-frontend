@@ -60,7 +60,6 @@ export default function AppRoutes() {
             <Route path="/lab-schedule" component={ SessionalSchedule } />
             <Route path="/pdf" component={pdfPage} />
             <Route path="/theory-schedule/new" component={TheoryScheduleDashboardSection} />
-            <Route path="/account" component={Account} />
             <Redirect to="/dashboard" />
           </Switch>
         ) : (
