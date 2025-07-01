@@ -69,8 +69,29 @@ export default function SessionalSelect() {
                   >
                     <div className="d-grid gap-2">
                       <Button
-                        variant="outline-success"
-                        size="sm"
+                        style={{
+                          borderRadius: "6px",
+                          padding: "7px 14px",
+                          fontWeight: "500",
+                          background: "rgba(154, 77, 226, 0.15)",
+                          border: "1px solid rgba(154, 77, 226, 0.5)",
+                          color: "rgb(154, 77, 226)",
+                          transition: "all 0.3s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.9rem"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "rgb(154, 77, 226)";
+                          e.target.style.color = "white";
+                          e.target.style.borderColor = "rgb(154, 77, 226)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                          e.target.style.color = "rgb(154, 77, 226)";
+                          e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                        }}
                         className="mb-2 btn-block"
                         onClick={(e) => {
                           const selectedOptions = Array.from(
@@ -97,8 +118,29 @@ export default function SessionalSelect() {
                         Move Right
                       </Button>
                       <Button
-                        variant="outline-danger"
-                        size="sm"
+                        style={{
+                          borderRadius: "6px",
+                          padding: "7px 14px",
+                          fontWeight: "500",
+                          background: "rgba(220, 53, 69, 0.15)",
+                          border: "1px solid rgba(220, 53, 69, 0.5)",
+                          color: "#dc3545",
+                          transition: "all 0.3s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.9rem"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "#dc3545";
+                          e.target.style.color = "white";
+                          e.target.style.borderColor = "#dc3545";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "rgba(220, 53, 69, 0.15)";
+                          e.target.style.color = "#dc3545";
+                          e.target.style.borderColor = "rgba(220, 53, 69, 0.5)";
+                        }}
                         className="btn-block"
                         onClick={(e) => {
                           const selectedOptions = Array.from(
@@ -127,8 +169,29 @@ export default function SessionalSelect() {
                     </div>
                     <div className="d-grid gap-2  mb-5">
                       <Button
-                        variant="outline-dark"
-                        size="sm"
+                        style={{
+                          borderRadius: "6px",
+                          padding: "7px 14px",
+                          fontWeight: "500",
+                          background: "rgba(154, 77, 226, 0.15)",
+                          border: "1px solid rgba(154, 77, 226, 0.5)",
+                          color: "rgb(154, 77, 226)",
+                          transition: "all 0.3s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.9rem"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "rgb(154, 77, 226)";
+                          e.target.style.color = "white";
+                          e.target.style.borderColor = "rgb(154, 77, 226)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                          e.target.style.color = "rgb(154, 77, 226)";
+                          e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                        }}
                         className="mb-2 btn-block"
                         onClick={(e) => {
                           const selectedOptions = Array.from(
@@ -157,8 +220,29 @@ export default function SessionalSelect() {
                         Move Top
                       </Button>
                       <Button
-                        variant="outline-dark"
-                        size="sm"
+                        style={{
+                          borderRadius: "6px",
+                          padding: "7px 14px",
+                          fontWeight: "500",
+                          background: "rgba(154, 77, 226, 0.15)",
+                          border: "1px solid rgba(154, 77, 226, 0.5)",
+                          color: "rgb(154, 77, 226)",
+                          transition: "all 0.3s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.9rem"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "rgb(154, 77, 226)";
+                          e.target.style.color = "white";
+                          e.target.style.borderColor = "rgb(154, 77, 226)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                          e.target.style.color = "rgb(154, 77, 226)";
+                          e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                        }}
                         className="mb-2 btn-block"
                         onClick={(e) => {
                           const selectedOptions = Array.from(
@@ -186,8 +270,29 @@ export default function SessionalSelect() {
                         Move Up
                       </Button>
                       <Button
-                        variant="outline-dark"
-                        size="sm"
+                        style={{
+                          borderRadius: "6px",
+                          padding: "7px 14px",
+                          fontWeight: "500",
+                          background: "rgba(154, 77, 226, 0.15)",
+                          border: "1px solid rgba(154, 77, 226, 0.5)",
+                          color: "rgb(154, 77, 226)",
+                          transition: "all 0.3s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.9rem"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "rgb(154, 77, 226)";
+                          e.target.style.color = "white";
+                          e.target.style.borderColor = "rgb(154, 77, 226)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                          e.target.style.color = "rgb(154, 77, 226)";
+                          e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                        }}
                         className="mb-2 btn-block"
                         onClick={(e) => {
                           const selectedOptions = Array.from(
@@ -219,8 +324,29 @@ export default function SessionalSelect() {
                         Move Down
                       </Button>
                       <Button
-                        variant="outline-dark"
-                        size="sm"
+                        style={{
+                          borderRadius: "6px",
+                          padding: "7px 14px",
+                          fontWeight: "500",
+                          background: "rgba(154, 77, 226, 0.15)",
+                          border: "1px solid rgba(154, 77, 226, 0.5)",
+                          color: "rgb(154, 77, 226)",
+                          transition: "all 0.3s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "0.9rem"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = "rgb(154, 77, 226)";
+                          e.target.style.color = "white";
+                          e.target.style.borderColor = "rgb(154, 77, 226)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                          e.target.style.color = "rgb(154, 77, 226)";
+                          e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                        }}
                         className="mb-2 btn-block"
                         onClick={(e) => {
                           const selectedOptions = Array.from(
