@@ -28,6 +28,7 @@ const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSched
 const Login = lazy(() => import("./user-pages/Login"));
 const Register = lazy(() => import("./user-pages/Register"));
 const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
+const Account = lazy(() => import("./user-pages/Account"));
 
 const pdfPage = lazy(() => import("./pdf/ShowPdf"));
 
@@ -57,6 +58,7 @@ export default function AppRoutes() {
             <Route path="/lab-assign/:teacherId" component={TeacherDetails} />
             <Route path="/lab-schedule" component={ SessionalSchedule } />
             <Route path="/pdf" component={pdfPage} />
+            <Route path="/account" component={Account} />
             <Redirect to="/dashboard" />
           </Switch>
         ) : (
