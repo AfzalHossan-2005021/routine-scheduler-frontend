@@ -31,6 +31,7 @@ class Sidebar extends Component {
       this.setState({[i]: false});
     });
 
+    // Only open dropdowns for paths that are not /theory-schedule/new
     const dropdownPaths = [
       {path:'/apps', state: 'appsMenuOpen'},
       {path:'/database', state: 'dbUiMenuOpen'},
@@ -48,8 +49,15 @@ class Sidebar extends Component {
     ];
 
     dropdownPaths.forEach((obj => {
-      if (this.isPathActive(obj.path)) {
-        this.setState({[obj.state] : true})
+      // Do not open Theory Schedule menu for /theory-schedule/new
+      if (obj.path === '/theory-schedule') {
+        if (this.isPathActive(obj.path) && this.props.location.pathname !== '/theory-schedule/new') {
+          this.setState({[obj.state] : true})
+        }
+      } else {
+        if (this.isPathActive(obj.path)) {
+          this.setState({[obj.state] : true})
+        }
       }
     }));
  
@@ -123,7 +131,8 @@ class Sidebar extends Component {
               <i className="mdi mdi-lightbulb-variant-outline menu-icon"></i>
             </Link>
           </li>
-          <li className={ this.isPathActive('/theory-schedule') ? 'nav-item active' : 'nav-item' }>
+          {/* Theory Schedule parent menu - only active for subroutes, not /theory-schedule/new */}
+          {/* <li className={ (this.isPathActive('/theory-schedule') && this.props.location.pathname !== '/theory-schedule/new') ? 'nav-item active' : 'nav-item' }>
             <div className={ this.state.theoryScheduleMenuOpen ? 'nav-link menu-expanded' : 'nav-link' } onClick={ () => this.toggleMenuState('theoryScheduleMenuOpen') } data-toggle="collapse">
               <span className="menu-title">Theory Schedule</span>
               <i className="menu-arrow"></i>
@@ -135,7 +144,20 @@ class Sidebar extends Component {
                 <li className="nav-item"> <Link className={ this.isPathActive('/theory-schedule/ask') ? 'nav-link active' : 'nav-link' } to="/theory-schedule/ask">Ask for Schedule</Link></li>
               </ul>
             </Collapse>
+          </li> */}
+          {/* TheorySchedule(New) as a top-level menu item */}
+          <li className={ this.props.location.pathname === '/theory-schedule/new' ? 'nav-item active' : 'nav-item' }>
+            <Link className="nav-link" to="/theory-schedule/new">
+              <span className="menu-title">Theory Schedule</span>
+              <i className="mdi mdi-table-clock menu-icon"></i>
+            </Link>
           </li>
+          {/* <li className={ this.isPathActive('/teachers') ? 'nav-item active' : 'nav-item' }>
+            <Link className="nav-link" to="/teachers">
+              <span className="menu-title">Sessional Assign</span>
+              <i className="mdi mdi-account-group menu-icon"></i>
+            </Link>
+          </li> */}
           <li className={ this.isPathActive('/lab-assign') ? 'nav-item active' : 'nav-item' }>
             <Link className="nav-link" to="/lab-assign">
               <span className="menu-title">Sessional Assign</span>

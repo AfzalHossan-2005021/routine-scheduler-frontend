@@ -48,6 +48,9 @@ export const deleteSection = (batch,section, department) =>
   axios.delete(api_url(`/section/${batch}/${section}/${department}`)).then((res) => res.data);
 export const getSessionalSectionsByDeptAndLevelTerm = (department, level_term) =>
   axios.get(api_url(`/section/${department}/${level_term}`)).then((res) => res.data);
+export const getTheorySectionsByDeptAndLevelTerm = (department, level_term) =>
+  axios.get(api_url(`/section/theory/${department}/${level_term}`)).then((res) => res.data);
+
 
 
 export const getLabRooms = () =>
@@ -60,6 +63,9 @@ export const getNonDeptLabRooms = () =>
   axios.get(api_url("/room/labs/non_dept")).then((res) => res.data);
 export const getNonDeptLabCourses = () =>
   axios.get(api_url("/course/labs/non_dept")).then((res) => res.data);
+export const getTheoryCoursesByDeptLevelTerm = (department, level_term) =>
+    axios.get(api_url(`/course/theory/${department}/${level_term}`)).then((res) => res.data);
+
 
 
 export const getLevelTerms = () =>

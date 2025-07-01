@@ -1,0 +1,619 @@
+import React, { useMemo, useCallback } from "react";
+import { Form } from "react-bootstrap";
+import { days, times } from "../shared/ScheduleSelctionTable";
+import { MultiSet } from "mnemonist";
+import { toast } from "react-hot-toast";
+
+/**
+ * Custom component for displaying a table with divided cells for subsections
+ * This component handles the display of sessional schedules with upper and lower sections
+ */
+const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
+  filled = [],
+  selected = [],
+  onChange = () => {},
+  theoryTimes = [],
+  allTheoryCourses = [],
+  theorySchedules = {},
+  sectionName = "Section",
+  isSessionalCourse = () => false,
+}) {
+  // Debug log to print allTheoryCourses for troubleshooting
+  //console.log('allTheoryCourses:', allTheoryCourses);
+
+  // Convert arrays to MultiSets for efficient lookup
+  const filledSet = useMemo(() => MultiSet.from(filled), [filled]);
+  const selectedSet = useMemo(() => MultiSet.from(selected), [selected]);
+  const theoryTimesSet = useMemo(() =>
+    MultiSet.from(theoryTimes.length ? theoryTimes : days.map((day) => `${day} 2`)),
+    [theoryTimes]
+  );
+
+  // Prepare filtered courses - memoized to prevent unnecessary filtering
+  const filteredCourses = useMemo(() => {
+    return Array.isArray(allTheoryCourses) ? allTheoryCourses : [];
+  }, [allTheoryCourses]);
+
+  // Helper to get course for a slot
+  const getCourse = useCallback((slotKey) => {
+    if (!theorySchedules) return null;
+    // Try to get the course from theorySchedules, fallback to controlled state if available
+    if (theorySchedules[slotKey] && theorySchedules[slotKey].course_id) {
+      return theorySchedules[slotKey].course_id;
+    }
+    // Fallback: try to get from filled or selected arrays if they are objects with course_id
+    const filledObj = filled.find(f => f.day === slotKey.split(' ')[0] && f.time === slotKey.split(' ')[1]);
+    if (filledObj && filledObj.course_id) return filledObj.course_id;
+    const selectedObj = selected.find(f => f.day === slotKey.split(' ')[0] && f.time === slotKey.split(' ')[1]);
+    if (selectedObj && selectedObj.course_id) return selectedObj.course_id;
+    return null;
+  }, [theorySchedules, filled, selected]);
+
+  // Helper to get course object by id
+  const getCourseObj = useCallback((course_id) => {
+    return filteredCourses.find(c => c.course_id === course_id);
+  }, [filteredCourses]);
+
+  // Helper to get all selected course_ids in a day (row)
+  const getSelectedCoursesForDay = useCallback((day) => {
+    const selected = [];
+    for (let idx = 0; idx < 9; idx++) {
+      const time = times[idx] || "";
+      const slotKey = `${day} ${time}`;
+      const cid = getCourse(slotKey);
+      if (cid) selected.push(cid);
+    }
+    return selected;
+  }, [getCourse]);
+
+  // Helper to count how many times a course is selected in the table
+  const getCourseCountInTable = useCallback((course_id) => {
+    let count = 0;
+    for (const day of days) {
+      for (let idx = 0; idx < 9; idx++) {
+        const time = times[idx] || "";
+        const slotKey = `${day} ${time}`;
+        if (getCourse(slotKey) === course_id) count++;
+      }
+    }
+    return count;
+  }, [getCourse]);
+
+  // Cell style calculation
+  const getCellStyle = useCallback((day, time) => {
+    const key = `${day} ${time}`;
+    if (selectedSet.has(key)) return "selected-upper";
+    if (filledSet.has(key)) return "filled-upper";
+    return "";
+  }, [selectedSet, filledSet]);
+
+  // Enhanced event handler with validation
+  const handleCourseChange = useCallback((day, time, courseId) => {
+    if (!courseId) {
+      onChange(day, time, courseId);
+      return;
+    }
+    // 1. Check for duplicate in the same day
+    const selectedToday = getSelectedCoursesForDay(day);
+    if (selectedToday.filter(cid => cid === courseId).length > 0) {
+      toast.error("You can't assign the same course more than once in a day for this section.");
+      return;
+    }
+    // 2. Check for class_per_week limit
+    const courseObj = getCourseObj(courseId);
+    if (courseObj && courseObj.class_per_week) {
+      const count = getCourseCountInTable(courseId);
+      if (count >= courseObj.class_per_week) {
+        toast.error(`You can't assign more than ${courseObj.class_per_week} classes for ${courseObj.course_id} in this section.`);
+        return;
+      }
+    }
+    onChange(day, time, courseId);
+  }, [onChange, getSelectedCoursesForDay, getCourseObj, getCourseCountInTable]);
+
+  // Compute blocked cells for sessional courses
+  const blockedCells = useMemo(() => {
+    // Map: slotKey => { course_id, span: 3 }
+    const blocked = {};
+    Object.entries(theorySchedules).forEach(([slot, val]) => {
+      if (val && val.course_id && isSessionalCourse(val.course_id)) {
+        // Block this and next 2 time slots in the same day
+        const [day, timeStr] = slot.split(" ");
+        const timeIdx = times.indexOf(Number(timeStr));
+        if (timeIdx !== -1) {
+          for (let i = 0; i < 3; i++) {
+            const t = times[timeIdx + i];
+            if (typeof t !== "undefined") {
+              blocked[`${day} ${t}`] = { course_id: val.course_id, base: i === 0 };
+            }
+          }
+        }
+      }
+    });
+    return blocked;
+  }, [theorySchedules, isSessionalCourse]);
+
+  // Memoized table style for consistent rendering with improved appearance
+  const tableStyle = useMemo(() => ({
+    borderCollapse: "separate", 
+    borderSpacing: "0", 
+    textAlign: "center",
+    backgroundColor: "#f8f9fa",
+    boxShadow: "0 5px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(194, 137, 248, 0.1)",
+    borderRadius: "10px",
+    overflow: "hidden",
+    width: "100%",
+    margin: "0 auto",
+    transition: "all 0.3s ease"
+  }), []);
+
+  return (
+    <div>
+      {/* CSS Styles */}
+      <style jsx="true">{`
+        .cell-container {
+          display: flex;
+          flex-direction: column;
+          height: 60px; /* Increased height for more space */
+          width: 100%;
+          overflow: hidden;
+          padding: 0;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          position: relative;
+          border-radius: 6px;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+        }
+        td:hover .cell-container {
+          transform: scale(1.03);
+          box-shadow: inset 0 0 0 1px #38b6ff;
+        }
+        /* Select form styles */
+        .form-control {
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          position: relative;
+          z-index: 1;
+        }
+        .form-control:hover {
+          border-color: #38b6ff !important;
+          box-shadow: 0 0 0 3px #b3e6ff, 0 1px 3px rgba(16, 24, 40, 0.1) !important;
+        }
+        .form-control:focus {
+          border-color: #38b6ff !important;
+          box-shadow: 0 0 0 4px #b3e6ff, 0 1px 3px rgba(16, 24, 40, 0.1) !important;
+          transform: translateY(-1px);
+          background: linear-gradient(to bottom, #ffffff, #e6f7ff) !important;
+          color: #0077b6 !important;
+        }
+        .form-control::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 5px;
+          height: 5px;
+          background: #38b6ff;
+          opacity: 0;
+          border-radius: 100%;
+          transform: translate(-50%, -50%);
+          z-index: 0;
+          pointer-events: none;
+        }
+        .form-control:focus::after {
+          animation: form-ripple 1s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        @keyframes form-ripple {
+          0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0.4;
+          }
+          40% {
+            opacity: 0.2;
+            transform: translate(-50%, -50%) scale(30);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(40);
+          }
+        }
+        .form-label {
+          position: relative;
+          z-index: 1;
+          transition: all 0.3s ease;
+        }
+        .form-label:hover {
+          color: rgb(154, 77, 226) !important;
+          transform: translateX(2px);
+        }
+        .form-label svg {
+          transition: all 0.3s ease;
+        }
+        .form-label:hover svg {
+          transform: scale(1.1);
+        }
+        .routine-table {
+          border-spacing: 0;
+          border-collapse: separate;
+          overflow: hidden;
+          font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        .routine-table th,
+        .routine-table td {
+          min-width: 60px;
+          max-width: 80px;
+          width: 7vw;
+          padding: 0.2rem 0.2rem;
+          font-size: 0.95rem;
+        }
+        .routine-table td {
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          position: relative;
+          z-index: 1;
+          border: 1px solid rgba(222, 226, 230, 0.8);
+        }
+        .routine-table td:hover {
+          background-color: #e6f7ff !important;
+          box-shadow: 0 8px 16px #b3e6ff;
+          border-color: #b3e6ff;
+        }
+        .routine-table td:before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(194, 137, 248, 0.05);
+          opacity: 0;
+          transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          pointer-events: none;
+          z-index: -1;
+          border-radius: inherit;
+          transform: scale(0.97);
+        }
+        .routine-table td:hover:before {
+          opacity: 1;
+          transform: scale(1);
+        }
+        .upper-cell, .lower-cell {
+          height: 50%;
+          position: relative;
+          font-size: 0.85rem;
+          border: none;
+          border-radius: 0;
+          padding: 0.3rem 0.5rem;
+          text-align: center;
+          transition: all 0.2s ease;
+        }
+        .dropdown-cell {
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background-position: right 0.5rem center;
+          background-size: 0.75em;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2338b6ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          color: #333;
+          text-align-last: center;
+          background-color: #ffffff;
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          transform-origin: center;
+        }
+        .dropdown-cell:focus, .dropdown-cell:hover {
+          border-color: #38b6ff !important;
+          box-shadow: 0 0 0 2px #b3e6ff, 0 4px 8px #b3e6ff;
+          color: #0077b6;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230077b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-color: #e6f7ff;
+        }
+        .dropdown-cell:after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 5px;
+          height: 5px;
+          background: #38b6ff;
+          opacity: 0;
+          border-radius: 100%;
+          transform: scale(1, 1) translate(-50%);
+          transform-origin: 50% 50%;
+          pointer-events: none;
+        }
+        
+        .dropdown-cell:focus:after {
+          animation: ripple 1.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+        
+        .dropdown-cell:hover:after {
+          animation: micro-ripple 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        @keyframes ripple {
+          0% {
+            transform: scale(0, 0);
+            opacity: 0.5;
+          }
+          20% {
+            transform: scale(25, 25);
+            opacity: 0.3;
+          }
+          100% {
+            opacity: 0;
+            transform: scale(40, 40);
+          }
+        }
+        
+        @keyframes micro-ripple {
+          0% {
+            transform: scale(0, 0);
+            opacity: 0.4;
+          }
+          40% {
+            transform: scale(10, 10);
+            opacity: 0.2;
+          }
+          100% {
+            opacity: 0;
+            transform: scale(15, 15);
+          }
+        }
+        .dropdown-cell option {
+          font-size: 0.9rem;
+          padding: 8px;
+        }
+        .dropdown-cell option:first-child {
+          color: transparent;
+          height: 0;
+          padding: 0;
+          margin: 0;
+          display: none;
+        }
+        .upper-cell {
+          border-bottom: 1px solid #dee2e6;
+          border-top-left-radius: 4px;
+          border-top-right-radius: 4px;
+        }
+        .lower-cell {
+          border-bottom-left-radius: 4px;
+          border-bottom-right-radius: 4px;
+        }
+        .section-labels {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 15px;
+        }
+        .section-label {
+          font-weight: bold;
+          padding: 7px 14px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #38b6ff 0%, #b3e6ff 100%);
+          color: white;
+          box-shadow: 0 4px 8px #b3e6ff;
+          letter-spacing: 0.5px;
+          position: relative;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .section-label:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px #b3e6ff;
+        }
+        .section-label:after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 70%);
+          z-index: 1;
+          transition: all 0.6s ease;
+          transform: translateX(-100%);
+        }
+        .section-label:hover:after {
+          transform: translateX(100%);
+        }
+        .selected-upper, .selected-lower {
+          font-weight: bold;
+          border-color: #38b6ff !important;
+          background-color: #e6f7ff;
+          box-shadow: 0 0 0 2px #b3e6ff;
+          animation: selected-pulse 2s infinite ease-in-out;
+          position: relative;
+          z-index: 2;
+        }
+        .selected-upper:hover, .selected-lower:hover {
+          box-shadow: 0 10px 20px #b3e6ff;
+          z-index: 4;
+        }
+        @keyframes selected-pulse {
+          0% {
+            box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.3);
+          }
+          50% {
+            box-shadow: 0 0 0 4px rgba(194, 137, 248, 0.2), 0 5px 15px rgba(154, 77, 226, 0.1);
+          }
+          100% {
+            box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.3);
+          }
+        }
+        .filled-upper, .filled-lower {
+          color: #495057;
+          font-style: italic;
+          background-color: #e6f7ff;
+          position: relative;
+          transition: all 0.3s ease;
+        }
+        .filled-upper:hover, .filled-lower:hover {
+          background-color: #b3e6ff;
+          box-shadow: 0 4px 12px rgba(154, 77, 226, 0.12);
+        }
+        .filled-upper:after, .filled-lower:after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 5px,
+            #b3e6ff 5px,
+            #b3e6ff 10px
+          );
+          transition: opacity 0.3s ease, transform 0.3s ease;
+          transform-origin: center;
+          pointer-events: none;
+        }
+        .routine-table td, .routine-table th {
+          border: 1px solid rgba(222, 226, 238, 0.7);
+          text-align: center;
+          vertical-align: middle;
+          background-color: #f8f9fa;
+          position: relative;
+          transition: all 0.3s ease;
+        }
+        .routine-table thead th {
+          background: linear-gradient(135deg, #38b6ff 0%, #b3e6ff 100%);
+          color: white;
+          font-weight: 600;
+          padding: 12px 8px;
+          letter-spacing: 0.5px;
+          text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
+          border: none;
+          position: relative;
+          overflow: hidden;
+          z-index: 1;
+        }
+        .routine-table thead th:after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(45deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 70%);
+          z-index: -1;
+          transition: all 0.6s ease;
+          transform: translateX(-100%);
+        }
+        .routine-table thead tr:hover th:after {
+          transform: translateX(100%);
+        }
+        .routine-table tbody th {
+          background: linear-gradient(135deg, #38b6ff 0%, #b3e6ff 100%);
+          color: white;
+          font-weight: 600;
+          padding: 8px;
+          text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
+          border: none;
+          transition: all 0.3s ease;
+        }
+        .routine-table tbody th:hover {
+          transform: translateX(2px);
+          box-shadow: -2px 0 8px rgba(154, 77, 226, 0.2);
+        }
+        .routine-table thead tr:hover th {
+          box-shadow: 0 4px 6px -2px rgba(154, 77, 226, 0.2);
+        }
+        .lab-time-cell {
+          background-color: #e6f7ff !important;
+          transition: background-color 0.3s ease;
+        }
+        .lab-time-cell:hover {
+          background-color: #b3e6ff !important;
+        }
+      `}</style>
+
+      {/* Table Layout */}
+      <table className="table routine-table" style={tableStyle}>
+        <thead>
+          <tr>
+            <th scope="col" className="col-2">Day \ Time</th>
+            {[...Array(9)].map((_, idx) => (
+              <th key={times[idx] || idx} scope="col">{times[idx] || ''}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {days.map((day) => (
+            <tr key={day}>
+              <th key={`${day}-header`} scope="row" className="col-2">{day}</th>
+              {[...Array(9)].map((_, idx) => {
+                const time = times[idx] || "";
+                const isTheoryTime = theoryTimesSet.has(`${day} ${time}`);
+                const cellClassName = isTheoryTime ? "lab-time-cell" : "";
+                const slotKey = `${day} ${time}`;
+                const blocked = blockedCells[slotKey];
+                return (
+                  <td
+                    key={`${day}-${time}-${idx}`}
+                    className={cellClassName}
+                    style={{
+                      padding: "0",
+                      position: "relative",
+                      textAlign: "center",
+                      background: blocked ? "#ffe6e6" : undefined,
+                      opacity: blocked ? 0.7 : 1,
+                      cursor: blocked ? "not-allowed" : undefined,
+                    }}
+                    title={blocked ? `This time is booked for sessional course ${blocked.course_id}` : undefined}
+                  >
+                    <div className="cell-container">
+                      {time ? (
+                        blocked ? (
+                          // Show the sessional course id in the cell, only for the base cell
+                          blocked.base ? (
+                            <div style={{ fontSize: '0.95em', marginTop: 2, color: '#b60000', fontWeight: 700, background: '#ffe6e6', borderRadius: 4, padding: '0 2px' }}>
+                              {blocked.course_id} (Sessional)
+                            </div>
+                          ) : null
+                        ) : (
+                          <>
+                            <Form.Select
+                              className={`dropdown-cell ${getCellStyle(day, time)}`}
+                              value={""}
+                              onChange={(e) => handleCourseChange(day, time, e.target.value)}
+                              title={`${sectionName} - ${day} ${time}`}
+                            >
+                              <option value=""></option>
+                              {filteredCourses.length === 0 ? (
+                                <option value="" disabled>No courses available</option>
+                              ) : (
+                                filteredCourses.map(course => (
+                                  <option
+                                    key={`theory-${day}-${time}-${course.course_id}`}
+                                    value={course.course_id}
+                                  >
+                                    {course.course_id} - {course.name || 'Unknown'}
+                                  </option>
+                                ))
+                              )}
+                            </Form.Select>
+                            {/* Show selected course_id in cell if selected */}
+                            {getCourse(slotKey) && getCourse(slotKey) !== '' && (
+                              <div style={{ fontSize: '0.95em', marginTop: 2, color: '#0077b6', fontWeight: 600, background: '#e6f7ff', borderRadius: 4, padding: '0 2px' }}>
+                                {getCourse(slotKey)}
+                              </div>
+                            )}
+                          </>
+                        )
+                      ) : null}
+                    </div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+});
+
+export default TheoryScheduleTable;
