@@ -56,6 +56,7 @@ function App(props) {
     window.scrollTo(0, 0);
     const fullPageLayoutRoutes = [
       "/auth/login",
+      "/auth/register",
       "/auth/forgot-password",
       "/form/"
     ];

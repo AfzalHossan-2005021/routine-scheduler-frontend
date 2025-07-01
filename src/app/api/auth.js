@@ -21,4 +21,33 @@ export const login = (username, password) =>
 export const forgetPassword = (username) =>
   axios
     .post(api_url("/auth/forgot-password"), { username })
-    .then((res) => res.data);
+    .then((res) => res.data)
+    .catch((error) => {
+      if (error.response) {
+        // Server responded with a status other than 2xx
+        throw new Error(error.response.data.message || "An error occurred");
+      } else if (error.request) {
+        // Request was made but no response received
+        throw new Error("No response from server. Please try again later.");
+      } else {
+        // Something else happened
+        throw new Error(error.message || "An unexpected error occurred");
+      }
+    });
+
+export const register = (username, email, password) =>
+  axios
+    .post(api_url("/auth/register"), { username, email, password })
+    .then((res) => res.data)
+    .catch((error) => {
+      if (error.response) {
+        // Server responded with a status other than 2xx
+        throw new Error(error.response.data.message || "An error occurred");
+      } else if (error.request) {
+        // Request was made but no response received
+        throw new Error("No response from server. Please try again later.");
+      } else {
+        // Something else happened
+        throw new Error(error.message || "An unexpected error occurred");
+      }
+    });
