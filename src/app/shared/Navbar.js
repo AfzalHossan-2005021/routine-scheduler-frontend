@@ -4,18 +4,117 @@ import { Link } from "react-router-dom";
 import { UserContext } from "../App";
 
 function Navbar() {
-  const toggleOffcanvas = () => {
-    document.querySelector(".sidebar-offcanvas").classList.toggle("active");
-  };
-
-  const toggleRightSidebar = () => {
-    document.querySelector(".right-sidebar").classList.toggle("open");
-  };
-
-  const { user, setUser } = useContext(UserContext);
+  const { setUser } = useContext(UserContext);
+  const name = localStorage.getItem("rememberedUsername");
 
   return (
-    <nav className="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row">
+    <nav
+      className="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row navbar-sessional-consistent"
+      style={{
+        boxShadow: '0 10px 30px rgba(194, 137, 248, 0.18)',
+        border: 'none',
+        background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)',
+        minHeight: '64px',
+        zIndex: 1050
+      }}
+    >
+      <style>{`
+        .navbar-sessional-consistent {
+          background: linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%) !important;
+          box-shadow: 0 10px 30px rgba(194, 137, 248, 0.18);
+          transition: background 0.3s ease;
+        }
+        .navbar-brand img {
+          filter: drop-shadow(0 4px 14px rgba(154, 77, 226, 0.12));
+          transition: transform 0.3s ease;
+        }
+        .navbar-brand img:hover {
+          transform: rotate(-2deg) scale(1.02);
+        }
+        .navbar-nav .nav-link, .navbar-nav .dropdown-toggle {
+          color: #fff !important;
+          font-weight: 700;
+          letter-spacing: 0.03em;
+          border-radius: 12px;
+          transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s;
+          box-shadow: none;
+        }
+        .navbar-nav .nav-link:hover, .navbar-nav .dropdown-toggle:hover {
+          background: rgba(255, 255, 255, 0.18);
+          color: #e6d6fa !important;
+          box-shadow: 0 4px 12px rgba(174, 117, 228, 0.18);
+        }
+        .navbar-nav .dropdown-menu {
+          border-radius: 15px;
+          box-shadow: 0 10px 30px rgba(154, 77, 226, 0.18);
+          animation: fadeInScale 0.25s ease forwards;
+          border: none;
+          backdrop-filter: blur(8px);
+          background: rgba(255, 255, 255, 0.95);
+          min-width: 220px;
+        }
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .navbar-toggler {
+          background: rgba(194, 137, 248, 0.25);
+          color: #fff;
+          border-radius: 12px;
+          transition: background 0.25s ease;
+        }
+        .navbar-toggler:hover {
+          background: rgba(194, 137, 248, 0.4);
+        }
+        .nav-profile-img {
+          border-radius: 12px;
+          background: rgba(255,255,255,0.18);
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .nav-profile-img i {
+          font-size: 32px;
+          color: #fff;
+        }
+        .nav-profile-text p {
+          color: #fff !important;
+          font-weight: 700;
+          margin-bottom: 0;
+        }
+        .navbar-nav .dropdown-item {
+          border-radius: 10px;
+          font-weight: 500;
+          color: #5e257e;
+          transition: background 0.2s ease, color 0.2s ease;
+        }
+        .navbar-nav .dropdown-item:hover {
+          background: linear-gradient(90deg, #f3e6ff 0%, #e3d5f7 100%);
+          color: #9a4de2;
+        }
+        .count-symbol {
+          display: inline-block;
+          min-width: 18px;
+          height: 18px;
+          border-radius: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          background: linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%);
+          color: #fff;
+          text-align: center;
+          line-height: 18px;
+          box-shadow: 0 2px 8px rgba(154, 77, 226, 0.15);
+          margin-left: 4px;
+        }
+      `}</style>
       <div className="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
         <Link className="navbar-brand brand-logo" to="/">
           <img
@@ -35,95 +134,33 @@ function Navbar() {
           className="navbar-toggler navbar-toggler align-self-center"
           type="button"
           onClick={() => document.body.classList.toggle("sidebar-icon-only")}
+          style={{ color: '#fff' }}
         >
           <span className="mdi mdi-menu"></span>
         </button>
-        <div className="search-field d-none d-md-block">
-            <form className="d-flex align-items-center h-100" action="#">
-              <div className="input-group">
-                <div className="input-group-prepend bg-transparent">
-                  <i className="input-group-text border-0 mdi mdi-magnify"></i>
-                </div>
-                <input type="text" className="form-control bg-transparent border-0" placeholder="Search projects"/>
-              </div>
-            </form>
-          </div>
-        <ul className="navbar-nav navbar-nav-right">
-          <li className="nav-item quick-actions d-none d-lg-block">
-            <Dropdown align="end">
-              <Dropdown.Toggle
-                as="button"
-                className="nav-link quick-actions-toggle"
-                type="button"
-              >
-                <i className="mdi mdi-plus-circle-outline"></i>
-                <span className="quick-actions-text">Quick Actions</span>
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="navbar-dropdown quick-actions-menu">
-                <div className="dropdown-header">
-                  <h6 className="quick-actions-title">Quick Actions</h6>
-                </div>
-                <div className="dropdown-divider"></div>
-                <Dropdown.Item
-                  as="button"
-                  type="button"
-                  onClick={e => e.preventDefault()}
-                  className="dropdown-item-enhanced"
-                >
-                  <i className="mdi mdi-account-plus mr-3 text-success"></i>
-                  <span>Add Teacher</span>
-                </Dropdown.Item>
-                <Dropdown.Item
-                  as="button"
-                  type="button"
-                  onClick={e => e.preventDefault()}
-                  className="dropdown-item-enhanced"
-                >
-                  <i className="mdi mdi-door mr-3 text-info"></i>
-                  <span>Add Room</span>
-                </Dropdown.Item>
-                <Dropdown.Item
-                  as="button"
-                  type="button"
-                  onClick={e => e.preventDefault()}
-                  className="dropdown-item-enhanced"
-                >
-                  <i className="mdi mdi-book-open mr-3 text-warning"></i>
-                  <span>Add Course</span>
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          </li>
+        <ul className="navbar-nav navbar-nav-right" style={{ alignItems: 'center' }}>
           <li className="nav-item nav-profile">
             <Dropdown align="end">
               <Dropdown.Toggle className="nav-link">
-                <div className="nav-profile-img">
-                  <img
-                    src={require("../../assets/images/faces/face1.jpg")}
-                    alt="user"
-                  />
+                <div className="nav-profile-img d-flex align-items-center justify-content-center">
+                  <i className="mdi mdi-account-circle" style={{ fontSize: 32, color: '#fff' }}></i>
                   <span className="availability-status online"></span>
                 </div>
                 <div className="nav-profile-text">
-                  <p className="mb-1 text-black"><b>{user?.user?.name || user?.user?.username || 'User'}</b></p>
+                  <p className="mb-1 text-black"><b>{name}</b></p>
                 </div>
               </Dropdown.Toggle>
-
               <Dropdown.Menu className="navbar-dropdown">
-                <Dropdown.Item
-                  href="!#"
-                  onClick={(evt) => evt.preventDefault()}
-                >
-                  <i className="mdi mdi-cached mr-2 text-success"></i>
-                  Activity Log
+                <Dropdown.Item as={Link} to="/account">
+                  <i className="mdi mdi-account mr-2 text-primary"></i>
+                  Account
                 </Dropdown.Item>
                 <Dropdown.Item
                   href="!#"
                   onClick={(evt) => {
                     evt.preventDefault();
                     localStorage.removeItem("token");
-                    setUser({loggedIn: false});
-                    console.log("signout");
+                    setUser({ loggedIn: false });
                   }}
                 >
                   <i className="mdi mdi-logout mr-2 text-primary"></i>
@@ -132,155 +169,7 @@ function Navbar() {
               </Dropdown.Menu>
             </Dropdown>
           </li>
-          <li className="nav-item">
-              <Dropdown align="end">
-                <Dropdown.Toggle className="nav-link count-indicator">
-                  <i className="mdi mdi-email-outline"></i>
-                  <span className="count-symbol bg-warning"></span>
-                </Dropdown.Toggle>
-
-                <Dropdown.Menu className="preview-list navbar-dropdown">
-                  <h6 className="p-3 mb-0">Messages</h6>
-                  <div className="dropdown-divider"></div>
-                  <Dropdown.Item className="dropdown-item preview-item" onClick={evt =>evt.preventDefault()}>
-                    <div className="preview-thumbnail">
-                      <img src={require("../../assets/images/faces/face4.jpg")} alt="user" className="profile-pic"/>
-                    </div>
-                    <div className="preview-item-content d-flex align-items-start flex-column justify-content-center">
-                      <h6 className="preview-subject ellipsis mb-1 font-weight-normal">Mark send you a message</h6>
-                      <p className="text-gray mb-0">
-                        1 Minutes ago
-                      </p>
-                    </div>
-                  </Dropdown.Item>
-                  <div className="dropdown-divider"></div>
-                  <Dropdown.Item className="dropdown-item preview-item" onClick={evt =>evt.preventDefault()}>
-                    <div className="preview-thumbnail">
-                      <img src={require("../../assets/images/faces/face2.jpg")} alt="user" className="profile-pic"/>
-                    </div>
-                    <div className="preview-item-content d-flex align-items-start flex-column justify-content-center">
-                      <h6 className="preview-subject ellipsis mb-1 font-weight-normal">Cregh send you a message</h6>
-                      <p className="text-gray mb-0">
-                        15 Minutes ago
-                      </p>
-                    </div>
-                  </Dropdown.Item>
-                  <div className="dropdown-divider"></div>
-                  <Dropdown.Item className="dropdown-item preview-item" onClick={evt =>evt.preventDefault()}>
-                    <div className="preview-thumbnail">
-                      <img src={require("../../assets/images/faces/face3.jpg")} alt="user" className="profile-pic"/>
-                    </div>
-                    <div className="preview-item-content d-flex align-items-start flex-column justify-content-center">
-                      <h6 className="preview-subject ellipsis mb-1 font-weight-normal">Profile picture updated</h6>
-                      <p className="text-gray mb-0">
-                        18 Minutes ago
-                      </p>
-                    </div>
-                  </Dropdown.Item>
-                  <div className="dropdown-divider"></div>
-                  <h6 className="p-3 mb-0 text-center cursor-pointer">4 new messages</h6>
-                </Dropdown.Menu>
-              </Dropdown>
-            </li>
-          <li className="nav-item">
-            <Dropdown align="end">
-              <Dropdown.Toggle className="nav-link count-indicator">
-                <i className="mdi mdi-bell-outline"></i>
-                <span className="count-symbol bg-danger"></span>
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="dropdown-menu navbar-dropdown preview-list">
-                <h6 className="p-3 mb-0">Notifications</h6>
-                <div className="dropdown-divider"></div>
-                <Dropdown.Item
-                  className="dropdown-item preview-item"
-                  onClick={(evt) => evt.preventDefault()}
-                >
-                  <div className="preview-thumbnail">
-                    <div className="preview-icon bg-success">
-                      <i className="mdi mdi-calendar"></i>
-                    </div>
-                  </div>
-                  <div className="preview-item-content d-flex align-items-start flex-column justify-content-center">
-                    <h6 className="preview-subject font-weight-normal mb-1">
-                      Event today
-                    </h6>
-                    <p className="text-gray ellipsis mb-0">
-                      Just a reminder that you have an event today
-                    </p>
-                  </div>
-                </Dropdown.Item>
-                <div className="dropdown-divider"></div>
-                <Dropdown.Item
-                  className="dropdown-item preview-item"
-                  onClick={(evt) => evt.preventDefault()}
-                >
-                  <div className="preview-thumbnail">
-                    <div className="preview-icon bg-warning">
-                      <i className="mdi mdi-settings"></i>
-                    </div>
-                  </div>
-                  <div className="preview-item-content d-flex align-items-start flex-column justify-content-center">
-                    <h6 className="preview-subject font-weight-normal mb-1">
-                      Settings
-                    </h6>
-                    <p className="text-gray ellipsis mb-0">Update dashboard</p>
-                  </div>
-                </Dropdown.Item>
-                <div className="dropdown-divider"></div>
-                <Dropdown.Item
-                  className="dropdown-item preview-item"
-                  onClick={(evt) => evt.preventDefault()}
-                >
-                  <div className="preview-thumbnail">
-                    <div className="preview-icon bg-info">
-                      <i className="mdi mdi-link-variant"></i>
-                    </div>
-                  </div>
-                  <div className="preview-item-content d-flex align-items-start flex-column justify-content-center">
-                    <h6 className="preview-subject font-weight-normal mb-1">
-                      Launch Admin
-                    </h6>
-                    <p className="text-gray ellipsis mb-0">New admin wow!</p>
-                  </div>
-                </Dropdown.Item>
-                <div className="dropdown-divider"></div>
-                <h6 className="p-3 mb-0 text-center cursor-pointer">
-                  See all notifications
-                </h6>
-              </Dropdown.Menu>
-            </Dropdown>
-          </li>
-          <li className="nav-item nav-logout d-none d-lg-block">
-            <a
-              className="nav-link"
-              href="!#"
-              onClick={(event) => {
-                event.preventDefault();
-                localStorage.removeItem("token");
-                setUser({loggedIn: false});
-                console.log("logout");
-              }}
-            >
-              <i className="mdi mdi-power"></i>
-            </a>
-          </li>
-          <li className="nav-item nav-settings d-none d-lg-block">
-            <button
-              type="button"
-              className="nav-link border-0"
-              onClick={toggleRightSidebar}
-            >
-              <i className="mdi mdi-format-line-spacing"></i>
-            </button>
-          </li>
         </ul>
-        <button
-          className="navbar-toggler navbar-toggler-right d-lg-none align-self-center"
-          type="button"
-          onClick={toggleOffcanvas}
-        >
-          <span className="mdi mdi-menu"></span>
-        </button>
       </div>
     </nav>
   );
