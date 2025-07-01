@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Form } from "react-bootstrap";
+import { Form, Button } from "react-bootstrap";
 import TheoryScheduleTable from "./TheoryScheduleTable";
 import { getActiveDepartments, getDepartmentalLevelTermBatches, getTheorySectionsByDeptAndLevelTerm, getTheoryCoursesByDeptLevelTerm } from "../api/db-crud";
+import { setSchedules, getSchedules } from "../api/theory-schedule";
 import { toast } from "react-hot-toast";
 
 export default function TheoryScheduleDashboardSection(props) {
@@ -104,6 +105,40 @@ export default function TheoryScheduleDashboardSection(props) {
     }));
   };
 
+  // Helper to determine if a course_id is sessional (even)
+  const isSessionalCourse = (course_id) => {
+    // Consider course_id as string, check if last char is even digit
+    if (!course_id) return false;
+    const lastDigit = course_id.match(/\d+/g)?.pop()?.slice(-1);
+    return lastDigit && parseInt(lastDigit) % 2 === 0;
+  };
+
+  // Fetch and populate already scheduled courses for all sections when loaded
+  useEffect(() => {
+    if (selectedDepartment && selectedLevelTermBatch && allTheorySections.length > 0) {
+      const batchValue = typeof selectedLevelTermBatch === 'object' && selectedLevelTermBatch.batch
+        ? selectedLevelTermBatch.batch
+        : null;
+      allTheorySections.forEach((section) => {
+        const sectionKey = `${selectedDepartment} ${section.batch} ${section.section}`;
+        const batchInt = parseInt(batchValue, 10); // Use batch from level-term selector
+        if (!isNaN(batchInt)) {
+          getSchedules(batchInt, section.section).then((res) => {
+            let allSchedules = [];
+            if (res.mainSection) allSchedules = [...res.mainSection];
+            if (res.subsections) Object.values(res.subsections).forEach(sub => { allSchedules = [...allSchedules, ...sub]; });
+            const cellMap = {};
+            allSchedules.forEach(sch => {
+              cellMap[`${sch.day} ${sch.time}`] = { course_id: sch.course_id, type: sch.type };
+            });
+            setTheorySchedulesBySection(prev => ({ ...prev, [sectionKey]: cellMap }));
+          });
+        }
+      });
+    }
+    // eslint-disable-next-line
+  }, [selectedDepartment, selectedLevelTermBatch, allTheorySections]);
+
   return (
     <div className="card mt-4">
       <div className="card-body">
@@ -159,6 +194,53 @@ export default function TheoryScheduleDashboardSection(props) {
           ) : (
             allTheorySections.map((section) => {
               const sectionKey = `${selectedDepartment} ${section.batch} ${section.section}`;
+              // Helper to get the schedule for this section in the format expected by setSchedules
+              const getSectionSchedules = () => {
+                const scheduleObj = theorySchedulesBySection[sectionKey] || {};
+                // Map: { 'Saturday 8': {course_id: 'CSE101'}, ... } => { course_id: [ {day, time}, ... ] }
+                const courseSlotMap = {};
+                Object.entries(scheduleObj).forEach(([slot, val]) => {
+                  if (!val.course_id) return;
+                  const [day, time] = slot.split(" ");
+                  if (!courseSlotMap[val.course_id]) courseSlotMap[val.course_id] = [];
+                  courseSlotMap[val.course_id].push({ day, time });
+                });
+                return courseSlotMap;
+              };
+
+              // Save handler for this section
+              const handleSaveSection = async () => {
+                const courseSlotMap = getSectionSchedules();
+                const batchValue = typeof selectedLevelTermBatch === 'object' && selectedLevelTermBatch.batch
+                  ? selectedLevelTermBatch.batch
+                  : null;
+                const batch = parseInt(batchValue, 10); // Use batch from level-term selector
+                const sectionName = section.section;
+                let anySuccess = false;
+                let anyFail = false;
+                let failCourses = [];
+                if (isNaN(batch)) {
+                  toast.error("Invalid batch value for this section. Cannot save schedule.");
+                  return;
+                }
+                for (const [course_id, slots] of Object.entries(courseSlotMap)) {
+                  try {
+                    await setSchedules(batch, sectionName, course_id, slots);
+                    anySuccess = true;
+                  } catch (err) {
+                    anyFail = true;
+                    failCourses.push(course_id);
+                  }
+                }
+                if (anySuccess && !anyFail) {
+                  toast.success(`Schedule saved for section ${sectionName}`);
+                } else if (anySuccess && anyFail) {
+                  toast.error(`Some courses failed to save: ${failCourses.join(", ")}`);
+                } else {
+                  toast.error("Failed to save schedule for this section");
+                }
+              };
+
               return (
                 <div className="row mb-4" key={sectionKey}>
                   <div className="col-12">
@@ -179,7 +261,13 @@ export default function TheoryScheduleDashboardSection(props) {
                           allTheoryCourses={allTheoryCourses}
                           theorySchedules={theorySchedulesBySection[sectionKey] || {}}
                           onChange={handleTheoryCellChange(sectionKey)}
+                          isSessionalCourse={isSessionalCourse}
                         />
+                        <div className="d-flex justify-content-end mt-3">
+                          <Button variant="primary" onClick={handleSaveSection}>
+                            Save
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

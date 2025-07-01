@@ -15,7 +15,8 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
   theoryTimes = [],
   allTheoryCourses = [],
   theorySchedules = {},
-  sectionName = "Section"
+  sectionName = "Section",
+  isSessionalCourse = () => false,
 }) {
   // Debug log to print allTheoryCourses for troubleshooting
   //console.log('allTheoryCourses:', allTheoryCourses);
@@ -109,6 +110,28 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
     }
     onChange(day, time, courseId);
   }, [onChange, getSelectedCoursesForDay, getCourseObj, getCourseCountInTable]);
+
+  // Compute blocked cells for sessional courses
+  const blockedCells = useMemo(() => {
+    // Map: slotKey => { course_id, span: 3 }
+    const blocked = {};
+    Object.entries(theorySchedules).forEach(([slot, val]) => {
+      if (val && val.course_id && isSessionalCourse(val.course_id)) {
+        // Block this and next 2 time slots in the same day
+        const [day, timeStr] = slot.split(" ");
+        const timeIdx = times.indexOf(Number(timeStr));
+        if (timeIdx !== -1) {
+          for (let i = 0; i < 3; i++) {
+            const t = times[timeIdx + i];
+            if (typeof t !== "undefined") {
+              blocked[`${day} ${t}`] = { course_id: val.course_id, base: i === 0 };
+            }
+          }
+        }
+      }
+    });
+    return blocked;
+  }, [theorySchedules, isSessionalCourse]);
 
   // Memoized table style for consistent rendering with improved appearance
   const tableStyle = useMemo(() => ({
@@ -526,6 +549,7 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
                 const isTheoryTime = theoryTimesSet.has(`${day} ${time}`);
                 const cellClassName = isTheoryTime ? "lab-time-cell" : "";
                 const slotKey = `${day} ${time}`;
+                const blocked = blockedCells[slotKey];
                 return (
                   <td
                     key={`${day}-${time}-${idx}`}
@@ -533,39 +557,52 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
                     style={{
                       padding: "0",
                       position: "relative",
-                      textAlign: "center"
+                      textAlign: "center",
+                      background: blocked ? "#ffe6e6" : undefined,
+                      opacity: blocked ? 0.7 : 1,
+                      cursor: blocked ? "not-allowed" : undefined,
                     }}
+                    title={blocked ? `This time is booked for sessional course ${blocked.course_id}` : undefined}
                   >
                     <div className="cell-container">
                       {time ? (
-                        <>
-                          <Form.Select
-                            className={`dropdown-cell ${getCellStyle(day, time)}`}
-                            value={""} // Always show placeholder, never the selected course
-                            onChange={(e) => handleCourseChange(day, time, e.target.value)}
-                            title={`${sectionName} - ${day} ${time}`}
-                          >
-                            <option value=""></option>
-                            {filteredCourses.length === 0 ? (
-                              <option value="" disabled>No courses available</option>
-                            ) : (
-                              filteredCourses.map(course => (
-                                <option
-                                  key={`theory-${day}-${time}-${course.course_id}`}
-                                  value={course.course_id}
-                                >
-                                  {course.course_id} - {course.name || 'Unknown'}
-                                </option>
-                              ))
-                            )}
-                          </Form.Select>
-                          {/* Show selected course_id in cell if selected */}
-                          {getCourse(slotKey) && getCourse(slotKey) !== '' && (
-                            <div style={{ fontSize: '0.95em', marginTop: 2, color: '#0077b6', fontWeight: 600, background: '#e6f7ff', borderRadius: 4, padding: '0 2px' }}>
-                              {getCourse(slotKey)}
+                        blocked ? (
+                          // Show the sessional course id in the cell, only for the base cell
+                          blocked.base ? (
+                            <div style={{ fontSize: '0.95em', marginTop: 2, color: '#b60000', fontWeight: 700, background: '#ffe6e6', borderRadius: 4, padding: '0 2px' }}>
+                              {blocked.course_id} (Sessional)
                             </div>
-                          )}
-                        </>
+                          ) : null
+                        ) : (
+                          <>
+                            <Form.Select
+                              className={`dropdown-cell ${getCellStyle(day, time)}`}
+                              value={""}
+                              onChange={(e) => handleCourseChange(day, time, e.target.value)}
+                              title={`${sectionName} - ${day} ${time}`}
+                            >
+                              <option value=""></option>
+                              {filteredCourses.length === 0 ? (
+                                <option value="" disabled>No courses available</option>
+                              ) : (
+                                filteredCourses.map(course => (
+                                  <option
+                                    key={`theory-${day}-${time}-${course.course_id}`}
+                                    value={course.course_id}
+                                  >
+                                    {course.course_id} - {course.name || 'Unknown'}
+                                  </option>
+                                ))
+                              )}
+                            </Form.Select>
+                            {/* Show selected course_id in cell if selected */}
+                            {getCourse(slotKey) && getCourse(slotKey) !== '' && (
+                              <div style={{ fontSize: '0.95em', marginTop: 2, color: '#0077b6', fontWeight: 600, background: '#e6f7ff', borderRadius: 4, padding: '0 2px' }}>
+                                {getCourse(slotKey)}
+                              </div>
+                            )}
+                          </>
+                        )
                       ) : null}
                     </div>
                   </td>
