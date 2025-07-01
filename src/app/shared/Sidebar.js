@@ -57,21 +57,32 @@ class Sidebar extends Component {
 
   render () {
     return (
-      <nav className="sidebar sidebar-offcanvas" id="sidebar">
+      <nav className="sidebar sidebar-offcanvas" id="sidebar" style={{
+        background: '#fff',
+        borderRadius: '0 16px 16px 0',
+        boxShadow: '0 6px 24px 0 rgba(154, 77, 226, 0.10)',
+        border: 'none',
+        minHeight: '100vh',
+        paddingTop: 16,
+        paddingBottom: 16,
+        transition: 'background 0.3s, box-shadow 0.3s',
+      }}>
+        <style>{`
+          .sidebar .nav-item {
+            position: relative;
+          }
+          .sidebar .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 8px; bottom: 8px;
+            width: 4px;
+            border-radius: 4px;
+            background: linear-gradient(180deg, #c289f8 0%, #ae75e4 100%);
+            z-index: 2;
+            display: block;
+          }
+        `}</style>
         <ul className="nav">
-          <li className="nav-item nav-profile">
-            <a href="!#" className="nav-link" onClick={evt =>evt.preventDefault()}>
-              <div className="nav-profile-image">
-                <img src={ require("../../assets/images/faces/face1.jpg") } alt="profile" />
-                <span className="login-status online"></span> {/* change to offline or busy as needed */}
-              </div>
-              <div className="nav-profile-text">
-                <span className="font-weight-bold mb-2">Saem Hasan</span>
-                <span className="text-secondary text-small">Site Admin</span>
-              </div>
-              <i className="mdi mdi-bookmark-check text-success nav-profile-badge"></i>
-            </a>
-          </li>
           <li className={ this.isPathActive('/dashboard') ? 'nav-item active' : 'nav-item' }>
             <Link className="nav-link" to="/dashboard">
               <span className="menu-title">Dashboard</span>
