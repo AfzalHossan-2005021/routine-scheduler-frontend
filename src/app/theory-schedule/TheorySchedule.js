@@ -300,12 +300,8 @@ export default function TheorySchedule(props) {
   // Block in-app route changes if there are unsaved changes
   useEffect(() => {
     if (!isChanged) return;
-    const unblock = history.block((tx) => {
-      if (isChanged && !window.confirm("You have unsaved changes. Are you sure you want to leave?")) {
-        return false;
-      }
-      unblock();
-      tx.retry();
+    const unblock = history.block((location, action) => {
+      return "You have unsaved changes. Are you sure you want to leave?";
     });
     return () => {
       unblock();
