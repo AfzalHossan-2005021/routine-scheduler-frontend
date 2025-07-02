@@ -19,9 +19,6 @@ const TheorySelect = lazy(() => import("./forms/TheorySelect"));
 const SessionalSelect = lazy(() => import("./forms/SessionalSelect"));
 const TheoryScheduleForm = lazy(() => import("./forms/TheorySchedule"));
 
-const TheorySchedule = lazy(() => import("./theory-schedule/AskForSchedule"));
-const FixedSchedule = lazy(() => import("./theory-schedule/FixedSchedule"));
-
 const LabRoomAssign = lazy(() => import("./lab-room-assign/LabRoomAssign"));
 const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSchedule"));
 
@@ -31,7 +28,7 @@ const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
 const Account = lazy(() => import("./user-pages/Account"));
 
 const pdfPage = lazy(() => import("./pdf/ShowPdf"));
-const TheoryScheduleDashboardSection = lazy(() => import("./theory-schedule/TheoryScheduleDashboardSection"));
+const TheorySchedule = lazy(() => import("./theory-schedule/TheorySchedule"));
 
 
 export default function AppRoutes() {
@@ -52,14 +49,13 @@ export default function AppRoutes() {
             <Route path="/database/courses" component={Courses} />
             <Route path="/database/initialize" component={Initialize} />
             <Route path="/theory-assign" component={TheoryPreference} />
-            <Route path="/theory-schedule/ask" component={TheorySchedule} />
-            <Route path="/theory-schedule/fixed" component={FixedSchedule} />
             <Route path="/room-assign" component={ LabRoomAssign } />
             <Route path="/lab-assign" component={ TeachersList } />
             <Route path="/lab-assign/:teacherId" component={TeacherDetails} />
             <Route path="/lab-schedule" component={ SessionalSchedule } />
             <Route path="/pdf" component={pdfPage} />
-            <Route path="/theory-schedule/new" component={TheoryScheduleDashboardSection} />
+            <Route path="/theory-schedule/new" component={TheorySchedule} />
+            <Route path="/account" component={Account} />
             <Redirect to="/dashboard" />
           </Switch>
         ) : (
