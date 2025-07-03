@@ -9,6 +9,10 @@ export default function Initialize(){
     const [levelTerms, setLevelTerms] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showActivateModal, setShowActivateModal] = useState(false);
+    const [selectedLevelTerms, setSelectedLevelTerms] = useState([]);
+    const [batchInputs, setBatchInputs] = useState({});
+    const [defaultSectionCount, setDefaultSectionCount] = useState("");
     
     useEffect(() => {
         setIsLoading(true);
@@ -106,6 +110,47 @@ export default function Initialize(){
             });
     }
 
+    // Get unique, sorted level-terms for dropdown
+    const uniqueLevelTerms = Array.from(new Set(levelTerms.map(lt => lt.level_term)))
+        .filter(Boolean)
+        .sort((a, b) => {
+            // Sort like L1-T1, L1-T2, L2-T1, L2-T2, ...
+            const parse = s => s.match(/L(\d+)-T(\d+)/) || [];
+            const [ , la, ta ] = parse(a) || [];
+            const [ , lb, tb ] = parse(b) || [];
+            if (la !== lb) return (parseInt(la) || 0) - (parseInt(lb) || 0);
+            return (parseInt(ta) || 0) - (parseInt(tb) || 0);
+        });
+
+    // Handler for activating selected level-terms for all departments
+    const handleActivateLevelTerms = () => {
+        if (!selectedLevelTerms.length) {
+            toast.error("Please select at least one level-term");
+            return;
+        }
+        // Validate batch inputs
+        for (const lt of selectedLevelTerms) {
+            if (!batchInputs[lt] || isNaN(batchInputs[lt]) || batchInputs[lt] === "") {
+                toast.error(`Please enter batch for ${lt}`);
+                return;
+            }
+        }
+        if (!defaultSectionCount || isNaN(defaultSectionCount)) {
+            toast.error("Please enter a default section count");
+            return;
+        }
+        setLevelTerms(prev => prev.map(lt =>
+            selectedLevelTerms.includes(lt.level_term)
+                ? { ...lt, active: true, batch: batchInputs[lt.level_term], section_count: defaultSectionCount }
+                : lt
+        ));
+        setShowActivateModal(false);
+        setSelectedLevelTerms([]);
+        setBatchInputs({});
+        setDefaultSectionCount("");
+        toast.success(`Activated ${selectedLevelTerms.join(", ")} for all departments`);
+    };
+
     return (
         <div>
             {/* Modern Page Header */}
@@ -168,27 +213,45 @@ export default function Initialize(){
                         background: "white"
                     }}>
                         <div className="card-body" style={{ padding: "2rem" }}>
-                            <h4 className="card-title" style={{ 
-                                color: "rgb(174, 117, 228)", 
-                                borderBottom: "3px solid rgb(194, 137, 248)",
-                                paddingBottom: "16px",
-                                marginBottom: "24px",
-                                fontWeight: "700",
-                                display: "flex",
-                                alignItems: "center",
-                                fontSize: "1.5rem",
-                                letterSpacing: "0.3px"
-                            }}>
-                                <span style={{ marginRight: "12px" }}>
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M9 5H7C6.46957 5 5.96086 5.21071 5.58579 5.58579C5.21071 5.96086 5 6.46957 5 7V19C5 19.5304 5.21071 20.0391 5.58579 20.4142C5.96086 20.7893 6.46957 21 7 21H17C17.5304 21 18.0391 20.7893 18.4142 20.4142C18.7893 20.0391 19 19.5304 19 19V7C19 6.46957 18.7893 5.96086 18.4142 5.58579C18.0391 5.21071 17.5304 5 17 5H15" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M13 3H11C9.89543 3 9 3.89543 9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5C15 3.89543 14.1046 3 13 3Z" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M9 12H15" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                        <path d="M9 16H15" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                    </svg>
-                                </span>
-                                Level Term Initialization
-                            </h4>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                                <h4 className="card-title" style={{ 
+                                    color: "rgb(174, 117, 228)", 
+                                    borderBottom: "3px solid rgb(194, 137, 248)",
+                                    paddingBottom: "16px",
+                                    marginBottom: 0,
+                                    fontWeight: "700",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    fontSize: "1.5rem",
+                                    letterSpacing: "0.3px"
+                                }}>
+                                    <span style={{ marginRight: "12px" }}>
+                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M9 5H7C6.46957 5 5.96086 5.21071 5.58579 5.58579C5.21071 5.96086 5 6.46957 5 7V19C5 19.5304 5.21071 20.0391 5.58579 20.4142C5.96086 20.7893 6.46957 21 7 21H17C17.5304 21 18.0391 20.7893 18.4142 20.4142C18.7893 20.0391 19 19.5304 19 19V7C19 6.46957 18.7893 5.96086 18.4142 5.58579C18.0391 5.21071 17.5304 5 17 5H15" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            <path d="M13 3H11C9.89543 3 9 3.89543 9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5C15 3.89543 14.1046 3 13 3Z" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            <path d="M9 12H15" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            <path d="M9 16H15" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                        </svg>
+                                    </span>
+                                    Level Term Initialization
+                                </h4>
+                                <button
+                                    type="button"
+                                    style={{
+                                        borderRadius: "8px",
+                                        padding: "8px 18px",
+                                        fontWeight: 600,
+                                        background: "linear-gradient(135deg, #c289f8, #ae75e4)",
+                                        border: "none",
+                                        color: "white",
+                                        fontSize: "1rem",
+                                        cursor: "pointer"
+                                    }}
+                                    onClick={() => setShowActivateModal(true)}
+                                >
+                                    Activate Level-Term
+                                </button>
+                            </div>
                             
                             {/* Add loading state */}
                             {isLoading ? (
@@ -584,6 +647,59 @@ export default function Initialize(){
                                             )}
                                         </button>
                                     </div>
+                                    {showActivateModal && (
+                                        <div style={{
+                                            position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "rgba(0,0,0,0.3)", zIndex: 1000,
+                                            display: "flex", alignItems: "center", justifyContent: "center"
+                                        }}>
+                                            <div style={{ background: "white", borderRadius: 12, padding: 32, minWidth: 340, boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)" }}>
+                                                <h5 style={{ marginBottom: 18, color: "#9a4de2" }}>Activate Level-Term</h5>
+                                                <div style={{ marginBottom: 18 }}>
+                                                    <label style={{ fontWeight: 600, marginBottom: 6, display: 'block' }}>Default Section Count for All</label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        value={defaultSectionCount}
+                                                        onChange={e => setDefaultSectionCount(e.target.value)}
+                                                        placeholder="e.g. 2"
+                                                        style={{ width: 120, padding: 8, borderRadius: 6, border: "1.5px solid #d0d5dd", marginBottom: 10 }}
+                                                    />
+                                                </div>
+                                                <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 18 }}>
+                                                    {uniqueLevelTerms.map(lt => (
+                                                        <div key={lt} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedLevelTerms.includes(lt)}
+                                                                onChange={e => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedLevelTerms(prev => [...prev, lt]);
+                                                                    } else {
+                                                                        setSelectedLevelTerms(prev => prev.filter(x => x !== lt));
+                                                                    }
+                                                                }}
+                                                                style={{ marginRight: 8 }}
+                                                            />
+                                                            <span style={{ minWidth: 70 }}>{lt}</span>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                placeholder="Batch"
+                                                                value={batchInputs[lt] || ""}
+                                                                onChange={e => setBatchInputs(prev => ({ ...prev, [lt]: e.target.value }))}
+                                                                style={{ marginLeft: 12, width: 80, padding: 6, borderRadius: 6, border: "1.5px solid #d0d5dd" }}
+                                                                disabled={!selectedLevelTerms.includes(lt)}
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                                                    <button onClick={() => setShowActivateModal(false)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid #ccc", background: "#f8f9fa", color: "#333" }}>Cancel</button>
+                                                    <button onClick={handleActivateLevelTerms} style={{ padding: "7px 16px", borderRadius: 6, border: "none", background: "#9a4de2", color: "white", fontWeight: 600 }}>Activate</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
