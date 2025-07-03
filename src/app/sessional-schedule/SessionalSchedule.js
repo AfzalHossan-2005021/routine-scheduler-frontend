@@ -17,6 +17,9 @@ import {
   setSessionalSchedules
 } from "../api/sessional-schedule";
 import SectionScheduleTable from "./SectionScheduleTable";
+import { mdiContentSave, mdiAccountGroupOutline } from '@mdi/js';
+import Icon from '@mdi/react';
+import { useHistory } from "react-router-dom";
 
 export default function SessionalSchedule() {
   // State variables grouped by functionality
@@ -40,8 +43,12 @@ export default function SessionalSchedule() {
   const [isChanged, setIsChanged] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Add state for original schedules
+  const [originalLabSchedulesBySection, setOriginalLabSchedulesBySection] = useState({});
+  
   // Use the custom hook for data loading
   const { loadData } = useLoadData();
+  const history = useHistory();
 
   // Fetch all active departments on component mount
   useEffect(() => {
@@ -155,7 +162,7 @@ export default function SessionalSchedule() {
       // Set up some default lab slots
       const defaultLabSlots = new Set();
       days.forEach(day => {
-        [2, 5, 8, 11].forEach(time => {
+        [2, 8, 11].forEach(time => {
           defaultLabSlots.add(`${day} ${time}`);
         });
       });
@@ -212,22 +219,17 @@ export default function SessionalSchedule() {
         .then((results) => {
           toast.dismiss(loadingSchedules);
           const newLabSchedulesBySection = {};
-
           let validSchedulesCount = 0;
-          
           results.forEach(({ sectionKey, schedules }) => {
             if (!sectionKey) return;
-            
-            // Store the schedules even if empty
             newLabSchedulesBySection[sectionKey] = schedules;
-            
             if (schedules.length > 0) {
               validSchedulesCount++;
             }
           });
-
           setLabSchedulesBySection(newLabSchedulesBySection);
-          
+          // Deep clone for original
+          setOriginalLabSchedulesBySection(JSON.parse(JSON.stringify(newLabSchedulesBySection)));
           if (validSchedulesCount > 0) {
             toast.success(`Loaded schedules for ${validSchedulesCount} sections`);
           }
@@ -322,85 +324,155 @@ export default function SessionalSchedule() {
   }, [allSessionalCourses, labSchedulesBySection]);
 
   // Save all schedules efficiently
-  const saveAllSchedules = useCallback(() => {
+  const saveAllSchedules = useCallback(async () => {
     if (!selectedLevelTermBatch || !selectedLevelTermBatch.batch) {
       toast.error("Select a batch first");
       return;
     }
-    
     if (!selectedDepartment) {
       toast.error("Select a department first");
       return;
     }
-    
     if (getAllSectionKeys.length === 0) {
       toast.warning("No sections found to save schedules for");
       return;
     }
-
-    // Show saving indicator
+    setIsLoading(true);
     const savingToast = toast.loading("Saving all schedules...");
-
-    // Save all section schedules in parallel
-    const savePromises = getAllSectionKeys.map(sectionKey => {
-      // Safely parse the section key
-      if (!sectionKey) {
-        return Promise.resolve({ success: false, section: null, error: "Invalid section key" });
-      }
-      
-      // Parse the section key
+    // For each section, find changed slots
+    const savePromises = getAllSectionKeys.map(async (sectionKey) => {
+      if (!sectionKey) return [];
       const { department, batch, section } = parseSectionKey(sectionKey);
-      
-      if (!department || !batch || !section) {
-        return Promise.resolve({ success: false, section: null, error: "Invalid section key format" });
-      }
-      
-      const schedules = labSchedulesBySection[sectionKey] || [];
-      
-      // Call the API to save the schedules
-      return setSessionalSchedules(batch, section, department, schedules)
-        .then(response => ({ success: true, section }))
-        .catch(error => {
-          console.error(`Failed to save schedules for section ${section}:`, error);
-          return { success: false, section, error };
-        });
+      if (!department || !batch || !section) return [];
+      const current = (labSchedulesBySection[sectionKey] || []).reduce((acc, slot) => {
+        acc[`${slot.day} ${slot.time}`] = slot;
+        return acc;
+      }, {});
+      const original = (originalLabSchedulesBySection[sectionKey] || []).reduce((acc, slot) => {
+        acc[`${slot.day} ${slot.time}`] = slot;
+        return acc;
+      }, {});
+      const changedSlots = [];
+      // Check all slots in current
+      Object.entries(current).forEach(([slot, val]) => {
+        const prevCourseId = original[slot]?.course_id || "";
+        const newCourseId = val.course_id || "";
+        if (prevCourseId !== newCourseId) {
+          changedSlots.push({ slot, course_id: newCourseId });
+        }
+      });
+      // Also check for slots that existed before but are now missing (deleted)
+      Object.keys(original).forEach(slot => {
+        if (!(slot in current)) {
+          changedSlots.push({ slot, course_id: "" });
+        }
+      });
+      // For each changed slot, send a setSessionalSchedules call
+      const saveSectionTasks = changedSlots.map(async ({ slot, course_id }) => {
+        const [day, time] = slot.split(" ");
+        try {
+          await setSessionalSchedules(batch, section, department,
+            { day, time, course_id: course_id == "" ? "None" : course_id }
+          );
+          return { success: true, section, slot };
+        } catch {
+          return { success: false, section, slot };
+        }
+      });
+      return Promise.all(saveSectionTasks);
     });
-
-    // Process all save results
     Promise.all(savePromises)
-      .then((results) => {
+      .then(results => {
         toast.dismiss(savingToast);
-        
-        // Count failures and successes
-        const failures = results.filter(r => !r.success);
-        const totalCount = results.length;
+        setIsLoading(false);
+        setIsChanged(false);
+        // After successful save, update originalLabSchedulesBySection to match current
+        setOriginalLabSchedulesBySection(JSON.parse(JSON.stringify(labSchedulesBySection)));
+        const flatResults = results.flat();
+        const failures = flatResults.filter(r => !r.success);
+        const totalCount = flatResults.length;
         const successCount = totalCount - failures.length;
-        
         if (failures.length === 0) {
           toast.success("All schedules saved successfully");
-          setIsChanged(false);
         } else if (failures.length < totalCount) {
           toast.warning(`Saved ${successCount} out of ${totalCount} schedules`);
-          setIsChanged(true);
         } else {
           toast.error("Failed to save any schedules");
         }
       })
-      .catch(err => {
+      .catch(() => {
         toast.dismiss(savingToast);
+        setIsLoading(false);
         toast.error("Failed to save schedules");
-        console.error("Unexpected error saving schedules:", err);
       });
-  }, [selectedLevelTermBatch, selectedDepartment, getAllSectionKeys, labSchedulesBySection]);
+  }, [selectedLevelTermBatch, selectedDepartment, getAllSectionKeys, labSchedulesBySection, originalLabSchedulesBySection]);
+
+  // Define a shared style object for modal action buttons (copied from Teachers.js)
+  const modalButtonStyle = {
+    borderRadius: "6px",
+    padding: "10px 20px",
+    fontWeight: "600",
+    background: "rgba(154, 77, 226, 0.15)",
+    border: "1px solid rgba(154, 77, 226, 0.5)",
+    color: "rgb(154, 77, 226)",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "1rem",
+    position: "relative",
+    overflow: "hidden"
+  };
+
+  // Block in-app route changes if there are unsaved changes
+  useEffect(() => {
+    if (!isChanged) return;
+    const unblock = history.block((location, action) => {
+      return "You have unsaved changes. Are you sure you want to leave?";
+    });
+    return () => {
+      unblock();
+    };
+  }, [isChanged, history]);
 
   // JSX for rendering the component UI is unchanged
   return (
     <div>
-      <div className="page-header">
-        <h3 className="page-title"> Sessional Schedule Assign </h3>
+      {/* Modern Page Header */}
+      <div className="page-header" style={{
+        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+        borderRadius: "16px",
+        padding: "1.5rem",
+        marginBottom: "2rem",
+        boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+        color: "white"
+      }}>
+        <h3 className="page-title" style={{
+          fontSize: "1.8rem",
+          fontWeight: "700",
+          marginBottom: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          color: "white"
+        }}>
+          <div style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "rgba(255, 255, 255, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
+          }}>
+            <Icon path={mdiAccountGroupOutline} size={1} color="white" />
+          </div>
+          Sessional Schedule Assign
+        </h3>
         <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item active" aria-current="page">
+          <ol className="breadcrumb" style={{ marginBottom: "0", background: "transparent" }}>
+            <li className="breadcrumb-item active" aria-current="page" style={{ color: "rgba(255,255,255,0.9)", fontWeight: "500" }}>
               Sessional Schedule
             </li>
           </ol>
@@ -411,17 +483,18 @@ export default function SessionalSchedule() {
       <div className="row mb-4">
         <div className="col-12">
           <div className="card" style={{
-            borderRadius: "12px",
-            boxShadow: "0 6px 16px rgba(0,0,0,0.1)",
+            borderRadius: "16px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
             border: "none",
-            transition: "all 0.3s ease"
+            transition: "all 0.3s ease",
+            background: "white"
           }}>
-            <div className="card-body" style={{ padding: "1.5rem" }}>
+            <div className="card-body" style={{ padding: "2rem" }}>
               <h4 className="card-title" style={{ 
                 color: "rgb(174, 117, 228)", 
-                borderBottom: "2px solid rgb(194, 137, 248)",
-                paddingBottom: "12px",
-                marginBottom: "20px",
+                borderBottom: "3px solid rgb(194, 137, 248)",
+                paddingBottom: "16px",
+                marginBottom: "24px",
                 fontWeight: "700",
                 display: "flex",
                 alignItems: "center",
@@ -604,51 +677,43 @@ export default function SessionalSchedule() {
                     `}</style>
                   </div>
                 )}
-                <div className="ml-auto">
-                  <Button
-                    variant="primary"
-                    onClick={saveAllSchedules}
-                    disabled={!isChanged || isLoading}
-                    style={{
-                      fontWeight: '600', 
-                      padding: '10px 20px',
-                      opacity: (isChanged && !isLoading) ? 1 : 0.7,
-                      background: isChanged && !isLoading ? 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)' : '#e3d5f7',
-                      border: 'none',
-                      borderRadius: '10px',
-                      boxShadow: isChanged && !isLoading ? '0 4px 10px rgba(154, 77, 226, 0.25)' : 'none',
-                      transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                    className="save-button"
-                    onMouseOver={(e) => {
-                      if(isChanged && !isLoading) {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 15px rgba(154, 77, 226, 0.35)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if(isChanged && !isLoading) {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 10px rgba(154, 77, 226, 0.25)';
-                      }
-                    }}
-                  >
-                    {isChanged ? (
-                      <>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M19 21H5C3.9 21 3 20.1 3 19V5C3 3.9 3.9 3 5 3H19C20.1 3 21 3.9 21 5V19C21 20.1 20.1 21 19 21Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          <path d="M8.5 10.5L11.5 13.5L16 8.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        Save All Changes
-                      </>
-                    ) : "No Changes to Save"}
-                  </Button>
-                </div>
+                {selectedLevelTermBatch && (
+                  <div className="ml-auto">
+                    <Button
+                      style={{
+                        ...modalButtonStyle,
+                        background: isChanged && !isLoading ? 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)' : 'rgba(154, 77, 226, 0.10)',
+                        color: isChanged && !isLoading ? 'white' : 'rgb(154, 77, 226)',
+                        border: isChanged && !isLoading ? '1.5px solid rgb(154, 77, 226)' : '1px solid rgba(154, 77, 226, 0.5)',
+                        boxShadow: isChanged && !isLoading ? '0 4px 10px rgba(154, 77, 226, 0.25)' : 'none',
+                        opacity: (isChanged && !isLoading) ? 1 : 0.7,
+                        cursor: (isChanged && !isLoading) ? 'pointer' : 'not-allowed',
+                      }}
+                      disabled={!isChanged || isLoading}
+                      className="save-button d-flex align-items-center justify-content-center"
+                      onClick={saveAllSchedules}
+                      onMouseOver={e => {
+                        if(isChanged && !isLoading) {
+                          e.currentTarget.style.background = 'rgb(154, 77, 226)';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.borderColor = 'rgb(154, 77, 226)';
+                          e.currentTarget.style.boxShadow = '0 6px 15px rgba(154, 77, 226, 0.35)';
+                        }
+                      }}
+                      onMouseOut={e => {
+                        if(isChanged && !isLoading) {
+                          e.currentTarget.style.background = 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)';
+                          e.currentTarget.style.color = 'white';
+                          e.currentTarget.style.borderColor = 'rgb(154, 77, 226)';
+                          e.currentTarget.style.boxShadow = '0 4px 10px rgba(154, 77, 226, 0.25)';
+                        }
+                      }}
+                    >
+                      <Icon path={mdiContentSave} size={0.9} style={{ marginRight: 8 }} />
+                      {isChanged ? 'Save All Changes' : 'No Changes to Save'}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -659,9 +724,24 @@ export default function SessionalSchedule() {
       {selectedLevelTermBatch && (Object.keys(groupedSections).length === 0 ? (
         <div className="row mb-4">
           <div className="col-12">
-            <div className="card">
-              <div className="card-body">
-                <h4 className="card-title">No sections found</h4>
+            <div className="card" style={{
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+              border: "none",
+              background: "white"
+            }}>
+              <div className="card-body" style={{ padding: "2rem" }}>
+                <h4 className="card-title" style={{ 
+                  color: "rgb(194, 137, 248)", 
+                  borderBottom: "3px solid rgb(194, 137, 248)",
+                  paddingBottom: "16px",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}>
+                  No sections found
+                </h4>
                 <p>No sections were found for the selected department and level-term.</p>
               </div>
             </div>
@@ -679,10 +759,25 @@ export default function SessionalSchedule() {
             return (
               <div className="row mb-4" key={`section-${mainSection}`}>
                 <div className="col-12">
-                  <div className="card">
-                    <div className="card-body">
-                      <h4 className="card-title">Section {mainSection} (Irregular Format)</h4>
-                      <p>This section doesn't have exactly 2 subsections. Found: {subsectionKeys.join(', ')}</p>
+                  <div className="card" style={{
+                    borderRadius: "16px",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+                    border: "none",
+                    background: "white"
+                  }}>
+                    <div className="card-body" style={{ padding: "2rem" }}>
+                      <h4 className="card-title" style={{ 
+                        color: "rgb(194, 137, 248)", 
+                        borderBottom: "3px solid rgb(194, 137, 248)",
+                        paddingBottom: "16px",
+                        fontWeight: "600",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px"
+                      }}>
+                        No sections found
+                      </h4>
+                      <p>No sections were found for the selected department and level-term.</p>
                     </div>
                   </div>
                 </div>
@@ -706,17 +801,17 @@ export default function SessionalSchedule() {
             <div className="row mb-4" key={`section-${mainSection}`}>
               <div className="col-12">
                 <div className="card" style={{
-                  borderRadius: "12px",
-                  boxShadow: "0 6px 16px rgba(0,0,0,0.1)",
+                  borderRadius: "16px",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
                   border: "none",
-                  overflow: "hidden"
+                  background: "white"
                 }}>
-                  <div className="card-body" style={{ padding: "1.5rem" }}>
+                  <div className="card-body" style={{ padding: "2rem" }}>
                     <div className="mb-4">
                       <h4 className="card-title" style={{ 
                         color: "rgb(194, 137, 248)", 
-                        borderBottom: "2px solid rgb(194, 137, 248)",
-                        paddingBottom: "12px",
+                        borderBottom: "3px solid rgb(194, 137, 248)",
+                        paddingBottom: "16px",
                         fontWeight: "600",
                         display: "flex",
                         alignItems: "center",
@@ -761,6 +856,78 @@ export default function SessionalSchedule() {
           );
         })
       ))}
+      <style jsx="true">{`
+      .form-control {
+          transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+          font-size: 1rem;
+        }
+        .form-control:focus {
+          border-color: rgb(194, 137, 248) !important;
+          box-shadow: 0 0 0 0.2rem rgba(194, 137, 248, 0.15) !important;
+          background: linear-gradient(to bottom, #ffffff, #fdfaff) !important;
+          color: #6b38a6 !important;
+        }
+        .form-control:hover {
+          border-color: rgb(194, 137, 248) !important;
+          box-shadow: 0 0 0 0.15rem rgba(194, 137, 248, 0.12) !important;
+          background: linear-gradient(to bottom, #ffffff, #fdfaff) !important;
+          color: #6b38a6 !important;
+        }
+        @media (max-width: 900px) {
+          .page-header {
+            padding: 1rem !important;
+            border-radius: 12px !important;
+          }
+          .page-title {
+            font-size: 1.2rem !important;
+          }
+          .card-body {
+            padding: 1rem !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .page-header {
+            padding: 0.7rem !important;
+            border-radius: 10px !important;
+          }
+          .page-title {
+            font-size: 1rem !important;
+          }
+          .card-body {
+            padding: 0.7rem !important;
+          }
+          .row.mb-4, .row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+          }
+          .save-button {
+            width: 100% !important;
+            min-width: 0 !important;
+            font-size: 0.98rem !important;
+            padding: 10px 0 !important;
+            margin-top: 10px !important;
+          }
+          .form-label, .form-control {
+            font-size: 0.95rem !important;
+          }
+        }
+        @media (max-width: 420px) {
+          .page-header {
+            padding: 0.4rem !important;
+            border-radius: 8px !important;
+          }
+          .page-title {
+            font-size: 0.85rem !important;
+          }
+          .card-body {
+            padding: 0.4rem !important;
+          }
+          .save-button {
+            font-size: 0.85rem !important;
+            padding: 8px 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

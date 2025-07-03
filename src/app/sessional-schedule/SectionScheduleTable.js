@@ -95,12 +95,13 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
 
   return (
     <div>
-      {/* CSS Styles */}
       <style jsx="true">{`
         .cell-container {
           display: flex;
           flex-direction: column;
-          height: 90px; /* Increased height for more space */
+          min-height: 100px;
+          max-height: 140px;
+          height: auto;
           width: 100%;
           overflow: hidden;
           padding: 0;
@@ -109,11 +110,32 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           border-radius: 6px;
           box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
         }
+        
+        /* Responsive adjustments for different screen sizes */
+        @media (max-width: 768px) {
+          .cell-container {
+            min-height: 80px;
+            max-height: 120px;
+          }
+        }
+        
+        @media (max-width: 576px) {
+          .cell-container {
+            min-height: 70px;
+            max-height: 100px;
+          }
+        }
+        
+        @media (min-width: 1200px) {
+          .cell-container {
+            min-height: 110px;
+            max-height: 150px;
+          }
+        }
         td:hover .cell-container {
           transform: scale(1.03);
           box-shadow: inset 0 0 0 1px rgba(194, 137, 248, 0.3);
         }
-        /* Select form styles */
         .form-control {
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
           position: relative;
@@ -188,6 +210,36 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           position: relative;
           z-index: 1;
           border: 1px solid rgba(222, 226, 230, 0.8);
+          min-width: 120px;
+          max-width: 200px;
+          width: auto;
+          vertical-align: top;
+          padding: 4px;
+        }
+        
+        /* Responsive table cell adjustments */
+        @media (max-width: 768px) {
+          .routine-table td {
+            min-width: 100px;
+            max-width: 150px;
+            padding: 2px;
+          }
+        }
+        
+        @media (max-width: 576px) {
+          .routine-table td {
+            min-width: 80px;
+            max-width: 120px;
+            padding: 1px;
+          }
+        }
+        
+        @media (min-width: 1200px) {
+          .routine-table td {
+            min-width: 140px;
+            max-width: 220px;
+            padding: 6px;
+          }
         }
         .routine-table td:hover {
           background-color: #f0e9ff !important;
@@ -216,7 +268,8 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           transform: scale(1);
         }
         .upper-cell, .lower-cell {
-          height: 50%;
+          flex: 1;
+          min-height: 50%;
           position: relative;
           font-size: 0.85rem;
           border: none;
@@ -224,6 +277,24 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           padding: 0.3rem 0.5rem;
           text-align: center;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        /* Responsive adjustments for cell content */
+        @media (max-width: 768px) {
+          .upper-cell, .lower-cell {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.3rem;
+          }
+        }
+        
+        @media (max-width: 576px) {
+          .upper-cell, .lower-cell {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.25rem;
+          }
         }
         .dropdown-cell {
           appearance: none;
@@ -231,7 +302,7 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           -moz-appearance: none;
           background-position: right 0.5rem center;
           background-size: 0.75em;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c289f8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-image: none;
           background-repeat: no-repeat;
           color: #333;
           text-align-last: center;
@@ -248,7 +319,7 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           outline: 0;
           box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.25), 0 4px 8px rgba(194, 137, 248, 0.15);
           color: rgb(94, 37, 126);
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235E257E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-image: none;
           background-color: #fcfaff;
           transform: translateY(-1px);
           letter-spacing: 0.01em;
@@ -266,55 +337,16 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           transform: scale(1, 1) translate(-50%);
           transform-origin: 50% 50%;
           pointer-events: none;
-        }
-        
+        }        
         .dropdown-cell:focus:after {
           animation: ripple 1.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-        }
-        
+        }        
         .dropdown-cell:hover:after {
           animation: micro-ripple 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-        
-        @keyframes ripple {
-          0% {
-            transform: scale(0, 0);
-            opacity: 0.5;
-          }
-          20% {
-            transform: scale(25, 25);
-            opacity: 0.3;
-          }
-          100% {
-            opacity: 0;
-            transform: scale(40, 40);
-          }
-        }
-        
-        @keyframes micro-ripple {
-          0% {
-            transform: scale(0, 0);
-            opacity: 0.4;
-          }
-          40% {
-            transform: scale(10, 10);
-            opacity: 0.2;
-          }
-          100% {
-            opacity: 0;
-            transform: scale(15, 15);
-          }
         }
         .dropdown-cell option {
           font-size: 0.9rem;
           padding: 8px;
-        }
-        .dropdown-cell option:first-child {
-          color: transparent;
-          height: 0;
-          padding: 0;
-          margin: 0;
-          display: none;
         }
         .upper-cell {
           border-bottom: 1px solid #dee2e6;
@@ -338,9 +370,9 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           color: white;
           box-shadow: 0 4px 8px rgba(154, 77, 226, 0.3);
           letter-spacing: 0.5px;
-          position: relative;
-          overflow: hidden;
-          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
         .section-label:hover {
           transform: translateY(-2px);
@@ -474,84 +506,114 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
         .lab-time-cell:hover {
           background-color: rgba(233, 245, 255, 0.6) !important;
         }
+        .table-scroll-x {
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          position: relative;
+        }
+        .table-scroll-x::-webkit-scrollbar {
+          height: 8px;
+        }
+        .table-scroll-x::-webkit-scrollbar-thumb {
+          background: rgba(194, 137, 248, 0.18);
+          border-radius: 4px;
+        }
+        @media (max-width: 900px) {
+          .routine-table {
+            min-width: 600px;
+          }
+        }
+        @media (max-width: 600px) {
+          .routine-table {
+            min-width: 480px;
+          }
+        }
+        @media (max-width: 420px) {
+          .routine-table {
+            min-width: 340px;
+          }
+        }
       `}</style>
-
-      {/* Table Layout */}
-      <table className="table routine-table" style={tableStyle}>
-        <thead>
-          <tr>
-            <th scope="col" className="col-2">Day \ Time</th>
-            {times.map((time) => (
-              <th key={time} scope="col">{time}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {days.map((day) => (
-            <tr key={day}>
-              <th key={`${day}-header`} scope="row" className="col-2">{day}</th>
-              {times
-                .filter((time) =>
-                  !labTimesSet.has(`${day} ${(time - 1 + 12) % 12}`) &&
-                  !labTimesSet.has(`${day} ${(time - 2 + 12) % 12}`)
-                )
-                .map((time) => {
-                  const isLabTime = labTimesSet.has(`${day} ${time}`);
-                  const cellClassName = isLabTime ? "lab-time-cell" : "";
-                  const slotKey = `${day} ${time}`;
-                  
-                  return (
-                    <td 
-                      key={`${day}-${time}`} 
-                      colSpan={isLabTime ? 3 : 1}
-                      className={cellClassName}
-                      style={{
-                        padding: "0",
-                        position: "relative",
-                        textAlign: "center"
-                      }}
-                    >
-                      <div className="cell-container">
-                        <Form.Select
-                          className={`upper-cell dropdown-cell ${getUpperCellStyle(day, time)}`}
-                          value={upperSectionCourse(slotKey) || ""}
-                          onChange={(e) => handleUpperCourseChange(day, time, e.target.value)}
-                          title={`${upperSectionName} - ${day} ${time}`}
-                        >
-                          <option value=""></option>
-                          {filteredCourses.map(course => (
-                            <option 
-                              key={`upper-${day}-${time}-${course.course_id}`}
-                              value={course.course_id}
-                            >
-                              {course.course_id} - {course.name || 'Unknown'}
-                            </option>
-                          ))}
-                        </Form.Select>
-                        <Form.Select
-                          className={`lower-cell dropdown-cell ${getLowerCellStyle(day, time)}`}
-                          value={lowerSectionCourse(slotKey) || ""}
-                          onChange={(e) => handleLowerCourseChange(day, time, e.target.value)}
-                          title={`${lowerSectionName} - ${day} ${time}`}
-                        >
-                          <option value=""></option>
-                          {filteredCourses.map(course => (
-                            <option 
-                              key={`lower-${day}-${time}-${course.course_id}`}
-                              value={course.course_id}
-                            >
-                              {course.course_id} - {course.name || 'Unknown'} 
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </div>
-                    </td>
-                  );
-                })}
+      <div className="table-scroll-x">
+        <table className="table routine-table" style={tableStyle}>
+          <thead>
+            <tr>
+              <th scope="col" className="col-2">Day \ Time</th>
+              {times.map((time) => (
+                <th key={time} scope="col">{time}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {days.map((day) => (
+              <tr key={day}>
+                <th key={`${day}-header`} scope="row" className="col-2">{day}</th>
+                {times
+                  .filter((time) =>
+                    !labTimesSet.has(`${day} ${(time - 1 + 12) % 12}`) &&
+                    !labTimesSet.has(`${day} ${(time - 2 + 12) % 12}`)
+                  )
+                  .map((time) => {
+                    const isLabTime = labTimesSet.has(`${day} ${time}`);
+                    const cellClassName = isLabTime ? "lab-time-cell" : "";
+                    const slotKey = `${day} ${time}`;
+                    
+                    return (
+                      <td 
+                        key={`${day}-${time}`} 
+                        colSpan={isLabTime ? 3 : 1}
+                        className={cellClassName}
+                        style={{
+                          padding: "0",
+                          position: "relative",
+                          textAlign: "center"
+                        }}
+                      >
+                        <div className="cell-container">
+                          <Form.Select
+                            className={`upper-cell dropdown-cell ${getUpperCellStyle(day, time)}`}
+                            value={upperSectionCourse(slotKey) || ''}
+                            onChange={(e) => handleUpperCourseChange(day, time, e.target.value)}
+                            title={`${upperSectionName} - ${day} ${time}`}
+                            style={{ color: (upperSectionCourse(slotKey) || "") === "" ? 'transparent' : undefined }}
+                          >
+                            <option value="">None</option>
+                            {filteredCourses.map(course => (
+                              <option 
+                                key={`upper-${day}-${time}-${course.course_id}`}
+                                value={course.course_id}
+                              >
+                                {course.course_id} - {course.name || 'Unknown'}
+                              </option>
+                            ))}
+                          </Form.Select>
+                          <Form.Select
+                            className={`lower-cell dropdown-cell ${getLowerCellStyle(day, time)}`}
+                            value={lowerSectionCourse(slotKey) || ''}
+                            onChange={(e) => handleLowerCourseChange(day, time, e.target.value)}
+                            title={`${lowerSectionName} - ${day} ${time}`}
+                            style={{ color: (lowerSectionCourse(slotKey) || "") === "" ? 'transparent' : undefined }}
+                          >
+                            <option value="">None</option>
+                            {filteredCourses.map(course => (
+                              <option 
+                                key={`lower-${day}-${time}-${course.course_id}`}
+                                value={course.course_id}
+                              >
+                                {course.course_id} - {course.name || 'Unknown'} 
+                              </option>
+                            ))}
+                          </Form.Select>
+                        </div>
+                      </td>
+                    );
+                  })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
