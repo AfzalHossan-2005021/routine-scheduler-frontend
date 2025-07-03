@@ -4,6 +4,7 @@ import {
     getLevelTerms,
     setLevelTermsDB
 } from "../api/db-crud"
+import { setTheoryAssignStatus } from "../api/theory-assign";
 
 export default function Initialize(){
     const [levelTerms, setLevelTerms] = useState([]);
@@ -104,6 +105,7 @@ export default function Initialize(){
             .finally(() => {
                 setIsSubmitting(false);
             });
+        setTheoryAssignStatus(0);
     }
 
     return (
