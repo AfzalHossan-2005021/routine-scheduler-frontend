@@ -1434,9 +1434,11 @@ export default function Teachers() {
                   if (selectedTeacher.prev_initial === "") {
                     createTeacher(selectedTeacher)
                       .then((res) => {
-                        const updatedTeachers = [...teachers, selectedTeacher];
-                        setTeachers(updatedTeachers.sort((a, b) => a.seniority_rank - b.seniority_rank));
-                        toast.success("Teacher added successfully");
+                        // Fetch updated teacher list from backend
+                        getTeachers().then((updated) => {
+                          setTeachers(updated.sort((a, b) => a.seniority_rank - b.seniority_rank));
+                          toast.success("Teacher added successfully");
+                        });
                       })
                       .catch(console.log);
                   } else {
@@ -1542,13 +1544,14 @@ export default function Teachers() {
             onClick={e => {
                   deleteTeacher(deleteTeacherSelected)
                 .then(res => {
-                      setDeleteTeacherSelected(null);
-                  setTeachers(
-                    teachers.filter((t) => t.initial !== deleteTeacherSelected)
-                  );
-                      toast.success("Teacher deleted successfully");
-                    })
-                    .catch(console.log);
+                  setDeleteTeacherSelected(null);
+                  // Fetch updated teacher list from backend
+                  getTeachers().then((updated) => {
+                    setTeachers(updated.sort((a, b) => a.seniority_rank - b.seniority_rank));
+                    toast.success("Teacher deleted successfully");
+                  });
+                })
+                .catch(console.log);
                 }}
             onMouseOver={e => {
               e.currentTarget.style.background = "#dc3545";
