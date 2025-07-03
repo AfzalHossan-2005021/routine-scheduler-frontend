@@ -2,9 +2,6 @@ import React, { useMemo, useCallback } from "react";
 import { Form } from "react-bootstrap";
 import { days, times } from "../shared/ScheduleSelctionTable";
 import { MultiSet } from "mnemonist";
-import { toast } from "react-hot-toast";
-import { mdiBookOpenVariant } from '@mdi/js';
-import Icon from '@mdi/react';
 
 /**
  * Custom component for displaying a theory schedule table with single dropdown per cell
@@ -20,9 +17,6 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
   sectionName = "Section",
   isSessionalCourse = () => false,
 }) {
-  // Debug log to print allTheoryCourses for troubleshooting
-  //console.log('allTheoryCourses:', allTheoryCourses);
-
   // Convert arrays to MultiSets for efficient lookup
   const filledSet = useMemo(() => MultiSet.from(filled), [filled]);
   const selectedSet = useMemo(() => MultiSet.from(selected), [selected]);
