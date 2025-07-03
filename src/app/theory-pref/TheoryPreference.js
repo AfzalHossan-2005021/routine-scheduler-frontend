@@ -84,23 +84,6 @@ export default function TheoryPreference() {
     }
   };
 
-  // These functions are not currently used, but kept in case they are needed in the future
-  // Add course to preference (at end)
-  /*
-  const addToPreference = (course) => {
-    if (!selectedCourse.includes(course)) {
-      setSelectedCourse([...selectedCourse, course]);
-    }
-  };
-
-  // Remove course from preference (goes back to offered)
-  const removeFromPreference = (index) => {
-    const newPref = Array.from(selectedCourse);
-    newPref.splice(index, 1);
-    setSelectedCourse(newPref);
-  };
-  */
-
   return (
     <div>
       {/* Modern Page Header */}
@@ -150,66 +133,67 @@ export default function TheoryPreference() {
           </ol>
         </nav>
       </div>
-      <div className="mb-4">
-        <CardWithButton
-          title="Send Email with Form Link"
-          subtitle="Initial Phase"
-          status={parseInt(status.status) === 0 ? "Click to Start" : "Sent"}
-          bgColor={parseInt(status.status) === 0 ? "info" : "success"}
-          icon={parseInt(status.status) === 0 ? "mdi-autorenew" : "mdi-check"}
-          disabled={false}
-          onClick={(e) => {
-            initiate().then((res) => {
-              getStatus().then((res) => {
-                // Sort the teachers in the status by seniority rank
-                let modifiedRes = { ...res };
-                if (modifiedRes.values && modifiedRes.values.length > 0) {
-                  modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
-                }
-                if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
-                  modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
-                }
-                setStatus({ values: [], submitted: [], ...modifiedRes });
+      {(status.values.length !== 0 || (parseInt(status.status) > 0 && parseInt(status.status) < 3)) && (
+        <div className="mb-4">
+          <CardWithButton
+            title="Send Email with Form Link"
+            subtitle="Initial Phase"
+            status={parseInt(status.status) === 0 ? "Click to Start" : "Sent"}
+            bgColor={parseInt(status.status) === 0 ? "info" : "success"}
+            icon={parseInt(status.status) === 0 ? "mdi-autorenew" : "mdi-check"}
+            disabled={false}
+            onClick={(e) => {
+              initiate().then((res) => {
+                getStatus().then((res) => {
+                  // Sort the teachers in the status by seniority rank
+                  let modifiedRes = { ...res };
+                  if (modifiedRes.values && modifiedRes.values.length > 0) {
+                    modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                  }
+                  if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                    modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                  }
+                  setStatus({ values: [], submitted: [], ...modifiedRes });
+                  setStatus({ ...status, status: 1 });
+                  setTheoryAssignStatus(1);
+                });
               });
-            });
-            setStatus({ ...status, status: 1 });
-            setTheoryAssignStatus(1);
-          }}
-        />
-      </div>
-
-      <div className="row">
-        <div className="col-12 grid-margin">
-          <div className="card" style={{
-            borderRadius: "16px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-            border: "none",
-            transition: "all 0.3s ease",
-            background: "white"
-          }}>
-            <div className="card-body" style={{ padding: "2rem" }}>
-              <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h4 className="card-title" style={{
-                  color: "rgb(174, 117, 228)",
-                  marginBottom: 0,
-                  fontWeight: "700",
-                  display: "flex",
-                  alignItems: "center",
-                  fontSize: "1.5rem",
-                  letterSpacing: "0.3px"
-                }}>
-                  <span style={{ marginRight: "12px" }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                  Yet to submit the form
-                </h4>
-              </div>
-              {(status.values.length !== 0 || parseInt(status.status) >= 1) && (
+            }}
+          />
+        </div>
+      )}
+      {(status.values.length !== 0 || (parseInt(status.status) > 0 && parseInt(status.status) < 3)) && (
+        <div className="row">
+          <div className="col-12 grid-margin">
+            <div className="card" style={{
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+              border: "none",
+              transition: "all 0.3s ease",
+              background: "white"
+            }}>
+              <div className="card-body" style={{ padding: "2rem" }}>
+                <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 className="card-title" style={{
+                    color: "rgb(174, 117, 228)",
+                    marginBottom: 0,
+                    fontWeight: "700",
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: "1.5rem",
+                    letterSpacing: "0.3px"
+                  }}>
+                    <span style={{ marginRight: "12px" }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    Yet to submit the form
+                  </h4>
+                </div>
                 <div className="table-responsive">
                   <table className="table" style={{ margin: 0 }}>
                     <thead>
@@ -389,198 +373,198 @@ export default function TheoryPreference() {
                     </tbody>
                   </table>
                 </div>
-              )}
-              {status.values.length === 0 && parseInt(status.status) >= 2 && (
-                <Alert variant="success text-center">
-                  All submitted, waiting for next phase
-                </Alert>
-              )}
-              {status.values.length === 0 && parseInt(status.status) === 0 && (
-                <Alert variant="info text-center">
-                  Click "Initial Phase" to start the process
-                </Alert>
-              )}
-              {status.values.length === 0 && parseInt(status.status) === 1 && (
-                <Alert variant="info text-center">
-                  Table is ready for teachers to submit preferences
-                </Alert>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="row">
-        <div className="col-12 grid-margin">
-          <div className="card" style={{
-            borderRadius: "16px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-            border: "none",
-            transition: "all 0.3s ease",
-            background: "white"
-          }}>
-            <div className="card-body" style={{ padding: "2rem" }}>
-              <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h4 className="card-title" style={{
-                  color: "rgb(174, 117, 228)",
-                  marginBottom: 0,
-                  fontWeight: "700",
-                  display: "flex",
-                  alignItems: "center",
-                  fontSize: "1.5rem",
-                  letterSpacing: "0.3px"
-                }}>
-                  <span style={{ marginRight: "12px" }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" stroke="rgb(194, 137, 248)" strokeWidth="1" fill="rgb(194, 137, 248)" />
-                    </svg>
-                  </span>
-                  Already Submitted
-                </h4>
+                {status.values.length === 0 && parseInt(status.status) >= 2 && (
+                  <Alert variant="success text-center">
+                    All submitted, waiting for next phase
+                  </Alert>
+                )}
+                {status.values.length === 0 && parseInt(status.status) === 0 && (
+                  <Alert variant="info text-center">
+                    Click "Initial Phase" to start the process
+                  </Alert>
+                )}
+                {status.values.length === 0 && parseInt(status.status) === 1 && (
+                  <Alert variant="info text-center">
+                    Table is ready for teachers to submit preferences
+                  </Alert>
+                )}
               </div>
-              {(status.submitted.length !== 0 || parseInt(status.status) >= 1) && (
-                <div className="table-responsive">
-                  <table className="table" style={{ margin: 0 }}>
-                    <thead>
-                      <tr style={{
-                        backgroundColor: "rgba(174, 117, 228, 0.08)",
-                        borderBottom: "2px solid rgba(174, 117, 228, 0.1)"
-                      }}>
-                        <th style={{
-                          padding: "18px 20px",
-                          color: "rgb(174, 117, 228)",
-                          fontWeight: "700",
-                          fontSize: "0.95rem",
-                          border: "none"
-                        }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
-                            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 6 15.9391 6 17V19" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          Initial
-                        </th>
-                        <th style={{
-                          padding: "18px 20px",
-                          color: "rgb(174, 117, 228)",
-                          fontWeight: "700",
-                          fontSize: "0.95rem",
-                          border: "none"
-                        }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
-                            <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          Name
-                        </th>
-                        <th style={{
-                          padding: "18px 20px",
-                          color: "rgb(174, 117, 228)",
-                          fontWeight: "700",
-                          fontSize: "0.95rem",
-                          border: "none"
-                        }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
-                            <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M22 6L12 13L2 6" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          Email
-                        </th>
-                        <th style={{
-                          padding: "18px 20px",
-                          color: "rgb(174, 117, 228)",
-                          fontWeight: "700",
-                          fontSize: "0.95rem",
-                          border: "none"
-                        }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
-                            <path d="M12 2L15.09 8.26L22 9L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9L8.91 8.26L12 2Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          Seniority Rank
-                        </th>
-                        <th style={{
-                          padding: "18px 20px",
-                          color: "rgb(174, 117, 228)",
-                          fontWeight: "700",
-                          fontSize: "0.95rem",
-                          border: "none"
-                        }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
-                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M9 12L11 14L15 10" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...status.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank).map((teacher, index) => (
-                        <tr key={index} style={{
-                          borderLeft: "3px solid transparent",
-                          borderBottom: "1px solid rgba(0,0,0,0.06)",
-                          transition: "all 0.2s ease"
-                        }} className="hover-row">
-                          <td style={{ padding: "15px 20px" }}> {teacher.initial} </td>
-                          <td style={{ padding: "15px 20px" }}> {teacher.name} </td>
-                          <td style={{ padding: "15px 20px" }}> {teacher.email} </td>
-                          <td style={{ padding: "15px 20px" }}> {teacher.seniority_rank} </td>
-                          <td style={{ padding: "15px 20px" }}>
-                            <button
-                              type="button"
-                              style={{
-                                borderRadius: "6px",
-                                padding: "7px 14px",
-                                fontWeight: "500",
-                                background: "rgba(154, 77, 226, 0.15)",
-                                border: "1px solid rgba(154, 77, 226, 0.5)",
-                                color: "rgb(154, 77, 226)",
-                                transition: "all 0.3s ease",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                fontSize: "0.9rem"
-                              }}
-                              onMouseEnter={e => {
-                                e.target.style.background = "rgb(154, 77, 226)";
-                                e.target.style.color = "white";
-                                e.target.style.borderColor = "rgb(154, 77, 226)";
-                              }}
-                              onMouseLeave={e => {
-                                e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                                e.target.style.color = "rgb(154, 77, 226)";
-                                e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
-                              }}
-                              onClick={() => {
-                                setSelectedTeacher({
-                                  ...teacher,
-                                });
-                                setSelectedCourse(teacher.response);
-                              }}
-                            >
-                              <i className="mdi mdi-pencil" style={{ fontSize: "16px", marginRight: "4px" }}></i>
-                              Edit Preference
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {status.submitted.length === 0 && parseInt(status.status) === 0 && (
-                <Alert variant="info text-center">
-                  Click "Initial Phase" to start and show submitted teachers
-                </Alert>
-              )}
-              {status.submitted.length === 0 && parseInt(status.status) >= 1 && (
-                <Alert variant="info text-center">
-                  No teachers have submitted yet
-                </Alert>
-              )}
             </div>
           </div>
         </div>
-      </div>
-
+      )}
+      {(status.values.length !== 0 || (parseInt(status.status) > 0 && parseInt(status.status) < 3)) && (
+        <div className="row">
+          <div className="col-12 grid-margin">
+            <div className="card" style={{
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+              border: "none",
+              transition: "all 0.3s ease",
+              background: "white"
+            }}>
+              <div className="card-body" style={{ padding: "2rem" }}>
+                <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 className="card-title" style={{
+                    color: "rgb(174, 117, 228)",
+                    marginBottom: 0,
+                    fontWeight: "700",
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: "1.5rem",
+                    letterSpacing: "0.3px"
+                  }}>
+                    <span style={{ marginRight: "12px" }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" stroke="rgb(194, 137, 248)" strokeWidth="1" fill="rgb(194, 137, 248)" />
+                      </svg>
+                    </span>
+                    Already Submitted
+                  </h4>
+                </div>
+                {(status.submitted.length !== 0 || parseInt(status.status) >= 1) && (
+                  <div className="table-responsive">
+                    <table className="table" style={{ margin: 0 }}>
+                      <thead>
+                        <tr style={{
+                          backgroundColor: "rgba(174, 117, 228, 0.08)",
+                          borderBottom: "2px solid rgba(174, 117, 228, 0.1)"
+                        }}>
+                          <th style={{
+                            padding: "18px 20px",
+                            color: "rgb(174, 117, 228)",
+                            fontWeight: "700",
+                            fontSize: "0.95rem",
+                            border: "none"
+                          }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                              <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 6 15.9391 6 17V19" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Initial
+                          </th>
+                          <th style={{
+                            padding: "18px 20px",
+                            color: "rgb(174, 117, 228)",
+                            fontWeight: "700",
+                            fontSize: "0.95rem",
+                            border: "none"
+                          }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                              <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Name
+                          </th>
+                          <th style={{
+                            padding: "18px 20px",
+                            color: "rgb(174, 117, 228)",
+                            fontWeight: "700",
+                            fontSize: "0.95rem",
+                            border: "none"
+                          }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                              <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M22 6L12 13L2 6" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Email
+                          </th>
+                          <th style={{
+                            padding: "18px 20px",
+                            color: "rgb(174, 117, 228)",
+                            fontWeight: "700",
+                            fontSize: "0.95rem",
+                            border: "none"
+                          }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                              <path d="M12 2L15.09 8.26L22 9L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9L8.91 8.26L12 2Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Seniority Rank
+                          </th>
+                          <th style={{
+                            padding: "18px 20px",
+                            color: "rgb(174, 117, 228)",
+                            fontWeight: "700",
+                            fontSize: "0.95rem",
+                            border: "none"
+                          }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                              <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M9 12L11 14L15 10" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...status.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank).map((teacher, index) => (
+                          <tr key={index} style={{
+                            borderLeft: "3px solid transparent",
+                            borderBottom: "1px solid rgba(0,0,0,0.06)",
+                            transition: "all 0.2s ease"
+                          }} className="hover-row">
+                            <td style={{ padding: "15px 20px" }}> {teacher.initial} </td>
+                            <td style={{ padding: "15px 20px" }}> {teacher.name} </td>
+                            <td style={{ padding: "15px 20px" }}> {teacher.email} </td>
+                            <td style={{ padding: "15px 20px" }}> {teacher.seniority_rank} </td>
+                            <td style={{ padding: "15px 20px" }}>
+                              <button
+                                type="button"
+                                style={{
+                                  borderRadius: "6px",
+                                  padding: "7px 14px",
+                                  fontWeight: "500",
+                                  background: "rgba(154, 77, 226, 0.15)",
+                                  border: "1px solid rgba(154, 77, 226, 0.5)",
+                                  color: "rgb(154, 77, 226)",
+                                  transition: "all 0.3s ease",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  fontSize: "0.9rem"
+                                }}
+                                onMouseEnter={e => {
+                                  e.target.style.background = "rgb(154, 77, 226)";
+                                  e.target.style.color = "white";
+                                  e.target.style.borderColor = "rgb(154, 77, 226)";
+                                }}
+                                onMouseLeave={e => {
+                                  e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                                  e.target.style.color = "rgb(154, 77, 226)";
+                                  e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                                }}
+                                onClick={() => {
+                                  setSelectedTeacher({
+                                    ...teacher,
+                                  });
+                                  setSelectedCourse(teacher.response);
+                                }}
+                              >
+                                <i className="mdi mdi-pencil" style={{ fontSize: "16px", marginRight: "4px" }}></i>
+                                Edit Preference
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {status.submitted.length === 0 && parseInt(status.status) === 0 && (
+                  <Alert variant="info text-center">
+                    Click "Initial Phase" to start and show submitted teachers
+                  </Alert>
+                )}
+                {status.submitted.length === 0 && parseInt(status.status) >= 1 && (
+                  <Alert variant="info text-center">
+                    No teachers have submitted yet
+                  </Alert>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {selectedTeacher !== null && (
         <Modal
           show={true}
@@ -1215,15 +1199,3 @@ export default function TheoryPreference() {
     </div>
   );
 }
-
-/*
-Place this CSS in your main stylesheet (e.g., index.css or App.css):
-.custom-width-modal .modal-dialog {
-  max-width: 620px;
-}
-
-.hover-row:hover {
-  background-color: rgba(174, 117, 228, 0.04);
-  border-left: 3px solid rgb(174, 117, 228) !important;
-}
-*/
