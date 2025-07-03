@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Badge } from "react-bootstrap";
 import { toast } from "react-hot-toast";
+import { mdiLockCheck, mdiRefresh, mdiAlertCircleOutline } from '@mdi/js';
+import Icon from '@mdi/react';
 
 import { getLabCourses, getLabRooms } from "../api/db-crud";
 import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
@@ -37,11 +39,11 @@ export default function LabRoomAssign() {
       // Additional validation - ensure we have an array
       const scheduleData = Array.isArray(res) ? res : [];
       // Filter out any entries that don't have required fields
-      const validSchedules = scheduleData.filter(item => 
+      const validSchedules = scheduleData.filter(item =>
         item && item.day && item.time && item.course_id && item.section
       );
       setSessionalSchedule(validSchedules);
-      
+
       // Log data for debugging purposes
       console.log("Original schedule data:", res);
       console.log("Filtered schedule data:", validSchedules);
@@ -169,15 +171,15 @@ export default function LabRoomAssign() {
     // Format: roomBookings[day][time] = [{room: "roomName", course: courseObject}]
     const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
     const timeSlots = [8, 11, 2]
-    
+
     // Log available schedule data for debugging
     console.log("Sessional Schedule Data:", sessionalSchedule);
-    
+
     // Check if there are any scheduling issues
     // const schedulingIssues = sessionalSchedule.filter(schedule => 
     //   !days.includes(schedule.day) || !timeSlots.includes(Number(schedule.time))
     // );
-    
+
     // if (schedulingIssues.length > 0) {
     //   console.warn("Found scheduling issues:", schedulingIssues);
     //   toast.error(`Found ${schedulingIssues.length} invalid schedule entries. Check console for details.`);
@@ -191,7 +193,7 @@ export default function LabRoomAssign() {
         roomBookings[day][time] = [];
       });
     });
-    
+
     // Add a safety method to access roomBookings without causing undefined errors
     const safeGetRoomBooking = (day, time) => {
       if (!roomBookings[day]) return [];
@@ -212,9 +214,9 @@ export default function LabRoomAssign() {
         console.warn("Found undefined or null schedule entry");
         return;
       }
-      
+
       const { day, time, course_id, section } = schedule;
-      
+
       // Skip if day or time is missing or not valid
       if (!day || !time || !days.includes(day) || !timeSlots.includes(Number(time))) {
         console.warn(`Invalid day or time in schedule: ${day} - ${time}`);
@@ -294,7 +296,7 @@ export default function LabRoomAssign() {
     scheduledCourses.forEach(course => {
       const { course_id, section, day, time } = course;
       const courseKey = `${course_id}_${section}`;
-      
+
       // Use our safe getter to avoid undefined errors
       // Check which rooms are available at this day and time
       const bookedRoomsAtThisTime = safeGetRoomBooking(day, time).map(booking => booking.room);
@@ -328,7 +330,7 @@ export default function LabRoomAssign() {
         // Make sure the day and time slots exist in roomBookings before pushing
         if (!roomBookings[day]) roomBookings[day] = {};
         if (!roomBookings[day][time]) roomBookings[day][time] = [];
-        
+
         roomBookings[day][time].push({
           room: assignedRoom,
           course: course
@@ -411,26 +413,55 @@ export default function LabRoomAssign() {
     }
   };
 
+  // Define a shared style object for modal action buttons (copied from Teachers.js)
+  const modalButtonStyle = {
+    borderRadius: "6px",
+    padding: "7px 14px",
+    fontWeight: "500",
+    background: "rgba(154, 77, 226, 0.15)",
+    border: "1px solid rgba(154, 77, 226, 0.5)",
+    color: "rgb(154, 77, 226)",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "0.9rem"
+  };
+
   return (
     <div>
-      <div className="page-header">
+      {/* Modern Page Header */}
+      <div className="page-header" style={{
+        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+        borderRadius: "16px",
+        padding: "1.5rem",
+        marginBottom: "2rem",
+        boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+        color: "white"
+      }}>
         <h3 className="page-title" style={{
-          color: "rgb(174, 117, 228)",
+          fontSize: "1.8rem",
           fontWeight: "700",
+          marginBottom: "0.5rem",
           display: "flex",
           alignItems: "center",
-          gap: "10px"
+          gap: "12px",
+          color: "white"
         }}>
-          <i className="mdi mdi-domain me-2"></i>
+          <div style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "rgba(255, 255, 255, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
+          }}>
+            <Icon path={mdiLockCheck} size={1} color="white" />
+          </div>
           Lab Room Assignment
         </h3>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item active" aria-current="page">
-              Room Assign
-            </li>
-          </ol>
-        </nav>
       </div>
       {!alreadySaved && showAssignmentCard && (
         <div className="row mb-4">
@@ -523,7 +554,7 @@ export default function LabRoomAssign() {
                       boxShadow: "0 4px 12px rgba(255, 193, 7, 0.3)",
                       zIndex: 1
                     }}>
-                      <i className="mdi mdi-alert-circle-outline" style={{ color: "white", fontSize: "24px" }}></i>
+                      <Icon path={mdiAlertCircleOutline} size={1} color="white" />
                     </div>
                     <div style={{ zIndex: 1 }}>
                       <h5 style={{ margin: "0 0 5px 0", color: "#664d03", fontWeight: "600" }}>Schedule Not Found</h5>
@@ -822,76 +853,31 @@ export default function LabRoomAssign() {
                         padding: "20px 0"
                       }}>
                         <Button
-                          variant="outline-success"
-                          className="px-4 py-3"
-                          style={{
-                            fontWeight: "700",
-                            borderRadius: "12px",
-                            borderColor: "rgb(194, 137, 248)",
-                            color: "rgb(174, 117, 228)",
-                            boxShadow: "0 8px 15px rgba(194, 137, 248, 0.15)",
-                            transition: "all 0.3s ease",
-                            backgroundColor: "rgba(194, 137, 248, 0.05)"
+                          style={modalButtonStyle}
+                          className="d-flex align-items-center justify-content-center"
+                          onMouseEnter={e => {
+                            e.target.style.background = "rgb(154, 77, 226)";
+                            e.target.style.color = "white";
+                            e.target.style.borderColor = "rgb(154, 77, 226)";
                           }}
-                          onClick={(e) => {
-                            const selectedCourseOptions = Array.from(
-                              selectedCourseRef.current.selectedOptions
-                            )
-                              .map((option) => option.value)
-                              .map((course_id) =>
-                                uniqueNamedCourses.find(
-                                  (course) => course.course_id === course_id
-                                )
-                              );
-
-                            const selectedRoomOptions = Array.from(
-                              selectedRoomRef.current.selectedOptions
-                            )
-                              .map((option) => option.value)
-                              .map((room_id) =>
-                                rooms.find((room) => room.room === room_id)
-                              );
-
-                            selectedCourseOptions.forEach((course) => {
-                              setUniqueNamedCourses(
-                                uniqueNamedCourses.filter(
-                                  (c) => c.course_id !== course.course_id
-                                )
-                              );
-
-                              setCourseRoom([
-                                ...courseRoom,
-                                {
-                                  course_id: course.course_id,
-                                  rooms: selectedRoomOptions.map(
-                                    (room) => room.room
-                                  ),
-                                },
-                              ]);
-                            });
+                          onMouseLeave={e => {
+                            e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                            e.target.style.color = "rgb(154, 77, 226)";
+                            e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                          }}
+                          onClick={() => {
+                            setCourseRoom((prev) => [
+                              ...prev,
+                              {
+                                course_id: selectedCourseRef.current.value,
+                                rooms: Array.from(selectedRoomRef.current.selectedOptions).map((o) => o.value),
+                              },
+                            ]);
                           }}
                         >
-                          <i className="mdi mdi-lock me-2"></i>
+                          <Icon path={mdiLockCheck} size={0.9} style={{ marginRight: 6 }} />
                           MUST USE
                         </Button>
-                        <div style={{
-                          marginTop: "15px",
-                          width: "100%",
-                          height: "1px",
-                          backgroundColor: "rgba(194, 137, 248, 0.15)",
-                          position: "relative"
-                        }}>
-                          <div style={{
-                            position: "absolute",
-                            left: "50%",
-                            top: "50%",
-                            transform: "translate(-50%, -50%)",
-                            backgroundColor: "white",
-                            padding: "0 10px",
-                            fontSize: "12px",
-                            color: "rgba(194, 137, 248, 0.6)"
-                          }}>OR</div>
-                        </div>
                       </div>
                     </div>
 
@@ -969,55 +955,27 @@ export default function LabRoomAssign() {
                 <hr className="my-5" style={{ opacity: "0.1", borderColor: "rgb(194, 137, 248)", margin: "35px 0" }} />
                 <div className="d-flex justify-content-center">
                   <Button
-                    style={{
-                      ...buttonStyle,
-                      fontSize: "1.15rem",
-                      padding: "18px 42px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "15px",
-                      boxShadow: "0 10px 25px rgba(194, 137, 248, 0.35)",
-                      border: "none",
-                      position: "relative",
-                      overflow: "hidden",
-                      borderRadius: "15px",
-                      background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-                      fontWeight: "700",
-                      letterSpacing: "0.5px"
+                    style={modalButtonStyle}
+                    className="d-flex align-items-center justify-content-center"
+                    onMouseEnter={e => {
+                      e.target.style.background = "rgb(154, 77, 226)";
+                      e.target.style.color = "white";
+                      e.target.style.borderColor = "rgb(154, 77, 226)";
+                    }}
+                    onMouseLeave={e => {
+                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                      e.target.style.color = "rgb(154, 77, 226)";
+                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
                     }}
                     onClick={() => {
                       generateRoomAssignments();
                       setShowAssignmentCard(false);
                     }}
-                    size="lg"
-                    className="btn-animate"
                   >
-                    <div style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundImage: "linear-gradient(45deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 70%)",
-                      backgroundSize: "200% 100%",
-                      animation: "shimmerEffect 2s infinite",
-                      opacity: 0.5
-                    }}></div>
-                    <i className="mdi mdi-refresh-circle" style={{ fontSize: "22px" }}></i>
-                    Auto-Assign Lab Rooms
+                    <Icon path={mdiRefresh} size={1.1} style={{ marginRight: 8 }} />
+                    Assign Lab Rooms
                   </Button>
                 </div>
-                <style>{`
-                  @keyframes shimmerEffect {
-                    0% { background-position: 200% 0; }
-                    100% { background-position: -200% 0; }
-                  }
-                  .btn-animate:hover {
-                    transform: translateY(-3px);
-                    box-shadow: 0 12px 25px rgba(194, 137, 248, 0.35) !important;
-                  }
-                `}</style>
               </div>
             </div>
           </div>
@@ -1151,7 +1109,7 @@ export default function LabRoomAssign() {
                   {!viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment && (
                     <div className="tab-pane fade show active">
                       <div className="table-responsive">
-                        <table className="table" style={{...tableStyle, transition: 'all 0.3s ease'}}>
+                        <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
                           <thead>
                             <tr>
                               <th style={tableHeaderStyle}> Lab Room </th>
@@ -1171,8 +1129,8 @@ export default function LabRoomAssign() {
                           <tbody>
                             {fixedRoomAllocation.map((room, index) => (
                               <tr key={index} className="stats-row">
-                                <td style={{ 
-                                  padding: "16px", 
+                                <td style={{
+                                  padding: "16px",
                                   verticalAlign: "middle",
                                   textAlign: "center"
                                 }}>
@@ -1193,14 +1151,14 @@ export default function LabRoomAssign() {
                                     <span style={{ fontSize: "1.05rem", fontWeight: "600", color: "#333" }}>{room.room}</span>
                                   </div>
                                 </td>
-                                <td style={{ 
+                                <td style={{
                                   padding: "16px",
                                   verticalAlign: "middle",
                                   textAlign: "center"
                                 }}>
                                   <div style={{
                                     width: "60px",
-                                    height: "60px", 
+                                    height: "60px",
                                     backgroundColor: room.count > 0 ? "rgba(40, 167, 69, 0.1)" : "rgba(108, 117, 125, 0.1)",
                                     color: room.count > 0 ? "#28a745" : "#6c757d",
                                     borderRadius: "50%",
@@ -1362,7 +1320,7 @@ export default function LabRoomAssign() {
                   {!viewLevelTermAssignment && viewCourseAssignment && !viewRoomAssignment && (
                     <div className="tab-pane fade show active">
                       <div className="table-responsive">
-                        <table className="table" style={{...tableStyle, transition: 'all 0.3s ease'}}>
+                        <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
                           <thead>
                             <tr>
                               <th style={tableHeaderStyle}> Course ID </th>
@@ -1437,7 +1395,7 @@ export default function LabRoomAssign() {
                   {viewLevelTermAssignment && (
                     <div className="tab-pane fade show active">
                       <div className="table-responsive">
-                        <table className="table" style={{...tableStyle, transition: 'all 0.3s ease'}}>
+                        <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
                           <thead>
                             <tr>
                               <th style={tableHeaderStyle}> Level-Term </th>
@@ -1474,12 +1432,12 @@ export default function LabRoomAssign() {
                           <tbody>
                             {levelTermAllocationArray.map((lt, index) => (
                               <tr key={index} className="level-term-row">
-                                <td style={{ 
-                                  verticalAlign: "middle", 
-                                  textAlign: "center", 
-                                  fontWeight: "600", 
+                                <td style={{
+                                  verticalAlign: "middle",
+                                  textAlign: "center",
+                                  fontWeight: "600",
                                   fontSize: "1.05rem",
-                                  color: "#333" 
+                                  color: "#333"
                                 }}>
                                   <div className="d-flex flex-column align-items-center">
                                     <div style={{
@@ -1499,10 +1457,10 @@ export default function LabRoomAssign() {
                                   </div>
                                 </td>
                                 {lt.rooms.length === 0 ? (
-                                  <td style={{ 
-                                    padding: "20px", 
-                                    textAlign: "center", 
-                                    verticalAlign: "middle" 
+                                  <td style={{
+                                    padding: "20px",
+                                    textAlign: "center",
+                                    verticalAlign: "middle"
                                   }}>
                                     <div style={{
                                       padding: "20px",
@@ -1517,10 +1475,10 @@ export default function LabRoomAssign() {
                                     </div>
                                   </td>
                                 ) : (
-                                  <td style={{ 
-                                    padding: "16px", 
+                                  <td style={{
+                                    padding: "16px",
                                     textAlign: "center",
-                                    verticalAlign: "middle" 
+                                    verticalAlign: "middle"
                                   }}>
                                     <div className="d-flex flex-wrap justify-content-center">
                                       {lt.rooms.map((room, index) => (
