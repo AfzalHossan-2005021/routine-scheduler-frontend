@@ -36,6 +36,7 @@ export default function TheoryPreference() {
       }
       setStatus({ values: [], submitted: [], ...modifiedRes });
     });
+    console.log(status.status)
     getTeachers().then((res) => {
       res = res.filter((t) => t.active === 1);
       // Sort teachers by seniority rank (lower rank means more senior)
@@ -133,7 +134,7 @@ export default function TheoryPreference() {
           </ol>
         </nav>
       </div>
-      {(status.values.length !== 0 || (parseInt(status.status) > 0 && parseInt(status.status) < 3)) && (
+      {(status.values.length !== 0 || parseInt(status.status) < 3) && (
         <div className="mb-4">
           <CardWithButton
             title="Send Email with Form Link"
