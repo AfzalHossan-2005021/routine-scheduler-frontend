@@ -62,6 +62,14 @@ const modalButtonStyle = {
   fontSize: "0.9rem"
 };
 
+const DESIGNATION_SUGGESTIONS = [
+  "Professor",
+  "Associate Professor",
+  "Assistant Professor",
+  "Lecturer",
+  "Adjunct Lecturer"
+];
+
 export default function Teachers() {
   const [teachers, setTeachers] = useState([]);
 
@@ -75,6 +83,27 @@ export default function Teachers() {
 
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [deleteTeacherSelected, setDeleteTeacherSelected] = useState(null);
+  const [showMapCredit, setShowMapCredit] = useState(false);
+  const [mapDesignation, setMapDesignation] = useState("");
+  const [mapCredit, setMapCredit] = useState("");
+  const [filteredSuggestions, setFilteredSuggestions] = useState(DESIGNATION_SUGGESTIONS);
+
+  // Handler for Map Credit Apply
+  const handleMapCreditApply = () => {
+    if (!mapDesignation.trim() || !mapCredit || isNaN(mapCredit)) {
+      toast.error("Please enter a valid designation and credit hour");
+      return;
+    }
+    setTeachers(prev => prev.map(t =>
+      t.designation?.toLowerCase() === mapDesignation.trim().toLowerCase()
+        ? { ...t, teacher_credits_offered: Number(mapCredit) }
+        : t
+    ));
+    setShowMapCredit(false);
+    setMapDesignation("");
+    setMapCredit("");
+    toast.success(`Mapped credit hour to all '${mapDesignation}'`);
+  };
 
   return (
     <div>
@@ -158,59 +187,86 @@ export default function Teachers() {
                   </span>
                   Teacher Management
                 </h4>
-                <button
-                  type="button"
-                  style={{
-                    borderRadius: "6px",
-                    padding: "7px 14px",
-                    fontWeight: "500",
-                    background: "rgba(154, 77, 226, 0.15)",
-                    border: "1px solid rgba(154, 77, 226, 0.5)",
-                    color: "rgb(154, 77, 226)",
-                    transition: "all 0.3s ease",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    fontSize: "0.95rem",
-                    cursor: "pointer",
-                    position: "relative",
-                    overflow: "hidden",
-                    minWidth: "auto",
-                    justifyContent: "center"
-                  }}
-                  onClick={(e) => {
-                    setSelectedTeacher({
-                      initial: "",
-                      name: "",
-                      surname: "",
-                      email: "",
-                      seniority_rank: 0,
-                      active: 1,
-                      theory_courses: 0,
-                      sessional_courses: 0,
-                      designation: "",
-                      full_time_status: false,
-                      offers_thesis_1: false,
-                      offers_thesis_2: false,
-                      offers_msc: false,
-                      teacher_credits_offered: 0,
-                      prev_initial: "",
-                    });
-                  }}
-                  onMouseEnter={e => {
-                    e.target.style.background = "rgb(154, 77, 226)";
-                    e.target.style.color = "white";
-                    e.target.style.borderColor = "rgb(154, 77, 226)";
-                  }}
-                  onMouseLeave={e => {
-                    e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                    e.target.style.color = "rgb(154, 77, 226)";
-                    e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
-                  }}
-                >
-                  <i className="mdi mdi-plus-circle" style={{ fontSize: "18px", marginRight: "8px" }}></i>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="button"
+                    style={{
+                      borderRadius: "6px",
+                      padding: "7px 14px",
+                      fontWeight: "500",
+                      background: "rgba(154, 77, 226, 0.15)",
+                      border: "1px solid rgba(154, 77, 226, 0.5)",
+                      color: "rgb(154, 77, 226)",
+                      transition: "all 0.3s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "0.95rem",
+                      cursor: "pointer",
+                      position: "relative",
+                      overflow: "hidden",
+                      minWidth: "auto",
+                      justifyContent: "center"
+                    }}
+                    onClick={() => setShowMapCredit(true)}
+                  >
+                    <i className="mdi mdi-cash-multiple" style={{ fontSize: "18px", marginRight: "8px" }}></i>
+                    Map Credit
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      borderRadius: "6px",
+                      padding: "7px 14px",
+                      fontWeight: "500",
+                      background: "rgba(154, 77, 226, 0.15)",
+                      border: "1px solid rgba(154, 77, 226, 0.5)",
+                      color: "rgb(154, 77, 226)",
+                      transition: "all 0.3s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "0.95rem",
+                      cursor: "pointer",
+                      position: "relative",
+                      overflow: "hidden",
+                      minWidth: "auto",
+                      justifyContent: "center"
+                    }}
+                    onClick={(e) => {
+                      setSelectedTeacher({
+                        initial: "",
+                        name: "",
+                        surname: "",
+                        email: "",
+                        seniority_rank: 0,
+                        active: 1,
+                        theory_courses: 0,
+                        sessional_courses: 0,
+                        designation: "",
+                        full_time_status: false,
+                        offers_thesis_1: false,
+                        offers_thesis_2: false,
+                        offers_msc: false,
+                        teacher_credits_offered: 0,
+                        prev_initial: "",
+                      });
+                    }}
+                    onMouseEnter={e => {
+                      e.target.style.background = "rgb(154, 77, 226)";
+                      e.target.style.color = "white";
+                      e.target.style.borderColor = "rgb(154, 77, 226)";
+                    }}
+                    onMouseLeave={e => {
+                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                      e.target.style.color = "rgb(154, 77, 226)";
+                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                    }}
+                  >
+                    <i className="mdi mdi-plus-circle" style={{ fontSize: "18px", marginRight: "8px" }}></i>
                     Add New Teacher
-                </button>
+                  </button>
+                </div>
               </div>
               <div className="table-responsive">
                 <table className="table" style={{ margin: 0 }}>
@@ -1148,7 +1204,7 @@ export default function Teachers() {
                         onChange={(e) => setSelectedTeacher({ ...selectedTeacher, sessional_courses: Number.parseInt(e.target.value || "0") })}
                     />
                   </FormGroup>
-                </Col>
+                                                                                           </Col>
               </Row>
               <Row>
                 <Col md={6} className="px-2 py-1">
@@ -1567,6 +1623,71 @@ export default function Teachers() {
               </Button>
         </Modal.Footer>
         </Modal>
+
+      {/* Map Credit Modal */}
+      <Modal show={showMapCredit} onHide={() => setShowMapCredit(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Map Credit by Designation</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <FormGroup style={{ position: 'relative' }}>
+              <Form.Label>Designation</Form.Label>
+              <FormControl
+                type="text"
+                value={mapDesignation}
+                onChange={e => {
+                  setMapDesignation(e.target.value);
+                  if (e.target.value) {
+                    setFilteredSuggestions(
+                      DESIGNATION_SUGGESTIONS.filter(s =>
+                        s.toLowerCase().includes(e.target.value.toLowerCase())
+                      )
+                    );
+                  } else {
+                    setFilteredSuggestions(DESIGNATION_SUGGESTIONS);
+                  }
+                }}
+                placeholder="Enter designation"
+                autoComplete="off"
+              />
+              {mapDesignation && filteredSuggestions.length > 0 && (
+                <div style={{ border: '1px solid #eee', borderRadius: 6, marginTop: 2, background: '#fff', zIndex: 10, position: 'absolute', width: '90%' }}>
+                  {filteredSuggestions.slice(0, 5).map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      style={{ padding: '6px 12px', cursor: 'pointer', color: '#9a4de2' }}
+                      onClick={() => {
+                        setMapDesignation(suggestion);
+                        setFilteredSuggestions([]); // Hide suggestions after selection
+                      }}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </FormGroup>
+            <FormGroup className="mt-3">
+              <Form.Label>Credit Hour</Form.Label>
+              <FormControl
+                type="number"
+                value={mapCredit}
+                onChange={e => setMapCredit(e.target.value)}
+                placeholder="Enter credit hour"
+              />
+            </FormGroup>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+              <Button
+                style={{ minWidth: 100, maxWidth: 140, ...modalButtonStyle }}
+                onClick={handleMapCreditApply}
+              >
+                Apply
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }
