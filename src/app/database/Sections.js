@@ -19,10 +19,6 @@ const validateSection = (section) => {
     return "Batch cannot be empty";
   }
 
-  if (section.batch < 18 || section.batch > 23) {
-    return "Invalid Batch";
-  }
-
   if (section.section === "") {
     return "Section cannot be empty";
   }
