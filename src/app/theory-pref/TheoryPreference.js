@@ -143,6 +143,9 @@ export default function TheoryPreference() {
             icon={parseInt(status.status) === 0 ? "mdi-autorenew" : "mdi-check"}
             disabled={false}
             onClick={(e) => {
+              // Show a loading toast
+              const loadingToast = toast.loading("Sending emails...");
+              
               initiate().then((res) => {
                 getStatus().then((res) => {
                   // Sort the teachers in the status by seniority rank
@@ -153,10 +156,37 @@ export default function TheoryPreference() {
                   if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
                     modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
                   }
-                  setStatus({ values: [], submitted: [], ...modifiedRes });
-                  setStatus({ ...status, status: 1 });
-                  setTheoryAssignStatus(1);
+                  
+                  // Update status with modified response, ensuring status is set to 1
+                  setStatus({ 
+                    values: [], 
+                    submitted: [], 
+                    ...modifiedRes,
+                    status: 1 
+                  });
+                  
+                  // Update the status in the backend
+                  setTheoryAssignStatus(1)
+                    .then(() => {
+                      // Dismiss loading toast and show success
+                      toast.dismiss(loadingToast);
+                      toast.success("Emails sent successfully!");
+                    })
+                    .catch(error => {
+                      // Handle error
+                      toast.dismiss(loadingToast);
+                      toast.error("Failed to update status");
+                      console.error("Error updating status:", error);
+                    });
+                }).catch(error => {
+                  toast.dismiss(loadingToast);
+                  toast.error("Failed to get status");
+                  console.error("Error getting status:", error);
                 });
+              }).catch(error => {
+                toast.dismiss(loadingToast);
+                toast.error("Failed to initiate email process");
+                console.error("Error initiating:", error);
               });
             }}
           />
@@ -590,8 +620,8 @@ export default function TheoryPreference() {
             background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
             color: "white",
             borderBottom: "none",
-            borderTopLeftRadius: "15px",
-            borderTopRightRadius: "15px",
+            borderTopLeftRadius: "5px",
+            borderTopRightRadius: "5px",
             padding: "1.25rem 1.5rem"
           }}>
             <div>
@@ -796,10 +826,9 @@ export default function TheoryPreference() {
           }
           disabled={false}
           onClick={() => {
-            if (parseInt(status.status) === 0) {
-              setTheoryAssignStatus(3);
-              setStatus({ ...status, status: 3 });
-            } else {
+            setTheoryAssignStatus(3);
+            setStatus({ ...status, status: 3 });
+            if( parseInt(status.status) >= 3) {
               setShowAssignConfirm(true);
             }
           }}
@@ -810,8 +839,8 @@ export default function TheoryPreference() {
           background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
           color: "white",
           borderBottom: "none",
-          borderTopLeftRadius: "15px",
-          borderTopRightRadius: "15px",
+          borderTopLeftRadius: "5px",
+          borderTopRightRadius: "5px",
           padding: "1.25rem 1.5rem"
         }}>
           <Modal.Title style={{ color: "white", fontSize: "1.4rem", fontWeight: "600" }}>Confirm Assignment</Modal.Title>
@@ -878,8 +907,15 @@ export default function TheoryPreference() {
             }}
             onClick={() => {
               setShowAssignConfirm(false);
-              finalize().then((res) => {
-                getStatus().then((res) => {
+              
+              // Show loading toast
+              const loadingToast = toast.loading("Finalizing assignments...");
+              
+              finalize()
+                .then(() => {
+                  return getStatus();
+                })
+                .then((res) => {
                   // Sort the teachers in the status by seniority rank
                   let modifiedRes = { ...res };
                   if (modifiedRes.values && modifiedRes.values.length > 0) {
@@ -888,11 +924,28 @@ export default function TheoryPreference() {
                   if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
                     modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
                   }
-                  setStatus({ values: [], submitted: [], ...modifiedRes });
+                  
+                  // Update backend status
+                  return setTheoryAssignStatus(3)
+                    .then(() => {
+                      // Set complete status with all updates at once
+                      setStatus({ 
+                        values: [], 
+                        submitted: [], 
+                        ...modifiedRes,
+                        status: 3 
+                      });
+                      
+                      // Dismiss loading and show success
+                      toast.dismiss(loadingToast);
+                      toast.success("Assignments finalized successfully");
+                    });
+                })
+                .catch(error => {
+                  toast.dismiss(loadingToast);
+                  toast.error("Failed to finalize assignments");
+                  console.error("Error finalizing assignments:", error);
                 });
-              });
-              setTheoryAssignStatus(3);
-              setStatus({ ...status, status: 3 });
             }}
           >
             <Icon path={mdiCheckCircle} size={0.85} />
@@ -1112,8 +1165,8 @@ export default function TheoryPreference() {
             background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
             color: "white",
             borderBottom: "none",
-            borderTopLeftRadius: "15px",
-            borderTopRightRadius: "15px",
+            borderTopLeftRadius: "5px",
+            borderTopRightRadius: "5px",
             padding: "1.25rem 1.5rem"
           }}>
             <Modal.Title style={{ color: "white", fontSize: "1.4rem", fontWeight: "600" }}>Confirm Action</Modal.Title>
@@ -1181,10 +1234,33 @@ export default function TheoryPreference() {
               onClick={async () => {
                 if (confirmAction === "Resend") {
                   try {
+                    // Show loading toast
+                    const loadingToast = toast.loading("Resending email...");
+                    
+                    // Resend email
                     await resendTheoryPrefMail(selectedTeacherRow.initial);
+                    
+                    // Refresh status data to update UI
+                    const res = await getStatus();
+                    
+                    // Sort the teachers in the status by seniority rank
+                    let modifiedRes = { ...res };
+                    if (modifiedRes.values && modifiedRes.values.length > 0) {
+                      modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                    }
+                    if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+                      modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+                    }
+                    
+                    // Update the state with the new data
+                    setStatus({ values: [], submitted: [], ...modifiedRes });
+                    
+                    // Dismiss loading and show success
+                    toast.dismiss(loadingToast);
                     toast.success("Resent email successfully");
                   } catch (err) {
                     toast.error("Failed to resend email");
+                    console.error("Error resending email:", err);
                   }
                 }
                 setShowConfirm(false);
