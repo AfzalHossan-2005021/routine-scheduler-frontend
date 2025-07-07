@@ -16,6 +16,7 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
   theorySchedules = {},
   sectionName = "Section",
   isSessionalCourse = () => false,
+  isDisabledTimeSlot = () => false,
 }) {
   // Memoized values for configuration settings
     const { days, times } = useConfig();
@@ -398,6 +399,42 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
         .lab-time-cell:hover {
           background-color: rgba(233, 245, 255, 0.6) !important;
         }
+        .disabled-time-slot {
+          background-color: rgba(249, 230, 244, 0.6) !important;
+          position: relative;
+          pointer-events: none !important;
+        }
+        .disabled-time-slot::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: repeating-linear-gradient(
+            45deg,
+            rgba(255, 105, 180, 0.05),
+            rgba(255, 105, 180, 0.05) 10px,
+            rgba(255, 192, 203, 0.1) 10px,
+            rgba(255, 192, 203, 0.1) 20px
+          );
+          z-index: 1;
+        }
+        .disabled-time-slot .dropdown-cell {
+          opacity: 0.6;
+          cursor: not-allowed !important;
+          text-align: center !important;
+          text-align-last: center !important;
+          text-indent: 0 !important;
+        }
+        .disabled-time-slot option {
+          text-align: center;
+          direction: rtl;
+        }
+        .disabled-time-slot:hover {
+          transform: none !important;
+          box-shadow: none !important;
+        }
         .table-scroll-x {
           width: 100%;
           overflow-x: auto;
@@ -444,16 +481,33 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
                 {times.map((time) => {
                   const slotKey = `${day} ${time}`;
                   const cellClassName = getCellStyle(day, time);
+                  const isDisabled = isDisabledTimeSlot(day, time);
+                  const disabledClass = isDisabled ? 'disabled-time-slot' : '';
+                  
                   return (
-                    <td key={`${day}-${time}`} className={cellClassName} style={{ padding: 0, position: "relative", textAlign: "center" }}>
+                    <td key={`${day}-${time}`} className={`${cellClassName} ${disabledClass}`} style={{ padding: 0, position: "relative", textAlign: "center" }}>
                       <Form.Select
                         className={`dropdown-cell ${cellClassName}`}
                         value={getCourse(slotKey) || ""}
                         onChange={e => handleCourseChange(day, time, e.target.value)}
                         title={`${sectionName} - ${day} ${time}`}
-                        style={{ color: (getCourse(slotKey) || "") === "" ? 'transparent' : undefined }}
+                        style={{ 
+                          color: (getCourse(slotKey) || "") === "" ? 'transparent' : undefined,
+                          ...(isDisabled && { 
+                            fontStyle: 'italic', 
+                            color: '#888',
+                            textAlign: 'center',
+                            paddingLeft: '0',
+                            paddingRight: '0' 
+                          })
+                        }}
+                        disabled={isDisabled}
                       >
-                        <option value="">None</option>
+                        {isDisabled ? (
+                          <option value="" style={{ textAlign: 'center' }}>Sessional Time</option>
+                        ) : (
+                          <option value="">None</option>
+                        )}
                         {filteredCourses.map(course => (
                           <option key={`${day}-${time}-${course.course_id}`} value={course.course_id}>
                             {course.course_id} - {course.name || 'Unknown'}

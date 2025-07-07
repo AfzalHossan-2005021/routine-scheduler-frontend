@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import { mdiSchoolOutline, mdiDomain, mdiPlusBoxOutline, mdiContentSave } from '@mdi/js';
 import Icon from '@mdi/react';
 import { useHistory } from "react-router-dom";
+import { useConfig } from '../shared/ConfigContext';
 
 export default function TheorySchedule(props) {
   const [selectedDepartment, setSelectedDepartment] = useState("");
@@ -20,6 +21,7 @@ export default function TheorySchedule(props) {
   const [isLoading, setIsLoading] = useState(false);
   const [originalSchedulesBySection, setOriginalSchedulesBySection] = useState({});
   const history = useHistory();
+  const { times } = useConfig();
 
   // Load departments on mount
   useEffect(() => {
@@ -162,6 +164,32 @@ export default function TheorySchedule(props) {
     const lastDigit = course_id.match(/\d+/g)?.pop()?.slice(-1);
     return lastDigit && parseInt(lastDigit) % 2 === 0;
   };
+
+  // Helper to check if a time slot should be disabled due to sessional scheduling
+  const isDisabledTimeSlot = useCallback((sectionKey, day, time) => {
+    const scheduleObj = theorySchedulesBySection[sectionKey] || {};
+    
+    // Check if this time slot has a sessional course or is affected by one
+    const timeIndex = times.indexOf(time);
+    if (timeIndex < 0) return false;
+    
+    // For each time slot, check if there's a sessional course in any previous slot
+    // that would affect this slot (current slot or up to 2 slots after a sessional)
+    for (let i = Math.max(0, timeIndex - 2); i <= timeIndex; i++) {
+      const checkTime = times[i];
+      const checkSlotKey = `${day} ${checkTime}`;
+      const course = scheduleObj[checkSlotKey]?.course_id;
+      
+      if (course && isSessionalCourse(course)) {
+        // This is a sessional course. If current slot is this slot or up to 2 after it,
+        // the slot should be disabled
+        if (timeIndex >= i && timeIndex <= i + 2) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }, [theorySchedulesBySection, isSessionalCourse, times]);
 
   // Fetch and populate already scheduled courses for all sections when loaded
   useEffect(() => {
@@ -569,6 +597,7 @@ export default function TheorySchedule(props) {
                         theorySchedules={theorySchedulesBySection[sectionKey] || {}}
                         onChange={handleTheoryCellChange(sectionKey)}
                         isSessionalCourse={isSessionalCourse}
+                        isDisabledTimeSlot={(day, time) => isDisabledTimeSlot(sectionKey, day, time)}
                       />
                     </div>
                   </div>
