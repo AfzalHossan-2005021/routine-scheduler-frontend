@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useConfig } from '../shared/ConfigContext';
 
 // Database and API imports
 import { getTeacher } from '../api/db-crud';
@@ -13,7 +13,6 @@ import { getCourseAllSchedule, getCourseSectionalSchedule } from '../api/theory-
 import { getDepartmentalSessionalSchedule } from '../api/sessional-schedule';
 
 // UI components and utilities
-import { days, possibleLabTimes } from '../shared/ScheduleSelctionTable';
 import toast from 'react-hot-toast';
 
 // Add some custom styles for the schedule table
@@ -153,6 +152,9 @@ function CourseTeachers({ courseId, section, fetchTeachers, isAlreadyScheduled, 
 export default function TeacherDetails(props) {
   // Get the teacher ID and callback from props
   const { teacherId, onAssignmentChange } = props;
+
+  // Memoized values for configuration settings
+  const { days, possibleLabTimes } = useConfig();
 
   const [departmentalSessionalSchedules, setdepartmentalSessionalSchedules] = useState([]); // All available sessional schedules
 

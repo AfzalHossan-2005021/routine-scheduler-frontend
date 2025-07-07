@@ -17,7 +17,6 @@ const Initialize = lazy(() => import("./database/Initialize"));
 const TheoryPreference = lazy(() => import("./theory-pref/TheoryPreference"));
 const TheorySelect = lazy(() => import("./forms/TheorySelect"));
 const SessionalSelect = lazy(() => import("./forms/SessionalSelect"));
-const TheoryScheduleForm = lazy(() => import("./forms/TheorySchedule"));
 
 const LabRoomAssign = lazy(() => import("./lab-room-assign/LabRoomAssign"));
 const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSchedule"));
@@ -39,7 +38,6 @@ export default function AppRoutes() {
       <Switch>
         <Route exact path="/form/theory-pref/:initial" component={TheorySelect} />
         <Route exact path="/form/sessional-pref/:initial" component={SessionalSelect} />
-        <Route exact path="/form/theory-sched/:initial" component={TheoryScheduleForm} />
         {user.loggedIn ? (
           <Switch>
             <Route exact path="/dashboard" component={Dashboard} />
@@ -54,7 +52,7 @@ export default function AppRoutes() {
             <Route path="/lab-assign/:teacherId" component={TeacherDetails} />
             <Route path="/lab-schedule" component={ SessionalSchedule } />
             <Route path="/pdf" component={pdfPage} />
-            <Route path="/theory-schedule/new" component={TheorySchedule} />
+            <Route path="/theory-schedule" component={TheorySchedule} />
             <Route path="/account" component={Account} />
             <Redirect to="/dashboard" />
           </Switch>

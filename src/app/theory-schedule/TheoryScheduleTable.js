@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { Form } from "react-bootstrap";
-import { days, times } from "../shared/ScheduleSelctionTable";
+import { useConfig } from '../shared/ConfigContext';
 import { MultiSet } from "mnemonist";
 
 /**
@@ -17,13 +17,12 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
   sectionName = "Section",
   isSessionalCourse = () => false,
 }) {
+  // Memoized values for configuration settings
+    const { days, times } = useConfig();
+
   // Convert arrays to MultiSets for efficient lookup
   const filledSet = useMemo(() => MultiSet.from(filled), [filled]);
   const selectedSet = useMemo(() => MultiSet.from(selected), [selected]);
-  const theoryTimesSet = useMemo(() =>
-    MultiSet.from(theoryTimes.length ? theoryTimes : days.map((day) => `${day} 2`)),
-    [theoryTimes]
-  );
 
   // Prepare filtered courses - memoized to prevent unnecessary filtering
   const filteredCourses = useMemo(() => {

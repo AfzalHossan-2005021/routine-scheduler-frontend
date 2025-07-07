@@ -36,7 +36,6 @@ export default function TheoryPreference() {
       }
       setStatus({ values: [], submitted: [], ...modifiedRes });
     });
-    console.log(status.status)
     getTeachers().then((res) => {
       res = res.filter((t) => t.active === 1);
       // Sort teachers by seniority rank (lower rank means more senior)

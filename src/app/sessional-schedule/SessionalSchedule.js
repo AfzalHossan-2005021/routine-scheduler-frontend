@@ -1,10 +1,7 @@
 import { useEffect, useMemo, useCallback, useState } from "react";
 import { Button } from "react-bootstrap";
 import { Form } from "react-bootstrap";
-import {
-  days,
-  possibleLabTimes,
-} from "../shared/ScheduleSelctionTable";
+import { useConfig } from '../shared/ConfigContext';
 import { 
   getActiveDepartments, 
   getDepartmentalLevelTermBatches, 
@@ -24,6 +21,9 @@ import Icon from '@mdi/react';
 import { useHistory } from "react-router-dom";
 
 export default function SessionalSchedule() {
+  // Memoized values for configuration settings
+  const { days, possibleLabTimes } = useConfig();
+
   // Theory schedules
   const [theorySchedules, setTheorySchedules] = useState({});
 
