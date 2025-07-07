@@ -7,8 +7,8 @@ import { api_url } from ".";
 export const getScheduleConfigs = () =>
     axios.get(api_url("/schedule/configs")).then((res) => res.data.data);
 
-export const getSchedules = (batch, section) => 
-    axios.get(api_url(`/schedule/theory/${batch}/${section}`)).then((res) => res.data);
+export const getSchedules = (department, batch, section) => 
+    axios.get(api_url(`/schedule/theory/${department}/${batch}/${section}`)).then((res) => res.data);
 
 export const setSchedules = (batch, section, course, schedules) => 
     axios.post(api_url(`/schedule/theory/${batch}/${section}/${course}`), schedules).then((res) => res.data);

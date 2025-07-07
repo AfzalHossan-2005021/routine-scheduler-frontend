@@ -9,6 +9,7 @@ import {
   getActiveDepartments, 
   getDepartmentalLevelTermBatches, 
   getSessionalSectionsByDeptAndLevelTerm, 
+  getTheorySectionsByDeptAndLevelTerm,
   getSessionalCoursesByDeptLevelTerm 
 } from "../api/db-crud";
 import { toast } from "react-hot-toast";
@@ -16,27 +17,30 @@ import {
   getSessionalSchedules,
   setSessionalSchedules
 } from "../api/sessional-schedule";
+import { getSchedules } from "../api";
 import SectionScheduleTable from "./SectionScheduleTable";
 import { mdiContentSave, mdiAccountGroupOutline } from '@mdi/js';
 import Icon from '@mdi/react';
 import { useHistory } from "react-router-dom";
 
 export default function SessionalSchedule() {
-  // State variables grouped by functionality
+  // Theory schedules
+  const [theorySchedules, setTheorySchedules] = useState({});
+
   // Selection state
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [selectedLevelTermBatch, setSelectedLevelTermBatch] = useState(null);
-  const [selectedCourse] = useState(null); // Keep but don't use setter
+  const [selectedCourse] = useState(null);
   
   // Data state
   const [allDepartments, setAllDepartments] = useState([]);
   const [allLevelTermBatches, setAllLevelTermBatches] = useState([]);
   const [allSessionalSections, setAllSessionalSections] = useState([]);
+  const [allTheorySections, setAllTheorySections] = useState([]);
   const [allSessionalCourses, setAllSessionalCourses] = useState([]);
   
   // Schedule state
   const [labSchedulesBySection, setLabSchedulesBySection] = useState({});
-  const [labSlots, setLabSlots] = useState(new Set());
   const [labTimes, setLabTimes] = useState([]);
   
   // UI state
@@ -73,6 +77,13 @@ export default function SessionalSchedule() {
   // Fetch sections and courses when department or level term changes
   useEffect(() => {
     if (selectedDepartment && selectedLevelTermBatch) {
+      // Load theory sections
+      loadData(
+        () => getTheorySectionsByDeptAndLevelTerm(selectedDepartment, selectedLevelTermBatch.level_term),
+        "Failed to load theory sections",
+        setAllTheorySections
+      );
+
       // Load sessional sections
       loadData(
         () => getSessionalSectionsByDeptAndLevelTerm(selectedDepartment, selectedLevelTermBatch.level_term),
@@ -88,6 +99,53 @@ export default function SessionalSchedule() {
       );
     }
   }, [selectedDepartment, selectedLevelTermBatch, loadData]);
+
+  // Load theory schedules when sections are available
+  useEffect(() => {
+    // Using loop load theory schedules for each section
+    if (allTheorySections && allTheorySections.length > 0) {
+      const loadingToast = toast.loading("Loading theory schedules...");
+      setIsLoading(true);
+      const loadTheorySchedules = async () => {
+        try {          
+          // Fetch schedules for each section and map them to their section identifier
+          const schedulesResults = await Promise.all(
+            allTheorySections.map(async (section) => {
+              const scheduleData = await getSchedules(
+                selectedDepartment,
+                selectedLevelTermBatch.batch,
+                section.section
+              );
+              // Return an object with the section identifier and its schedules
+              return { 
+                section: section.section,
+                schedules: scheduleData
+              };
+            })
+          );
+          
+          // Create a mapping object where keys are section identifiers and values are schedules
+          const schedulesMap = {};
+          schedulesResults.forEach(result => {
+            schedulesMap[result.section] = result.schedules;
+          });
+          
+          // Set the theory schedules state with the flattened array for compatibility with existing code
+          setTheorySchedules(schedulesMap);
+          
+          toast.dismiss(loadingToast);
+          toast.success("Theory schedules loaded successfully");
+        } catch (error) {
+          console.error("Error loading theory schedules:", error);
+          toast.dismiss(loadingToast);
+          toast.error("Failed to load theory schedules");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadTheorySchedules();
+    }
+  }, [allTheorySections, selectedDepartment, selectedLevelTermBatch]);
 
   // Group sections by main section and subsections - memoized to prevent unnecessary recalculation
   const groupedSections = useMemo(() => {
@@ -145,8 +203,8 @@ export default function SessionalSchedule() {
     });
     
     // Add any special lab time slots if needed
-    return [...result, ...Array.from(labSlots)];
-  }, [labSlots]);
+    return result;
+  }, []);
   
   // Set lab times only once when computed lab times change
   useEffect(() => {
@@ -158,17 +216,6 @@ export default function SessionalSchedule() {
     if (selectedLevelTermBatch && selectedLevelTermBatch.batch && selectedDepartment) {
       const batch = selectedLevelTermBatch.batch;
       const department = selectedDepartment;
-      
-      // Set up some default lab slots
-      const defaultLabSlots = new Set();
-      days.forEach(day => {
-        [2, 8, 11].forEach(time => {
-          defaultLabSlots.add(`${day} ${time}`);
-        });
-      });
-      
-      // Store the lab slots
-      setLabSlots(defaultLabSlots);
 
       // Safety check for sections
       if (!allSessionalSections || allSessionalSections.length === 0) {
@@ -836,7 +883,7 @@ export default function SessionalSchedule() {
                     
                     {/* Schedule table with divided cells */}
                     <SectionScheduleTable
-                      filled={[]} // No theory slots to fill
+                      filled={theorySchedules[mainSection]}
                       selectedUpper={upperSelectedSlots}
                       selectedLower={lowerSelectedSlots}
                       onChangeUpper={(day, time, courseId) => handleSlotChange(day, time, courseId, upperSectionKey)}

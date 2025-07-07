@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { Form } from "react-bootstrap";
-import { days, times } from "../shared/ScheduleSelctionTable";
+import { useConfig } from '../shared/ConfigContext';
 import { MultiSet } from "mnemonist";
 
 /**
@@ -21,14 +21,63 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
   lowerSectionKey,
   labSchedulesBySection = {}
 }) {
+  // Memoized values for configuration settings
+  const { days, times, possibleLabTimes } = useConfig();
+
+  // Extended blocked slots calculation from theory slots
+  const extendedBlockedSlots = useMemo(() => {
+    if (!Array.isArray(filled.mainSection)) return [];
+    
+    // Create a map of all blocked slots by day
+    const blockedSlotsByDay = {};
+    
+    // First, identify all theory classes
+    filled.mainSection.forEach(course => {
+      const { day, time } = course;
+      
+      // Convert time to number if it's not already
+      const timeNum = parseInt(time);
+      
+      // Initialize the day if not already present
+      if (!blockedSlotsByDay[day]) {
+        blockedSlotsByDay[day] = new Set();
+      }
+      
+      // Add the original slot to the blocked set
+      blockedSlotsByDay[day].add(timeNum);
+    });
+    
+    // Build final list of blocked slots
+    const blockedSlots = [];
+    
+    // For each day with theory classes
+    Object.entries(blockedSlotsByDay).forEach(([day, timeSet]) => {
+      // For each hour of the day
+      for (let h of possibleLabTimes) {        
+        // If this slot should be blocked, add it to our results
+        if (timeSet.has(h) || timeSet.has((h % 12) + 1) || timeSet.has(((h + 1) % 12) + 1)) {
+          blockedSlots.push(`${day} ${h}`);
+        }
+      }
+    });
+    
+    return blockedSlots;
+  }, [filled]);
+  
   // Convert arrays to MultiSets for efficient lookup
-  const filledSet = useMemo(() => MultiSet.from(filled), [filled]);
+  const extendedBlockedSet = useMemo(() => MultiSet.from(extendedBlockedSlots), [extendedBlockedSlots]);
   const selectedUpperSet = useMemo(() => MultiSet.from(selectedUpper), [selectedUpper]);
   const selectedLowerSet = useMemo(() => MultiSet.from(selectedLower), [selectedLower]);
   const labTimesSet = useMemo(() => 
     MultiSet.from(labTimes.length ? labTimes : days.map((day) => `${day} 2`)),
     [labTimes]
   );
+  
+  // Check if a slot is blocked (filled by any theory course or within 2 slots of a theory course)
+  const isSlotBlocked = useCallback((day, time) => {
+    const key = `${day} ${time}`;
+    return extendedBlockedSet.has(key);
+  }, [extendedBlockedSet]);
   
   // Prepare filtered courses - memoized to prevent unnecessary filtering
   const filteredCourses = useMemo(() => {
@@ -58,17 +107,17 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
   // Cell style calculation - memoized to prevent recalculation
   const getUpperCellStyle = useCallback((day, time) => {
     const key = `${day} ${time}`;
+    if (extendedBlockedSet.has(key)) return "filled-upper blocked-cell";
     if (selectedUpperSet.has(key)) return "selected-upper";
-    if (filledSet.has(key)) return "filled-upper";
     return "";
-  }, [selectedUpperSet, filledSet]);
+  }, [selectedUpperSet, extendedBlockedSet]);
 
   const getLowerCellStyle = useCallback((day, time) => {
     const key = `${day} ${time}`;
+    if (extendedBlockedSet.has(key)) return "filled-lower blocked-cell";
     if (selectedLowerSet.has(key)) return "selected-lower";
-    if (filledSet.has(key)) return "filled-lower";
     return "";
-  }, [selectedLowerSet, filledSet]);
+  }, [selectedLowerSet, extendedBlockedSet]);
   
   // Event handlers
   const handleUpperCourseChange = useCallback((day, time, courseId) => {
@@ -135,6 +184,12 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
         td:hover .cell-container {
           transform: scale(1.03);
           box-shadow: inset 0 0 0 1px rgba(194, 137, 248, 0.3);
+        }
+        
+        /* Ensure cell container in blocked cells doesn't transform */
+        td:has(.blocked-cell):hover .cell-container {
+          transform: none !important;
+          box-shadow: none !important;
         }
         .form-control {
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -247,6 +302,17 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           box-shadow: 0 8px 16px rgba(154, 77, 226, 0.2);
           z-index: 3;
           border-color: rgba(194, 137, 248, 0.4);
+        }
+        .routine-table td:has(.blocked-cell):hover,
+        .routine-table td:has(.blocked-cell):focus,
+        .routine-table td:has(.blocked-cell):active {
+          background-color: #f8f9fa !important;
+          transform: none !important;
+          box-shadow: none !important;
+          z-index: 1;
+          border-color: rgba(222, 226, 230, 0.8) !important;
+          transition: none !important;
+          animation: none !important;
         }
         .routine-table td:before {
           content: "";
@@ -430,6 +496,73 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           background-color: #f0ebf7;
           box-shadow: 0 4px 12px rgba(154, 77, 226, 0.12);
         }
+        .blocked-cell {
+          background-color: #ffe0e0 !important;
+          color: #6c757d !important;
+          cursor: not-allowed !important;
+          opacity: 0.8;
+          pointer-events: none;
+          border: 1px solid rgba(220, 53, 69, 0.3) !important;
+          box-shadow: inset 0 0 4px rgba(220, 53, 69, 0.2) !important;
+          position: relative;
+          overflow: hidden;
+          transform: none !important;
+          transition: none !important;
+          animation: none !important;
+        }
+        
+        /* Completely disable all hover effects on blocked cells */
+        .blocked-cell:hover, 
+        .blocked-cell:focus, 
+        .blocked-cell:active,
+        td:hover .blocked-cell,
+        td:focus .blocked-cell,
+        td:active .blocked-cell {
+          transform: none !important;
+          box-shadow: inset 0 0 4px rgba(220, 53, 69, 0.2) !important;
+          animation: none !important;
+          background-color: #ffe0e0 !important;
+          border-color: rgba(220, 53, 69, 0.3) !important;
+          color: #6c757d !important;
+          opacity: 0.8 !important;
+          transition: none !important;
+        }
+        .blocked-cell::before {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 5px,
+            rgba(220, 53, 69, 0.05) 5px,
+            rgba(220, 53, 69, 0.05) 10px
+          );
+          pointer-events: none;
+          z-index: 1;
+        }
+        .blocked-cell {
+          position: relative;
+        }
+        .blocked-cell-content {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 0.7rem;
+          color: #dc3545;
+          text-shadow: 0px 0px 2px rgba(255, 255, 255, 0.8);
+          font-weight: bold;
+          white-space: nowrap;
+          z-index: 2;
+          background-color: rgba(255, 255, 255, 0.8);
+          padding: 2px 6px;
+          border-radius: 4px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+          pointer-events: none;
+        }
         .filled-upper:after, .filled-lower:after {
           content: "";
           position: absolute;
@@ -571,14 +704,22 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
                         }}
                       >
                         <div className="cell-container">
+                          {isSlotBlocked(day, time) && (
+                            <div className="blocked-cell-content">
+                              ⚠️ {`Slot filled by theory class`}
+                            </div>
+                          )}
                           <Form.Select
                             className={`upper-cell dropdown-cell ${getUpperCellStyle(day, time)}`}
                             value={upperSectionCourse(slotKey) || ''}
                             onChange={(e) => handleUpperCourseChange(day, time, e.target.value)}
-                            title={`${upperSectionName} - ${day} ${time}`}
-                            style={{ color: (upperSectionCourse(slotKey) || "") === "" ? 'transparent' : undefined }}
+                            title={isSlotBlocked(day, time) 
+                              ? `Slot filled by theory class` 
+                              : `${upperSectionName} - ${day} ${time}`}
+                            style={{ color: (upperSectionCourse(slotKey) || "") === "" || isSlotBlocked(day, time) ? 'transparent' : undefined }}
+                            disabled={isSlotBlocked(day, time)}
                           >
-                            <option value="">None</option>
+                            <option value="">{isSlotBlocked(day, time) ? "" : "None"}</option>
                             {filteredCourses.map(course => (
                               <option 
                                 key={`upper-${day}-${time}-${course.course_id}`}
@@ -592,10 +733,13 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
                             className={`lower-cell dropdown-cell ${getLowerCellStyle(day, time)}`}
                             value={lowerSectionCourse(slotKey) || ''}
                             onChange={(e) => handleLowerCourseChange(day, time, e.target.value)}
-                            title={`${lowerSectionName} - ${day} ${time}`}
-                            style={{ color: (lowerSectionCourse(slotKey) || "") === "" ? 'transparent' : undefined }}
+                            title={isSlotBlocked(day, time) 
+                              ? `Slot filled by theory class` 
+                              : `${lowerSectionName} - ${day} ${time}`}
+                            style={{ color: (lowerSectionCourse(slotKey) || "") === "" || isSlotBlocked(day, time) ? 'transparent' : undefined }}
+                            disabled={isSlotBlocked(day, time)}
                           >
-                            <option value="">None</option>
+                            <option value="">{isSlotBlocked(day, time) ? "" : "None"}</option>
                             {filteredCourses.map(course => (
                               <option 
                                 key={`lower-${day}-${time}-${course.course_id}`}

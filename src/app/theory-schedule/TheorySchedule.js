@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Form, Button } from "react-bootstrap";
 import TheoryScheduleTable from "./TheoryScheduleTable";
 import { getActiveDepartments, getDepartmentalLevelTermBatches, getTheorySectionsByDeptAndLevelTerm, getTheoryCoursesByDeptLevelTerm } from "../api/db-crud";
@@ -173,7 +173,7 @@ export default function TheorySchedule(props) {
         const sectionKey = `${selectedDepartment} ${section.batch} ${section.section}`;
         const batchInt = parseInt(batchValue, 10); // Use batch from level-term selector
         if (!isNaN(batchInt)) {
-          getSchedules(batchInt, section.section).then((res) => {
+          getSchedules(selectedDepartment, batchInt, section.section).then((res) => {
             let allSchedules = [];
             if (res.mainSection) allSchedules = [...res.mainSection];
             if (res.subsections) Object.values(res.subsections).forEach(sub => { allSchedules = [...allSchedules, ...sub]; });
