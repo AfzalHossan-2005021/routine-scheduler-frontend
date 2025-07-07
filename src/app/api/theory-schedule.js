@@ -1,19 +1,25 @@
 import axios from "axios";
 import { api_url } from ".";
 
+/**
+ * Get schedule configuration values (times, days, possibleLabTimes)
+ */
+export const getScheduleConfigs = () =>
+    axios.get(api_url("/schedule/configs")).then((res) => res.data.data);
+
 export const getSchedules = (batch, section) => 
     axios.get(api_url(`/schedule/theory/${batch}/${section}`)).then((res) => res.data);
 
 export const setSchedules = (batch, section, course, schedules) => 
     axios.post(api_url(`/schedule/theory/${batch}/${section}/${course}`), schedules).then((res) => res.data);
 
-export const initiate = () =>
+export const initiateTheorySchedule = () =>
     axios.get(api_url("/schedule/theory/initiate")).then((res) => res.data);
 
-export const getStatus = () =>
+export const getTheoryScheduleStatus = () =>
     axios.get(api_url("/schedule/theory/status")).then((res) => res.data);
 
-export const finalize = () =>
+export const finalizeTheorySchedule = () =>
     axios.get(api_url("/schedule/theory/finalize")).then((res) => res.data);
 
 export const getAllSchedule = () =>

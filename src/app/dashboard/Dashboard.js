@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Alert, Button, Form, InputGroup, Modal } from "react-bootstrap";
 import { getTheoryEmail,getScheduleEmail,getSessionalEmail } from "../api/dashboard";
 import Emailtemplate from "./Emailtemplate";
+import ConfigManagement from "./ConfigManagement";
 import themeImg from '../../assets/images/dashboard/theme.png';
 
 function App() {
@@ -240,6 +241,13 @@ Thank you.`}
           <Button variant="primary">Save changes</Button>
         </Modal.Footer>
       </Modal>
+      
+      {/* System Configuration Management Section */}
+      <div className="row mt-4 mb-4">
+        <div className="col-12">
+          <ConfigManagement />
+        </div>
+      </div>
     </div>
   );
 }

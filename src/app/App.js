@@ -11,6 +11,7 @@ import "./App.css";
 import { useLocation } from "react-router-dom/cjs/react-router-dom.min";
 import { FORBIDDEN, UNAUTHORIZED } from "./api";
 import { toast } from "react-hot-toast";
+import { ConfigProvider } from "./shared/ConfigContext";
 
 export const UserContext = createContext({user: undefined, setUser: u => {}});
 export const UserProvider = UserContext.Provider;
@@ -81,19 +82,21 @@ function App(props) {
 
   return (
     <UserProvider value={{ user: user, setUser }}>
-      <div className="container-scroller">
-        {navbarComponent}
-        <div className={"container-fluid page-body-wrapper"}>
-          {sidebarComponent}
-          <div className="main-panel">
-            <div className="content-wrapper">
-              <AppRoutes />
-              {SettingsPanelComponent}
+      <ConfigProvider>
+        <div className="container-scroller">
+          {navbarComponent}
+          <div className={"container-fluid page-body-wrapper"}>
+            {sidebarComponent}
+            <div className="main-panel">
+              <div className="content-wrapper">
+                <AppRoutes />
+                {SettingsPanelComponent}
+              </div>
+              {footerComponent}
             </div>
-            {footerComponent}
           </div>
         </div>
-      </div>
+      </ConfigProvider>
     </UserProvider>
   );
 }
