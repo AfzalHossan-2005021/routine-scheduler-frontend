@@ -105,55 +105,90 @@ export default function TheorySchedule(props) {
   };
 
   // Handler to update schedule for a section, with cross-section cell warning
-  const handleTheoryCellChange = (sectionKey) => (day, time, courseId) => {
-    if (courseId) {
+  const handleTheoryCellChange = (sectionKey) => (day, time, courseIds) => {
+    // If this is a no-op call (from the forced re-render), just return
+    if (day === null && time === null) {
+      return;
+    }
+    
+    // Handle both single string and array of course IDs
+    const courseIdsArray = Array.isArray(courseIds) ? courseIds : (courseIds ? [courseIds] : []);
+    
+    const slotKey = `${day} ${time}`;
+    // Get a fresh copy of the current section schedule to avoid stale data
+    const currentSectionSchedule = { ...theorySchedulesBySection[sectionKey] } || {};
+    
+    // Check each course ID in the selection
+    for (const courseId of courseIdsArray) {
       // Check for duplicate course in the same section on the same day
-      const currentSectionSchedule = theorySchedulesBySection[sectionKey] || {};
       let duplicateCount = 0;
       Object.entries(currentSectionSchedule).forEach(([slot, val]) => {
-        if (val.course_id === courseId && slot.startsWith(day + ' ')) {
+        // Check if this slot has the current course
+        const slotCourseIds = val.course_ids || (val.course_id ? [val.course_id] : []);
+        if (slotCourseIds.includes(courseId) && slot.startsWith(day + ' ') && slot !== slotKey) {
           duplicateCount++;
         }
       });
+      
       // If already selected in another time slot on the same day, show warning
       if (duplicateCount > 0) {
-        toast("This course is already selected in this section on this day.", { icon: "⚠️" });
+        toast(`Course ${courseId} is already selected in this section on this day.`, { icon: "⚠️" });
       }
+      
       // Check if selected more than class_per_week times in this section
-      // Count all slots in this section with this courseId (including this change)
       let totalCount = 0;
       Object.entries(currentSectionSchedule).forEach(([slot, val]) => {
-        if (val.course_id === courseId) totalCount++;
+        const slotCourseIds = val.course_ids || (val.course_id ? [val.course_id] : []);
+        if (slotCourseIds.includes(courseId)) totalCount++;
       });
-      // If the user is changing a slot to this course, add 1 if this slot wasn't already this course
-      const slotKey = `${day} ${time}`;
-      if (!currentSectionSchedule[slotKey] || currentSectionSchedule[slotKey].course_id !== courseId) {
+      
+      // If this is a new slot for this course, increment the count
+      const existingSlotCourseIds = currentSectionSchedule[slotKey]?.course_ids || 
+                                   (currentSectionSchedule[slotKey]?.course_id ? 
+                                    [currentSectionSchedule[slotKey].course_id] : []);
+                                    
+      if (!existingSlotCourseIds.includes(courseId)) {
         totalCount++;
       }
+      
       // Find class_per_week for this course
       const courseObj = allTheoryCourses.find(c => c.course_id === courseId);
       if (courseObj && courseObj.class_per_week && totalCount > courseObj.class_per_week) {
         toast(`Warning: ${courseId} is selected more than ${courseObj.class_per_week} times in this section.`, { icon: "⚠️" });
       }
+      
       // Check all other sections for same course in same cell
       for (const otherSection of allTheorySections) {
         const otherSectionKey = `${selectedDepartment} ${otherSection.batch} ${otherSection.section}`;
         if (otherSectionKey !== sectionKey) {
           const otherSchedule = theorySchedulesBySection[otherSectionKey] || {};
-          if (otherSchedule[slotKey] && otherSchedule[slotKey].course_id === courseId) {
-            toast("You have selected this course in another section at the same time.", { icon: "⚠️", duration: 4000 });
+          const otherSlotCourseIds = otherSchedule[slotKey]?.course_ids || 
+                                    (otherSchedule[slotKey]?.course_id ? 
+                                     [otherSchedule[slotKey].course_id] : []);
+                                     
+          if (otherSlotCourseIds.includes(courseId)) {
+            toast(`You have selected course ${courseId} in another section at the same time.`, { icon: "⚠️", duration: 4000 });
             break;
           }
         }
       }
-    }
-    setTheorySchedulesBySection(prev => ({
-      ...prev,
-      [sectionKey]: {
-        ...prev[sectionKey],
-        [`${day} ${time}`]: { course_id: courseId }
+    }      // Update the schedule with the new course IDs in a way that ensures React detects the change
+    setTheorySchedulesBySection(prev => {
+      // Create a deep copy of the previous state to avoid mutation
+      const updatedState = JSON.parse(JSON.stringify(prev));
+      
+      // Initialize the section if it doesn't exist
+      if (!updatedState[sectionKey]) {
+        updatedState[sectionKey] = {};
       }
-    }));
+      
+      // Update the specific day-time slot with the new course IDs
+      updatedState[sectionKey][slotKey] = { course_ids: courseIdsArray };
+      
+      return updatedState;
+    });
+    
+    // Mark that changes have been made
     setIsChanged(true);
   };
 
@@ -178,9 +213,15 @@ export default function TheorySchedule(props) {
     for (let i = Math.max(0, timeIndex - 2); i <= timeIndex; i++) {
       const checkTime = times[i];
       const checkSlotKey = `${day} ${checkTime}`;
-      const course = scheduleObj[checkSlotKey]?.course_id;
       
-      if (course && isSessionalCourse(course)) {
+      // Check if there are any sessional courses in this slot
+      const slotData = scheduleObj[checkSlotKey];
+      const courseIds = slotData?.course_ids || (slotData?.course_id ? [slotData.course_id] : []);
+      
+      // Check if any of the courses in this slot is a sessional course
+      const hasSessional = courseIds.some(id => isSessionalCourse(id));
+      
+      if (hasSessional) {
         // This is a sessional course. If current slot is this slot or up to 2 after it,
         // the slot should be disabled
         if (timeIndex >= i && timeIndex <= i + 2) {
@@ -198,6 +239,7 @@ export default function TheorySchedule(props) {
         ? selectedLevelTermBatch.batch
         : null;
       allTheorySections.forEach((section) => {
+        // Use a consistent format for section key
         const sectionKey = `${selectedDepartment} ${section.batch} ${section.section}`;
         const batchInt = parseInt(batchValue, 10); // Use batch from level-term selector
         if (!isNaN(batchInt)) {
@@ -205,12 +247,52 @@ export default function TheorySchedule(props) {
             let allSchedules = [];
             if (res.mainSection) allSchedules = [...res.mainSection];
             if (res.subsections) Object.values(res.subsections).forEach(sub => { allSchedules = [...allSchedules, ...sub]; });
+            
+            // Initialize cellMap with empty course_ids arrays for all day-time combinations
             const cellMap = {};
-            allSchedules.forEach(sch => {
-              cellMap[`${sch.day} ${sch.time}`] = { course_id: sch.course_id, type: sch.type };
+            // Pre-initialize all possible day-time slots
+            times.forEach(time => {
+              ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'].forEach(day => {
+                const key = `${day} ${time}`;
+                cellMap[key] = { course_ids: [] };
+              });
             });
-            setTheorySchedulesBySection(prev => ({ ...prev, [sectionKey]: cellMap }));
-            setOriginalSchedulesBySection(prev => ({ ...prev, [sectionKey]: cellMap }));
+            
+            // Process all schedules and add courses to the appropriate day-time slots
+            allSchedules.forEach(sch => {
+              const slotKey = `${sch.day} ${sch.time}`;
+              
+              // Initialize the slot if it doesn't exist yet
+              if (!cellMap[slotKey]) {
+                cellMap[slotKey] = { course_ids: [] };
+              }
+              
+              // Add the course_id to the course_ids array if it's not already there
+              if (sch.course_id && !cellMap[slotKey].course_ids.includes(sch.course_id)) {
+                cellMap[slotKey].course_ids.push(sch.course_id);
+              }
+              
+              // Store the type information as well
+              if (sch.type) {
+                cellMap[slotKey].type = sch.type;
+              }
+            });
+            
+            // Deep clone to ensure we're not sharing references
+            const cellMapClone = JSON.parse(JSON.stringify(cellMap));
+            
+            // Make sure to use function form of setState to ensure we're using the latest state
+            setTheorySchedulesBySection(prev => {
+              const updated = { ...prev };
+              updated[sectionKey] = cellMapClone; // This ensures the exact same reference
+              return updated;
+            });
+            
+            setOriginalSchedulesBySection(prev => {
+              const updated = { ...prev };
+              updated[sectionKey] = cellMapClone; // This ensures the exact same reference
+              return updated;
+            });
           });
         }
       });
@@ -275,26 +357,57 @@ export default function TheorySchedule(props) {
       const changedSlots = [];
       // Check all slots in current
       Object.entries(current).forEach(([slot, val]) => {
-        const prevCourseId = original[slot]?.course_id || "None";
-        const newCourseId = val.course_id || "None";
-        if (prevCourseId !== newCourseId) {
-          changedSlots.push({ slot, course_id: newCourseId });
+        // Handle both course_id and course_ids
+        const prevCourseIds = original[slot]?.course_ids || 
+                             (original[slot]?.course_id ? [original[slot].course_id] : []);
+        const newCourseIds = val.course_ids || 
+                            (val.course_id ? [val.course_id] : []);
+        
+        // Check if arrays are different
+        const prevIdsStr = JSON.stringify(prevCourseIds.sort());
+        const newIdsStr = JSON.stringify(newCourseIds.sort());
+        
+        if (prevIdsStr !== newIdsStr) {
+          // For backward compatibility, if there's only one course, use course_id
+          if (newCourseIds.length === 0) {
+            changedSlots.push({ slot, course_id: "" });
+          } else {
+            // For each course_id, create a separate entry
+            newCourseIds.forEach(courseId => {
+              changedSlots.push({ slot, course_id: courseId });
+            });
+          }
         }
       });
+      
       // Also check for slots that existed before but are now missing (deleted)
       Object.keys(original).forEach(slot => {
         if (!(slot in current)) {
           changedSlots.push({ slot, course_id: "" });
         }
       });
+      
       // For each changed slot, send a setSchedules call, throttled
-      const saveSectionTasks = changedSlots.map(({ slot, course_id }) => async () => {
-        const [day, time] = slot.split(" ");
+      const saveSectionTasks = changedSlots.map((slotData) => async () => {
+        const [day, time] = slotData.slot.split(" ");
         try {
-          await setSchedules(batch, section.section, course_id, [{ day, time }]);
-          return ({ success: true, section: section.section, slot });
+          // Handle both single course_id and multiple course_ids
+          if ('course_ids' in slotData) {
+            // Handle multiple course IDs
+            // Note: This may need API changes on the backend to support multiple courses
+            // For now, we'll send the first course ID for backward compatibility
+            const mainCourseId = slotData.course_ids.length > 0 ? slotData.course_ids[0] : "";
+            await setSchedules(batch, section.section, mainCourseId, [{ day, time }]);
+            
+            // Store the full course_ids array in the local state even if API only accepts one
+            return ({ success: true, section: section.section, slot: slotData.slot });
+          } else {
+            // Handle single course ID (backward compatible)
+            await setSchedules(batch, section.section, slotData.course_id, [{ day, time }]);
+            return ({ success: true, section: section.section, slot: slotData.slot });
+          }
         } catch {
-          return ({ success: false, section: section.section, slot });
+          return ({ success: false, section: section.section, slot: slotData.slot });
         }
       });
       return promisePool(saveSectionTasks, 5);
@@ -544,14 +657,29 @@ export default function TheorySchedule(props) {
             // Helper to get the schedule for this section in the format expected by setSchedules
             const getSectionSchedules = () => {
               const scheduleObj = theorySchedulesBySection[sectionKey] || {};
-              // Map: { 'Saturday 8': {course_id: 'CSE101'}, ... } => { course_id: [ {day, time}, ... ] }
+              // Map: { 'Saturday 8': {course_ids: ['CSE101', 'CSE102']}, ... } => { course_id: [ {day, time}, ... ] }
               const courseSlotMap = {};
+              
               Object.entries(scheduleObj).forEach(([slot, val]) => {
-                if (!val.course_id) return;
+                // Handle both course_id and course_ids formats
+                const courseIds = val.course_ids || (val.course_id ? [val.course_id] : []);
+                
+                if (!courseIds.length) return;
+                
                 const [day, time] = slot.split(" ");
-                if (!courseSlotMap[val.course_id]) courseSlotMap[val.course_id] = [];
-                courseSlotMap[val.course_id].push({ day, time });
+                
+                // For each course ID in this slot
+                courseIds.forEach(courseId => {
+                  if (!courseId) return; // Skip empty values
+                  
+                  if (!courseSlotMap[courseId]) {
+                    courseSlotMap[courseId] = [];
+                  }
+                  
+                  courseSlotMap[courseId].push({ day, time });
+                });
               });
+              
               return courseSlotMap;
             };
 
@@ -587,18 +715,18 @@ export default function TheorySchedule(props) {
                           Section {section.section}
                         </h4>
                       </div>
-                      <TheoryScheduleTable
-                        {...props}
-                        department={selectedDepartment}
-                        levelTerm={selectedLevelTermBatch}
-                        section={section.section}
-                        batch={section.batch}
-                        allTheoryCourses={allTheoryCourses}
-                        theorySchedules={theorySchedulesBySection[sectionKey] || {}}
-                        onChange={handleTheoryCellChange(sectionKey)}
-                        isSessionalCourse={isSessionalCourse}
-                        isDisabledTimeSlot={(day, time) => isDisabledTimeSlot(sectionKey, day, time)}
-                      />
+                      {(() => {
+                        const sectionData = theorySchedulesBySection[sectionKey] || {};
+                        return (
+                          <TheoryScheduleTable
+                            {...props}
+                            allTheoryCourses={allTheoryCourses}
+                            theorySchedules={sectionData}
+                            onChange={handleTheoryCellChange(sectionKey)}
+                            isDisabledTimeSlot={(day, time) => isDisabledTimeSlot(sectionKey, day, time)}
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

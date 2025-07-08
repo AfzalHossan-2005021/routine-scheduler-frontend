@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback } from "react";
-import { Form } from "react-bootstrap";
+import Select from 'react-select';
 import { useConfig } from '../shared/ConfigContext';
 import { MultiSet } from "mnemonist";
 
@@ -7,17 +7,17 @@ import { MultiSet } from "mnemonist";
  * Custom component for displaying a theory schedule table with single dropdown per cell
  * Styles and structure match SectionScheduleTable.js exactly
  */
-const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
-  filled = [],
-  selected = [],
-  onChange = () => { },
-  theoryTimes = [],
-  allTheoryCourses = [],
-  theorySchedules = {},
-  sectionName = "Section",
-  isSessionalCourse = () => false,
-  isDisabledTimeSlot = () => false,
-}) {
+const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
+  const {
+    filled = [],
+    selected = [],
+    onChange = () => { },
+    allTheoryCourses = [],
+    theorySchedules = {},
+    sectionName = "Section",
+    isDisabledTimeSlot = () => false,
+  } = props;
+  
   // Memoized values for configuration settings
     const { days, times } = useConfig();
 
@@ -30,18 +30,61 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
     return Array.isArray(allTheoryCourses) ? allTheoryCourses : [];
   }, [allTheoryCourses]);
 
-  // Helper to get course for a slot
-  const getCourse = useCallback((slotKey) => {
-    if (!theorySchedules) return null;
-    if (theorySchedules[slotKey] && theorySchedules[slotKey].course_id) {
-      return theorySchedules[slotKey].course_id;
+  // Helper to get courses for a slot
+  const getCourses = useCallback((slotKey) => {
+    if (!theorySchedules) return [];
+    
+    // Extract day and time from slot key
+    const [day, time] = slotKey.split(' ');
+    
+    // Get courses from theorySchedules
+    let courses = [];
+    
+    // Check if the slot exists in theorySchedules
+    if (theorySchedules[slotKey]) {
+      // Extract course_ids safely, handling both array and single course_id formats
+      const courseIds = Array.isArray(theorySchedules[slotKey].course_ids) 
+        ? theorySchedules[slotKey].course_ids 
+        : (theorySchedules[slotKey].course_id ? [theorySchedules[slotKey].course_id] : []);
+      
+      // Map course IDs to select options
+      if (courseIds.length > 0) {
+        courses = courseIds.map(id => {
+          if (!id) return null; // Skip empty IDs
+          
+          const courseObj = filteredCourses.find(c => c.course_id === id);
+          const result = {
+            value: id,
+            label: `${id} - ${courseObj?.name || 'Unknown'}`
+          };
+          return result;
+        }).filter(Boolean); // Remove null entries
+      }
     }
-    const filledObj = filled.find(f => f.day === slotKey.split(' ')[0] && f.time === slotKey.split(' ')[1]);
-    if (filledObj && filledObj.course_id) return filledObj.course_id;
-    const selectedObj = selected.find(f => f.day === slotKey.split(' ')[0] && f.time === slotKey.split(' ')[1]);
-    if (selectedObj && selectedObj.course_id) return selectedObj.course_id;
-    return null;
-  }, [theorySchedules, filled, selected]);
+    
+    // If no courses in schedules, check filled and selected
+    if (courses.length === 0) {
+      const filledObj = filled.find(f => f.day === day && f.time === time);
+      if (filledObj && filledObj.course_id) {
+        const courseObj = filteredCourses.find(c => c.course_id === filledObj.course_id);
+        courses.push({
+          value: filledObj.course_id,
+          label: `${filledObj.course_id} - ${courseObj?.name || 'Unknown'}`
+        });
+      }
+      
+      const selectedObj = selected.find(f => f.day === day && f.time === time);
+      if (selectedObj && selectedObj.course_id) {
+        const courseObj = filteredCourses.find(c => c.course_id === selectedObj.course_id);
+        courses.push({
+          value: selectedObj.course_id,
+          label: `${selectedObj.course_id} - ${courseObj?.name || 'Unknown'}`
+        });
+      }
+    }
+    
+    return courses;
+  }, [theorySchedules, filled, selected, filteredCourses]);
 
   // Cell style calculation
   const getCellStyle = useCallback((day, time) => {
@@ -51,9 +94,13 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
     return "";
   }, [selectedSet, filledSet]);
 
-  // Event handler
-  const handleCourseChange = useCallback((day, time, courseId) => {
-    onChange(day, time, courseId);
+  // Event handler for multi-select
+  const handleCourseChange = useCallback((day, time, selectedOptions) => {
+    // Extract course IDs from selected options
+    const courseIds = selectedOptions ? selectedOptions.map(option => option.value) : [];
+    
+    // Call the parent component's onChange handler with the day, time, and selected course IDs
+    onChange(day, time, courseIds);
   }, [onChange]);
 
   // Memoized table style for consistent rendering with improved appearance
@@ -64,7 +111,7 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
     backgroundColor: "#f8f9fa",
     boxShadow: "0 5px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(194, 137, 248, 0.1)",
     borderRadius: "10px",
-    overflow: "hidden",
+    overflow: "visible",
     width: "100%",
     margin: "0 auto",
     transition: "all 0.3s ease"
@@ -155,7 +202,7 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
         .routine-table {
           border-spacing: 0;
           border-collapse: separate;
-          overflow: hidden;
+          overflow: visible;
           font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
         }
         .routine-table td {
@@ -215,13 +262,15 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
         td {
           padding: 0 !important;
           height: 60px !important;
+          width: 120px !important;
+          min-width: 120px !important;
+          max-width: 120px !important;
         }
         .dropdown-cell:focus, .dropdown-cell:hover {
           border-color: rgb(194, 137, 248) !important;
           outline: 0;
           box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.25), 0 4px 8px rgba(194, 137, 248, 0.15);
           color: rgb(94, 37, 126);
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235E257E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
           background-color: #fcfaff;
           transform: translateY(-1px);
           letter-spacing: 0.01em;
@@ -360,6 +409,14 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
           position: relative;
           overflow: hidden;
           z-index: 1;
+          width: 120px !important;
+          min-width: 120px !important;
+          max-width: 120px !important;
+        }
+        .routine-table thead th:first-child {
+          width: 100px !important;
+          min-width: 100px !important;
+          max-width: 100px !important;
         }
         .routine-table thead th:after {
           content: "";
@@ -384,6 +441,9 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
           text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
           border: none;
           transition: all 0.3s ease;
+          width: 100px !important;
+          min-width: 100px !important;
+          max-width: 100px !important;
         }
         .routine-table tbody th:hover {
           transform: translateX(2px);
@@ -438,6 +498,7 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
         .table-scroll-x {
           width: 100%;
           overflow-x: auto;
+          overflow-y: visible;
           -webkit-overflow-scrolling: touch;
           position: relative;
         }
@@ -447,6 +508,39 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
         .table-scroll-x::-webkit-scrollbar-thumb {
           background: rgba(194, 137, 248, 0.18);
           border-radius: 4px;
+        }
+        /* Multi-select styles */
+        .multi-select-cell {
+          height: 100%;
+        }
+        .multi-select-cell .react-select__control {
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .multi-select-cell .react-select__control:hover {
+          border-color: rgba(194, 137, 248, 0.5) !important;
+          background-color: rgba(194, 137, 248, 0.03) !important;
+        }
+        .multi-select-cell .react-select__control--is-focused {
+          border-color: rgb(194, 137, 248) !important;
+          box-shadow: 0 0 0 1px rgba(194, 137, 248, 0.5) !important;
+          background-color: rgba(194, 137, 248, 0.05) !important;
+        }
+        .multi-select-cell .react-select__menu {
+          border-radius: 8px;
+          border: 1px solid rgba(194, 137, 248, 0.2);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+        .multi-select-cell .react-select__option {
+          cursor: pointer;
+          padding: 8px 12px;
+        }
+        .multi-select-cell .react-select__option--is-focused {
+          background-color: rgba(194, 137, 248, 0.1) !important;
+          color: rgb(94, 37, 126) !important;
+        }
+        .multi-select-cell .react-select__option--is-selected {
+          background-color: rgb(194, 137, 248) !important;
+          color: white !important;
         }
         @media (max-width: 900px) {
           .routine-table {
@@ -486,34 +580,111 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable({
                   
                   return (
                     <td key={`${day}-${time}`} className={`${cellClassName} ${disabledClass}`} style={{ padding: 0, position: "relative", textAlign: "center" }}>
-                      <Form.Select
-                        className={`dropdown-cell ${cellClassName}`}
-                        value={getCourse(slotKey) || ""}
-                        onChange={e => handleCourseChange(day, time, e.target.value)}
-                        title={`${sectionName} - ${day} ${time}`}
-                        style={{ 
-                          color: (getCourse(slotKey) || "") === "" ? 'transparent' : undefined,
-                          ...(isDisabled && { 
-                            fontStyle: 'italic', 
-                            color: '#888',
-                            textAlign: 'center',
-                            paddingLeft: '0',
-                            paddingRight: '0' 
-                          })
-                        }}
-                        disabled={isDisabled}
-                      >
-                        {isDisabled ? (
-                          <option value="" style={{ textAlign: 'center' }}>Sessional Time</option>
-                        ) : (
-                          <option value="">None</option>
-                        )}
-                        {filteredCourses.map(course => (
-                          <option key={`${day}-${time}-${course.course_id}`} value={course.course_id}>
-                            {course.course_id} - {course.name || 'Unknown'}
-                          </option>
-                        ))}
-                      </Form.Select>
+                      {isDisabled ? (
+                        <div className="disabled-slot-message" style={{ 
+                          height: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          fontStyle: 'italic', 
+                          color: '#888',
+                          padding: '0 8px'
+                        }}>
+                          Sessional Time
+                        </div>
+                      ) : (
+                        <Select
+                          isMulti
+                          className={`multi-select-cell ${cellClassName}`}
+                          classNamePrefix="react-select"
+                          value={getCourses(slotKey)}
+                          key={`select-${slotKey}-${JSON.stringify(getCourses(slotKey))}`}
+                          onChange={selectedOptions => handleCourseChange(day, time, selectedOptions)}
+                          options={filteredCourses.map(course => ({ 
+                            value: course.course_id, 
+                            label: `${course.course_id} - ${course.name || 'Unknown'}` 
+                          }))}
+                          placeholder=""
+                          noOptionsMessage={() => "No courses available"}
+                          isClearable={true}
+                          isSearchable={true}
+                          title={`${sectionName} - ${day} ${time}`}
+                          styles={{
+                            control: (base) => ({
+                              ...base,
+                              minWidth: "110px",
+                              width: "100%",
+                              borderRadius: "0",
+                              border: "none",
+                              boxShadow: "none",
+                              minHeight: "60px",
+                              height: "100%",
+                              background: "transparent"
+                            }),
+                            multiValue: (base) => ({
+                              ...base,
+                              background: "#e9d8fd",
+                              borderRadius: "8px",
+                              margin: "2px",
+                              color: "#7c4fd5"
+                            }),
+                            multiValueLabel: (base) => ({
+                              ...base,
+                              color: "#7c4fd5",
+                              fontWeight: 500,
+                              fontSize: "0.8rem"
+                            }),
+                            multiValueRemove: (base) => ({
+                              ...base,
+                              color: "#7c4fd5",
+                              ':hover': {
+                                background: "#c289f8",
+                                color: "white"
+                              }
+                            }),
+                            placeholder: (base) => ({
+                              ...base,
+                              color: "#b39ddb"
+                            }),
+                            menu: (base) => ({
+                              ...base,
+                              width: "auto",
+                              minWidth: "250px",
+                              position: "fixed",
+                              zIndex: 9999,
+                              boxShadow: "0 8px 20px rgba(154, 77, 226, 0.15), 0 0 0 1px rgba(194, 137, 248, 0.2)"
+                            }),
+                            menuList: (base) => ({
+                              ...base,
+                              maxHeight: "240px",
+                              padding: "6px"
+                            }),
+                            container: (base) => ({
+                              ...base,
+                              height: "100%"
+                            }),
+                            valueContainer: (base) => ({
+                              ...base,
+                              padding: "2px 8px",
+                              overflow: "auto"
+                            }),
+                            input: (base) => ({
+                              ...base,
+                              margin: 0,
+                              padding: 0
+                            }),
+                            dropdownIndicator: () => ({
+                              display: 'none'
+                            }),
+                            clearIndicator: () => ({
+                              display: 'none'
+                            }),
+                            indicatorSeparator: () => ({
+                              display: 'none'
+                            }),
+                          }}
+                        />
+                      )}
                     </td>
                   );
                 })}
