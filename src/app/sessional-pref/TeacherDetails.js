@@ -287,7 +287,10 @@ export default function TeacherDetails(props) {
   const hasTimeConflict = (day, time) => {
     // Check theory schedules for conflicts
     const theoryConflict = theorySchedule.some(schedule =>
-      schedule.day === day && schedule.time === time
+      schedule.day === day &&
+      (schedule.time === time ||
+        schedule.time === (time % 12) + 1 ||
+        schedule.time === ((time + 1) % 12 ) + 1)
     );
 
     // Check already assigned sessional courses for conflicts - two methods:
