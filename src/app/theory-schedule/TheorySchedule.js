@@ -370,7 +370,7 @@ export default function TheorySchedule(props) {
         if (prevIdsStr !== newIdsStr) {
           // For backward compatibility, if there's only one course, use course_id
           if (newCourseIds.length === 0) {
-            changedSlots.push({ slot, course_id: "" });
+            changedSlots.push({ slot, course_id: "None" });
           } else {
             // For each course_id, create a separate entry
             newCourseIds.forEach(courseId => {
@@ -380,32 +380,13 @@ export default function TheorySchedule(props) {
         }
       });
       
-      // Also check for slots that existed before but are now missing (deleted)
-      Object.keys(original).forEach(slot => {
-        if (!(slot in current)) {
-          changedSlots.push({ slot, course_id: "" });
-        }
-      });
-      
       // For each changed slot, send a setSchedules call, throttled
       const saveSectionTasks = changedSlots.map((slotData) => async () => {
         const [day, time] = slotData.slot.split(" ");
         try {
           // Handle both single course_id and multiple course_ids
-          if ('course_ids' in slotData) {
-            // Handle multiple course IDs
-            // Note: This may need API changes on the backend to support multiple courses
-            // For now, we'll send the first course ID for backward compatibility
-            const mainCourseId = slotData.course_ids.length > 0 ? slotData.course_ids[0] : "";
-            await setSchedules(batch, section.section, mainCourseId, [{ day, time }]);
-            
-            // Store the full course_ids array in the local state even if API only accepts one
-            return ({ success: true, section: section.section, slot: slotData.slot });
-          } else {
-            // Handle single course ID (backward compatible)
-            await setSchedules(batch, section.section, slotData.course_id, [{ day, time }]);
-            return ({ success: true, section: section.section, slot: slotData.slot });
-          }
+          await setSchedules(batch, section.section, slotData.course_id, [{ day, time }]);
+          return ({ success: true, section: section.section, slot: slotData.slot });
         } catch {
           return ({ success: false, section: section.section, slot: slotData.slot });
         }
