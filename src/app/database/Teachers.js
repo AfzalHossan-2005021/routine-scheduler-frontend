@@ -94,15 +94,44 @@ export default function Teachers() {
       toast.error("Please enter a valid designation and credit hour");
       return;
     }
+    
+    // Find all teachers with the matching designation
+    const teachersToUpdate = teachers.filter(
+      t => t.designation?.toLowerCase() === mapDesignation.trim().toLowerCase()
+    );
+    
+    if (teachersToUpdate.length === 0) {
+      toast.error(`No teachers found with designation '${mapDesignation}'`);
+      return;
+    }
+    
+    // Update local state first
     setTeachers(prev => prev.map(t =>
       t.designation?.toLowerCase() === mapDesignation.trim().toLowerCase()
         ? { ...t, teacher_credits_offered: Number(mapCredit) }
         : t
     ));
-    setShowMapCredit(false);
-    setMapDesignation("");
-    setMapCredit("");
-    toast.success(`Mapped credit hour to all '${mapDesignation}'`);
+    
+    // Save each teacher to the database
+    const updatePromises = teachersToUpdate.map(teacher => 
+      updateTeacher(teacher.initial, {
+        ...teacher,
+        teacher_credits_offered: Number(mapCredit)
+      })
+    );
+    
+    // Wait for all updates to complete
+    Promise.all(updatePromises)
+      .then(() => {
+        setShowMapCredit(false);
+        setMapDesignation("");
+        setMapCredit("");
+        toast.success(`Updated credit hours for all '${mapDesignation}' teachers`);
+      })
+      .catch(error => {
+        console.error("Error updating teachers:", error);
+        toast.error("Failed to update some teachers. Please try again.");
+      });
   };
 
   return (
@@ -1204,68 +1233,45 @@ export default function Teachers() {
                         onChange={(e) => setSelectedTeacher({ ...selectedTeacher, sessional_courses: Number.parseInt(e.target.value || "0") })}
                     />
                   </FormGroup>
-                                                                                           </Col>
-              </Row>
-              <Row>
-                <Col md={6} className="px-2 py-1">
-                  <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Designation</Form.Label>
-                    <FormControl
-                      type="text"
-                      placeholder="Enter Designation"
-                      value={selectedTeacher.designation}
-                        style={{ minWidth: "110px", width: "100%", borderRadius: "12px", border: "1.5px solid rgba(194, 137, 248, 0.3)", boxShadow: "0 2px 5px rgba(194, 137, 248, 0.05)", backgroundColor: "#f8faff", padding: "8px 12px", fontSize: "15px", transition: "all 0.3s ease" }}
-                        onChange={(e) => setSelectedTeacher({ ...selectedTeacher, designation: e.target.value || "" })}
-                    />
-                  </FormGroup>
                 </Col>
-                <Col className="px-2 py-1 d-flex align-items-center">
-                    {/* Currently Active Checkbox */}
-                    <div className="form-check d-flex align-items-center">
-                    <div
-                      className="custom-checkbox-wrapper d-flex align-items-center"
-                        style={{ cursor: "pointer", transition: "all 0.3s ease", marginRight: "8px" }}
-                        onClick={(e) => {
-                        setSelectedTeacher({
-                          ...selectedTeacher,
-                            full_time_status: !selectedTeacher.full_time_status,
-                        });
-                      }}
-                    >
-                      {/* Custom Checkbox */}
-                      <div
-                        style={{
-                          width: "20px",
-                          height: "20px",
+                <Col className="px-2 py-1">
+                  <FormGroup>
+                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Full Time Status</Form.Label>
+                      <div className="d-flex align-items-center mt-2">
+                        {/* Custom Checkbox */}
+                        <div
+                          style={{
+                            width: "20px",
+                            height: "20px",
                             borderRadius: "5px",
-                          border: selectedTeacher.full_time_status ? "2px solid rgb(174, 117, 228)" : "2px solid rgba(194, 137, 248, 0.4)",
-                          background: selectedTeacher.full_time_status
-                            ? "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)"
-                            : "transparent",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          transition: "all 0.3s ease",
-                          boxShadow: selectedTeacher.full_time_status ? "0 2px 8px rgba(174, 117, 228, 0.3)" : "none",
-                        }}
-                      >
-                        {selectedTeacher.full_time_status && (
-                          <i
-                            className="mdi mdi-check"
-                            style={{
-                              color: "white",
+                            border: selectedTeacher.full_time_status ? "2px solid rgb(174, 117, 228)" : "2px solid rgba(194, 137, 248, 0.4)",
+                            background: selectedTeacher.full_time_status
+                              ? "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)"
+                              : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.3s ease",
+                            boxShadow: selectedTeacher.full_time_status ? "0 2px 8px rgba(174, 117, 228, 0.3)" : "none",
+                          }}
+                        >
+                          {selectedTeacher.full_time_status && (
+                            <i
+                              className="mdi mdi-check"
+                              style={{
+                                color: "white",
                                 fontSize: "16px",
-                              fontWeight: "bold",
+                                fontWeight: "bold",
                                 marginTop: "1px" 
-                            }}
-                          />
-                        )}
+                              }}
+                            />
+                          )}
+                        </div>
+                        <label className="form-check-label mb-0" style={{ cursor: "pointer", fontWeight: "500", color: "#333", marginLeft: 10 }}>
+                          Full Time Status : {selectedTeacher.full_time_status ? "FULL" : "PART"}
+                        </label>
                       </div>
-                    </div>
-                      <label className="form-check-label mb-0" style={{ cursor: "pointer", fontWeight: "500", color: "#333", marginLeft: 0 }}>
-                        Full Time Status : {selectedTeacher.full_time_status ? "FULL" : "PART"}
-                      </label>
-                  </div>
+                  </FormGroup>
                 </Col>
               </Row>
               <Row>
