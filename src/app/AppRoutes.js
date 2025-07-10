@@ -5,26 +5,34 @@ import Spinner from "../app/shared/Spinner";
 import { useContext } from "react";
 import { UserContext } from "./App";
 
+const Login = lazy(() => import("./user-pages/Login"));
+const Register = lazy(() => import("./user-pages/Register"));
+const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
+const Account = lazy(() => import("./user-pages/Account"));
+
 const Dashboard = lazy(() => import("./dashboard/Dashboard"));
-const Teachers = lazy(() => import("./database/Teachers"));
-const TeachersList = lazy(() => import("./sessional-pref//TeachersList"));
-const TeacherDetails = lazy(() => import("./sessional-pref//TeacherDetails"));
-const Sections = lazy(() => import("./database/Sections"));
-const Rooms = lazy(() => import("./database/Rooms"));
-const Courses = lazy(() => import("./database/Courses"));
+
 const Initialize = lazy(() => import("./database/Initialize"));
+const Backup = lazy(() => import("./database/Backup"));
+const Restore = lazy(() => import("./database/Restore"));
+const Clear = lazy(() => import("./database/Clear"));
+
+const Teachers = lazy(() => import("./information/Teachers"));
+const Sections = lazy(() => import("./information/Sections"));
+const Rooms = lazy(() => import("./information/Rooms"));
+const Courses = lazy(() => import("./information/Courses"));
 
 const TheoryPreference = lazy(() => import("./theory-pref/TheoryPreference"));
 const TheorySelect = lazy(() => import("./forms/TheorySelect"));
 const SessionalSelect = lazy(() => import("./forms/SessionalSelect"));
 
 const LabRoomAssign = lazy(() => import("./lab-room-assign/LabRoomAssign"));
+const TheoryRoomAssign = lazy(() => import("./theory-room-assign/TheoryRoomAssign"));
 const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSchedule"));
 
-const Login = lazy(() => import("./user-pages/Login"));
-const Register = lazy(() => import("./user-pages/Register"));
-const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
-const Account = lazy(() => import("./user-pages/Account"));
+const TeachersList = lazy(() => import("./sessional-pref//TeachersList"));
+const TeacherDetails = lazy(() => import("./sessional-pref//TeacherDetails"));
+
 
 const pdfPage = lazy(() => import("./pdf/ShowPdf"));
 const TheorySchedule = lazy(() => import("./theory-schedule/TheorySchedule"));
@@ -41,13 +49,17 @@ export default function AppRoutes() {
         {user.loggedIn ? (
           <Switch>
             <Route exact path="/dashboard" component={Dashboard} />
-            <Route path="/database/teachers" component={Teachers} />
-            <Route path="/database/sections" component={Sections} />
-            <Route path="/database/rooms" component={Rooms} />
-            <Route path="/database/courses" component={Courses} />
             <Route path="/database/initialize" component={Initialize} />
+            <Route path="/database/backup" component={Backup} />
+            <Route path="/database/restore" component={Restore} />
+            <Route path="/database/clear" component={Clear} />
+            <Route path="/information/teachers" component={Teachers} />
+            <Route path="/information/sections" component={Sections} />
+            <Route path="/information/rooms" component={Rooms} />
+            <Route path="/information/courses" component={Courses} />
             <Route path="/theory-assign" component={TheoryPreference} />
             <Route path="/room-assign" component={ LabRoomAssign } />
+            <Route path="/theory-room-assign" component={ TheoryRoomAssign } />
             <Route path="/lab-assign" component={ TeachersList } />
             <Route path="/lab-assign/:teacherId" component={TeacherDetails} />
             <Route path="/lab-schedule" component={ SessionalSchedule } />
