@@ -43,10 +43,6 @@ export default function LabRoomAssign() {
         item && item.day && item.time && item.course_id && item.section
       );
       setSessionalSchedule(validSchedules);
-
-      // Log data for debugging purposes
-      console.log("Original schedule data:", res);
-      console.log("Filtered schedule data:", validSchedules);
     });
 
     Promise.all([labs, courses]).then(() => {

@@ -169,7 +169,7 @@ class Sidebar extends Component {
           <li className={this.isPathActive('/theory-room-assign') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/theory-room-assign">
               <span className="menu-title">Theory Room Assign</span>
-              <i className="mdi mdi-lightbulb-variant-outline menu-icon"></i>
+              <i className="mdi mdi-door menu-icon"></i>
             </Link>
           </li>
           <li className={this.isPathActive('/pdf') ? 'nav-item active' : 'nav-item'}>
