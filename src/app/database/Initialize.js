@@ -87,7 +87,7 @@ export default function Initialize() {
                         return {
                             ...lt,
                             active: !lt.active,
-                            batch: ""
+                            batch: 0
                         }
                     } else {
                         return {
@@ -130,7 +130,7 @@ export default function Initialize() {
                 setLevelTerms(prev => [...prev, {
                     ...newLevelTerm,
                     active: false,
-                    batch: ""
+                    batch: 0
                 }]);
                 // Reset form
                 setNewLevelTerm({ department: "", level_term: "" });
@@ -166,7 +166,7 @@ export default function Initialize() {
 
     const handleSubmit = () => {
         // Validate data before submission
-        const invalidEntries = levelTerms.filter(lt => lt.active && (!lt.batch || lt.batch === ""));
+        const invalidEntries = levelTerms.filter(lt => lt.active && (lt.batch < 0 || lt.batch === ""));
 
         if (invalidEntries.length > 0) {
             toast.error("Please select batch for all active level terms");
