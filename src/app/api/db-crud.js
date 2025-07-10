@@ -72,6 +72,10 @@ export const getLevelTerms = () =>
   axios.get(api_url("/level_terms")).then((res) => res.data);
 export const setLevelTermsDB = (levelTerms) =>
   axios.put(api_url("/level_terms/set"), levelTerms).then((res) => res.data);
+export const addLevelTerm = (data) =>
+  axios.post(api_url("/level_terms/add"), data).then((res) => res.data);
+export const deleteLevelTerm = (data) =>
+  axios.delete(api_url("/level_terms/delete"), { data }).then((res) => res.data);
 export const getActiveDepartments = () =>
   axios.get(api_url("/level_terms/active-departments")).then((res) => res.data);
 export const getDepartmentalLevelTermBatches = (department) =>

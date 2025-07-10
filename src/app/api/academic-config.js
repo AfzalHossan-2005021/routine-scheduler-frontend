@@ -55,3 +55,13 @@ export const deleteBatch = (data) =>
     axios
         .delete(api_url(`/academic_config/delete/batch`), { data })
         .then((res) => res.data);
+
+export const getDepartments = () =>
+    axios
+        .get(api_url(`/academic_config/get/departments`))
+        .then((res) => res.data);
+
+export const getAllLevelTermsName = () =>
+    axios
+        .get(api_url(`/academic_config/get/level_terms`))
+        .then((res) => res.data);
