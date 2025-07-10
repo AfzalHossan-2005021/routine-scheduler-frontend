@@ -8,14 +8,14 @@ class Sidebar extends Component {
 
   toggleMenuState(menuState) {
     if (this.state[menuState]) {
-      this.setState({[menuState] : false});
-    } else if(Object.keys(this.state).length === 0) {
-      this.setState({[menuState] : true});
+      this.setState({ [menuState]: false });
+    } else if (Object.keys(this.state).length === 0) {
+      this.setState({ [menuState]: true });
     } else {
       Object.keys(this.state).forEach(i => {
-        this.setState({[i]: false});
+        this.setState({ [i]: false });
       });
-      this.setState({[menuState] : true});
+      this.setState({ [menuState]: true });
     }
   }
 
@@ -28,11 +28,11 @@ class Sidebar extends Component {
   onRouteChanged() {
     document.querySelector('#sidebar').classList.remove('active');
     Object.keys(this.state).forEach(i => {
-      this.setState({[i]: false});
+      this.setState({ [i]: false });
     });
   }
 
-  render () {
+  render() {
     return (
       <nav className="sidebar sidebar-offcanvas" id="sidebar" style={{
         background: '#fff',
@@ -60,59 +60,119 @@ class Sidebar extends Component {
           }
         `}</style>
         <ul className="nav">
-          <li className={ this.isPathActive('/dashboard') ? 'nav-item active' : 'nav-item' }>
+          <li className={this.isPathActive('/dashboard') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/dashboard">
               <span className="menu-title">Dashboard</span>
               <i className="mdi mdi-home menu-icon"></i>
             </Link>
           </li>
-          <li className={ this.isPathActive('/database') ? 'nav-item active' : 'nav-item' }>
-            <div className={ this.state.dbUiMenuOpen ? 'nav-link menu-expanded' : 'nav-link' } onClick={ () => this.toggleMenuState('dbUiMenuOpen') } data-toggle="collapse">
+          <li className={this.isPathActive('/database') ? 'nav-item active' : 'nav-item'}>
+            <div className={this.state.dbUiMenuOpen ? 'nav-link menu-expanded' : 'nav-link'} onClick={() => this.toggleMenuState('dbUiMenuOpen')} data-toggle="collapse">
               <span className="menu-title">Database</span>
-              <i className="menu-arrow"></i>
+              <i className={this.state.dbUiMenuOpen ? 'mdi mdi-chevron-down menu-icon' : 'mdi mdi-chevron-right menu-icon'}></i>
               <i className="mdi mdi-database menu-icon"></i>
             </div>
-            <Collapse in={ this.state.dbUiMenuOpen }>
+            <Collapse in={this.state.dbUiMenuOpen}>
               <ul className="nav flex-column sub-menu">
-                <li className="nav-item"> <Link className={ this.isPathActive('/database/initialize') ? 'nav-link active' : 'nav-link' } to="/database/initialize">Initialize</Link></li>
-                <li className="nav-item"> <Link className={ this.isPathActive('/database/teachers') ? 'nav-link active' : 'nav-link' } to="/database/teachers">Teachers</Link></li>
-                <li className="nav-item"> <Link className={ this.isPathActive('/database/rooms') ? 'nav-link active' : 'nav-link' } to="/database/rooms">Rooms</Link></li>
-                <li className="nav-item"> <Link className={ this.isPathActive('/database/courses') ? 'nav-link active' : 'nav-link' } to="/database/courses">Courses</Link></li>
-                <li className="nav-item"> <Link className={ this.isPathActive('/database/sections') ? 'nav-link active' : 'nav-link' } to="/database/sections">Sections</Link></li>
+                <li className={this.isPathActive('/database/initialize') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/database/initialize">
+                    <span className="menu-title">Initialize</span>
+                    <i className="mdi mdi-database-plus menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/database/backup') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/database/backup">
+                    <span className="menu-title">Backup</span>
+                    <i className="mdi mdi-database-export menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/database/restore') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/database/restore">
+                    <span className="menu-title">Restore</span>
+                    <i className="mdi mdi-database-import menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/database/clear') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/database/clear">
+                    <span className="menu-title">Clear</span>
+                    <i className="mdi mdi-database-remove menu-icon"></i>
+                  </Link>
+                </li>
               </ul>
             </Collapse>
           </li>
-          <li className={ this.isPathActive('/theory-assign') ? 'nav-item active' : 'nav-item' }>
+          <li className={this.isPathActive('/information') ? 'nav-item active' : 'nav-item'}>
+            <div className={this.state.infoUiMenuOpen ? 'nav-link menu-expanded' : 'nav-link'} onClick={() => this.toggleMenuState('infoUiMenuOpen')} data-toggle="collapse">
+              <span className="menu-title">Information</span>
+              <i className={this.state.infoUiMenuOpen ? 'mdi mdi-chevron-down menu-icon' : 'mdi mdi-chevron-right menu-icon'}></i>
+              <i className="mdi mdi-information-outline menu-icon"></i>
+            </div>
+            <Collapse in={this.state.infoUiMenuOpen}>
+              <ul className="nav flex-column sub-menu">
+                <li className={this.isPathActive('/information/teachers') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/information/teachers">
+                    <span className="menu-title">Teachers</span>
+                    <i className="mdi mdi-account-multiple menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/information/sections') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/information/sections">
+                    <span className="menu-title">Sections</span>
+                    <i className="mdi mdi-account-group menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/information/rooms') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/information/rooms">
+                    <span className="menu-title">Rooms</span>
+                    <i className="mdi mdi-home-modern menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/information/courses') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/information/courses">
+                    <span className="menu-title">Courses</span>
+                    <i className="mdi mdi-book-open-variant menu-icon"></i>
+                  </Link>
+                </li>
+              </ul>
+            </Collapse>
+          </li>
+          <li className={this.isPathActive('/theory-assign') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/theory-assign">
               <span className="menu-title">Theory Assign</span>
               <i className="mdi mdi-clipboard-check menu-icon"></i>
             </Link>
           </li>
-          <li className={ this.isPathActive('/lab-schedule') ? 'nav-item active' : 'nav-item' }>
+          <li className={this.isPathActive('/lab-schedule') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/lab-schedule">
               <span className="menu-title">Sessional Schedule</span>
               <i className="mdi mdi-timer-edit-outline menu-icon"></i>
             </Link>
           </li>
-          <li className={ this.isPathActive('/room-assign') ? 'nav-item active' : 'nav-item' }>
+          <li className={this.isPathActive('/room-assign') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/room-assign">
               <span className="menu-title">Lab Room Assign</span>
               <i className="mdi mdi-lightbulb-variant-outline menu-icon"></i>
             </Link>
           </li>
-          <li className={ this.props.location.pathname === '/theory-schedule' ? 'nav-item active' : 'nav-item' }>
+          <li className={this.props.location.pathname === '/theory-schedule' ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/theory-schedule">
               <span className="menu-title">Theory Schedule</span>
               <i className="mdi mdi-table-clock menu-icon"></i>
             </Link>
           </li>
-          <li className={ this.isPathActive('/lab-assign') ? 'nav-item active' : 'nav-item' }>
+          <li className={this.isPathActive('/lab-assign') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/lab-assign">
               <span className="menu-title">Sessional Assign</span>
               <i className="mdi mdi-format-list-text menu-icon"></i>
             </Link>
           </li>
-          <li className={ this.isPathActive('/pdf') ? 'nav-item active' : 'nav-item' }>
+          <li className={this.isPathActive('/theory-room-assign') ? 'nav-item active' : 'nav-item'}>
+            <Link className="nav-link" to="/theory-room-assign">
+              <span className="menu-title">Theory Room Assign</span>
+              <i className="mdi mdi-lightbulb-variant-outline menu-icon"></i>
+            </Link>
+          </li>
+          <li className={this.isPathActive('/pdf') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/pdf">
               <span className="menu-title">Generate Routine</span>
               <i className="mdi mdi-file-pdf-box menu-icon"></i>
@@ -132,14 +192,14 @@ class Sidebar extends Component {
     // add class 'hover-open' to sidebar navitem while hover in sidebar-icon-only menu
     const body = document.querySelector('body');
     document.querySelectorAll('.sidebar .nav-item').forEach((el) => {
-      
-      el.addEventListener('mouseover', function() {
-        if(body.classList.contains('sidebar-icon-only')) {
+
+      el.addEventListener('mouseover', function () {
+        if (body.classList.contains('sidebar-icon-only')) {
           el.classList.add('hover-open');
         }
       });
-      el.addEventListener('mouseout', function() {
-        if(body.classList.contains('sidebar-icon-only')) {
+      el.addEventListener('mouseout', function () {
+        if (body.classList.contains('sidebar-icon-only')) {
           el.classList.remove('hover-open');
         }
       });
