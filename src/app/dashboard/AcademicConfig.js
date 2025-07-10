@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Form, Button, Table, Row, Col, Modal } from 'react-bootstrap';
 import { getDefaultAllSectionCount, setDefaultSectionCount, deleteDefaultSectionCount, getBatches, addBatch, deleteBatch, getAllSectionCount, setSectionCount } from '../api/academic-config';
+import { getConfiguration, setConfiguration } from '../api/config';
 import { toast } from 'react-hot-toast';
 import {
     mdiPlus,
@@ -25,6 +26,8 @@ const AcademicConfig = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showBatchModal, setShowBatchModal] = useState(false);
     const [showSectionCountModal, setShowSectionCountModal] = useState(false);
+    const [levelCount, setLevelCount] = useState(4); // Default value
+    const [termCount, setTermCount] = useState(2); // Default value
     const [newBatch, setNewBatch] = useState('');
     const [newDepartment, setNewDepartment] = useState({
         department: '',
@@ -117,6 +120,45 @@ const AcademicConfig = () => {
             console.error('Error loading section counts:', err);
             toast.error('Failed to load section counts');
             setSectionCounts([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Load level and term counts from configuration
+    const loadLevelTermConfig = async () => {
+        try {
+            const level = await getConfiguration('LEVEL_COUNT');
+            const term = await getConfiguration('TERM_COUNT');
+
+            if (level) {
+                setLevelCount(parseInt(level));
+            }
+
+            if (term) {
+                setTermCount(parseInt(term));
+            }
+        } catch (err) {
+            console.error('Error loading level-term configuration:', err);
+            toast.error('Failed to load level-term configuration');
+        }
+    };
+
+    // Save level and term count configuration
+    const saveLevelTermConfig = async () => {
+        try {
+            setLoading(true);
+
+            // Save level count
+            const level = await setConfiguration('LEVEL_COUNT', levelCount.toString());
+
+            // Save term count
+            const term = await setConfiguration('TERM_COUNT', termCount.toString());
+
+            toast.success('Level-Term configuration saved successfully');
+        } catch (err) {
+            console.error('Error saving level-term configuration:', err);
+            toast.error('Failed to save level-term configuration');
         } finally {
             setLoading(false);
         }
@@ -256,7 +298,7 @@ const AcademicConfig = () => {
     // Handle section count input change
     const handleSectionCountInputChange = (e) => {
         const { name, value } = e.target;
-        
+
         // Convert to number for numeric fields
         if (name === 'section_count' || name === 'subsection_count_per_section') {
             setEditSectionCount({ ...editSectionCount, [name]: parseInt(value) || 0 });
@@ -289,7 +331,8 @@ const AcademicConfig = () => {
                 await Promise.all([
                     loadDepartments(),
                     loadBatches(),
-                    loadSectionCounts()
+                    loadSectionCounts(),
+                    loadLevelTermConfig()
                 ]);
             } catch (err) {
                 console.error('Error loading data:', err);
@@ -298,12 +341,184 @@ const AcademicConfig = () => {
                 setLoading(false);
             }
         };
-        
+
         loadAllData();
     }, []);
 
     return (
         <div className="academic-config-container">
+            <Card style={{
+                borderRadius: "12px",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
+                border: "none",
+                overflow: "hidden",
+                marginBottom: "2rem"
+            }}>
+                <Card.Body style={{ padding: "2rem" }}>
+                    <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h4 className="card-title" style={{
+                            color: "rgb(174, 117, 228)",
+                            marginBottom: 0,
+                            fontWeight: "700",
+                            display: "flex",
+                            alignItems: "center",
+                            fontSize: "1.5rem",
+                            letterSpacing: "0.3px"
+                        }}>
+                            <span style={{ marginRight: "12px" }}>
+                                <Icon path={mdiViewGrid} size={1.2} color="rgb(194, 137, 248)" />
+                            </span>
+                            Level-Term Configuration
+                        </h4>
+                    </div>
+                    <div className="level-term-config" style={{ padding: "0 1.25rem" }}>
+                        <Row>
+                            <Col md={5}>
+                                <div style={{
+                                    background: 'rgba(194, 137, 248, 0.05)',
+                                    padding: '1.5rem',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(194, 137, 248, 0.2)'
+                                }}>
+                                    <h5 style={{
+                                        color: 'rgb(174, 117, 228)',
+                                        fontSize: '1.1rem',
+                                        marginBottom: '1rem',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}>
+                                        <Icon path={mdiCog} size={0.9} color="rgb(194, 137, 248)" style={{ marginRight: '8px' }} />
+                                        System Configuration
+                                    </h5>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label style={{ display: 'flex', alignItems: 'center', color: 'rgb(154, 77, 226)', fontWeight: '500' }}>
+                                            <Icon path={mdiSchool} size={0.8} color="rgb(194, 137, 248)" style={{ marginRight: '8px' }} />
+                                            Number of Levels
+                                        </Form.Label>
+                                        <Form.Control
+                                            type="number"
+                                            min="1"
+                                            max="10"
+                                            value={levelCount}
+                                            onChange={(e) => setLevelCount(parseInt(e.target.value) || 1)}
+                                            style={{
+                                                borderRadius: '8px',
+                                                border: '1.5px solid rgba(194, 137, 248, 0.3)',
+                                                boxShadow: '0 2px 5px rgba(194, 137, 248, 0.05)'
+                                            }}
+                                        />
+                                        <Form.Text style={{ color: '#6c757d' }}>
+                                            Total number of levels in the academic program (e.g., 4 for undergraduate)
+                                        </Form.Text>
+                                    </Form.Group>
+
+                                    <Form.Group className="mb-3">
+                                        <Form.Label style={{ display: 'flex', alignItems: 'center', color: 'rgb(154, 77, 226)', fontWeight: '500' }}>
+                                            <Icon path={mdiViewGrid} size={0.8} color="rgb(194, 137, 248)" style={{ marginRight: '8px' }} />
+                                            Number of Terms per Level
+                                        </Form.Label>
+                                        <Form.Control
+                                            type="number"
+                                            min="1"
+                                            max="4"
+                                            value={termCount}
+                                            onChange={(e) => setTermCount(parseInt(e.target.value) || 1)}
+                                            style={{
+                                                borderRadius: '8px',
+                                                border: '1.5px solid rgba(194, 137, 248, 0.3)',
+                                                boxShadow: '0 2px 5px rgba(194, 137, 248, 0.05)'
+                                            }}
+                                        />
+                                        <Form.Text style={{ color: '#6c757d' }}>
+                                            Number of terms in each level (e.g., 2 for semester system)
+                                        </Form.Text>
+                                    </Form.Group>
+
+                                    <Button
+                                        onClick={saveLevelTermConfig}
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            padding: '8px 16px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            fontWeight: '500',
+                                            marginTop: '0.5rem'
+                                        }}
+                                        disabled={loading}
+                                    >
+                                        <Icon path={mdiContentSave} size={0.9} />
+                                        Save Configuration
+                                    </Button>
+                                </div>
+                            </Col>
+                            <Col md={7}>
+                                <div style={{
+                                    background: 'rgba(194, 137, 248, 0.05)',
+                                    padding: '1.5rem',
+                                    borderRadius: '12px',
+                                    border: '1px solid rgba(194, 137, 248, 0.2)',
+                                    height: '100%'
+                                }}>
+                                    <h5 style={{
+                                        color: 'rgb(174, 117, 228)',
+                                        fontSize: '1.1rem',
+                                        marginBottom: '1rem',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}>
+                                        <Icon path={mdiSchool} size={0.9} color="rgb(194, 137, 248)" style={{ marginRight: '8px' }} />
+                                        Level-Term Structure
+                                    </h5>
+
+                                    <div style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '10px',
+                                        marginTop: '1rem'
+                                    }}>
+                                        {Array.from({ length: levelCount }, (_, levelIndex) => (
+                                            <div key={levelIndex} style={{
+                                                marginBottom: '1rem',
+                                                width: '100%'
+                                            }}>
+                                                <div style={{
+                                                    fontWeight: '600',
+                                                    color: 'rgb(154, 77, 226)',
+                                                    marginBottom: '8px'
+                                                }}>
+                                                    Level {levelIndex + 1}
+                                                </div>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    flexWrap: 'wrap',
+                                                    gap: '8px'
+                                                }}>
+                                                    {Array.from({ length: termCount }, (_, termIndex) => (
+                                                        <div key={termIndex} style={{
+                                                            padding: '8px 16px',
+                                                            borderRadius: '6px',
+                                                            background: 'rgba(154, 77, 226, 0.1)',
+                                                            border: '1px solid rgba(154, 77, 226, 0.3)',
+                                                            color: 'rgb(154, 77, 226)'
+                                                        }}>
+                                                            {levelIndex + 1}-{termIndex + 1}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </Col>
+                        </Row>
+                    </div>
+                </Card.Body>
+            </Card>
+
             {/* Department Section Count Table Card */}
             <Card style={{
                 borderRadius: "12px",
@@ -794,7 +1009,7 @@ const AcademicConfig = () => {
                         ) : (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                                 {batches.map((batch) => (
-                                    <div 
+                                    <div
                                         key={batch}
                                         style={{
                                             padding: '8px 16px',
