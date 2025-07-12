@@ -49,6 +49,9 @@ export const setTeacherAssignment = (assignment) =>
 export const setTeacherSessionalAssignment = (assignment) =>
   axios.put(api_url("/assign/sessional/set"), assignment).then((res) => res.data);
 
+export const deleteTeacherSessionalAssignment = (unassignData) =>
+  axios.delete(api_url("/assign/sessional/delete"), {data: unassignData}).then((res) => res.data);
+
 export const resendTheoryPrefMail = (initial) =>
   axios.get(api_url(`/assign/theory/resend/${initial}`)).then((res) => res.data);
 

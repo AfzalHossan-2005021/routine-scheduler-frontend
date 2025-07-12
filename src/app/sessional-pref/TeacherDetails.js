@@ -7,6 +7,7 @@ import {
   getTeacherTheoryAssigments,
   getTeacherSessionalAssignment,
   setTeacherSessionalAssignment,
+  deleteTeacherSessionalAssignment,
   getSessionalTeachers
 } from '../api/theory-assign';
 import { getCourseAllSchedule, getCourseSectionalSchedule } from '../api/theory-schedule';
@@ -83,7 +84,7 @@ const scheduleTableStyle = {
  * Fetches and displays the teachers assigned to a specific course section.
  * Handles loading states and displays appropriate messages if no teachers are assigned.
  */
-function CourseTeachers({ courseId, section, fetchTeachers, isAlreadyScheduled, currentTeacherId }) {
+function CourseTeachers({ courseId, section, fetchTeachers, isAlreadyScheduled, currentTeacherId, refreshKey }) {
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -112,7 +113,7 @@ function CourseTeachers({ courseId, section, fetchTeachers, isAlreadyScheduled, 
     return () => {
       isMounted = false;
     };
-  }, [courseId, section, fetchTeachers]);
+  }, [courseId, section, fetchTeachers, refreshKey]); // Added refreshKey as dependency
 
   const textStyle = isAlreadyScheduled ? { color: '#155724' } : {};
 
@@ -175,6 +176,7 @@ export default function TeacherDetails(props) {
   const [courseTeachersCache, setCourseTeachersCache] = useState({});
   const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [submittingSessional, setSubmittingSessional] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Add refresh key to trigger re-renders
 
 
   useEffect(() => {
@@ -775,8 +777,22 @@ export default function TeacherDetails(props) {
                                     };
 
                                     // Handle click based on conflict status
-                                    if (isAlreadyScheduled || conflictType === 'theory') {
+                                    if (conflictType === 'theory') {
                                       showConflictTooltip();
+                                      return;
+                                    }
+
+                                    // For already assigned courses, show options
+                                    if (isAlreadyScheduled) {
+                                      // Create a custom dialog for already assigned courses
+                                      // const shouldUnassign = window.confirm(
+                                      //   `You are already assigned to ${courseInfo.course_id} (Section ${courseInfo.section}).\n\n` +
+                                      //   `Would you like to unassign yourself from this course?`
+                                      // );
+                                      
+                                      // if (shouldUnassign) {
+                                      // }
+                                      handleUnassignCourse(courseInfo);
                                       return;
                                     }
 
@@ -788,7 +804,7 @@ export default function TeacherDetails(props) {
                                     ...(isSelected ? scheduleTableStyle.selectedCourseItem : {}),
                                     ...(isAlreadyScheduled ? scheduleTableStyle.alreadyScheduledCourseItem : {}),
                                     ...((conflict && conflictType !== 'selected' && !isAlreadyScheduled) ? { opacity: 0.7 } : {}),
-                                    cursor: isAlreadyScheduled ? 'not-allowed' : 'pointer',
+                                    cursor: 'pointer', // Make all courses clickable
                                     position: 'relative'
                                   }}
                                   // Keep a simple title for non-conflict items
@@ -803,6 +819,7 @@ export default function TeacherDetails(props) {
                                       fetchTeachers={fetchCourseTeachers}
                                       isAlreadyScheduled={isAlreadyScheduled}
                                       currentTeacherId={teacherId}
+                                      refreshKey={refreshKey}
                                     />
                                   )}
                                   {isAlreadyScheduled && (
@@ -986,18 +1003,15 @@ export default function TeacherDetails(props) {
           // Prepare assignment data using helper function
           const assignment = prepareAssignmentData(teacherId, schedule);
 
-          let result;
           let success = false;
 
           try {
             // Call the API to save assignment
-            result = await setTeacherSessionalAssignment(assignment);
+            const result = await setTeacherSessionalAssignment(assignment);
 
             // Check if assignment was successful based on backend response format
             if (result) {
-              if (result.success === true ||
-                result.status === 'success' ||
-                (result.message && result.message.includes("Successful"))) {
+              if (result.message.includes("Assignment Successful")) {
                 success = true;
               } else {
                 console.warn(`Assignment response didn't indicate success:`, result);
@@ -1068,72 +1082,51 @@ export default function TeacherDetails(props) {
       // Clear the selected schedules regardless of success/failure
       setSelectedSessionalSchedules([]);
 
-      // If at least one assignment succeeded, show a loading state while we fetch updated data
+      // If at least one assignment succeeded, update the teacher cache and refresh data
       if (successCount > 0) {
-        // Show a subtle notification about updating the view
-        toast("Updating the view with your new assignments...", {
-          icon: '🔄',
+        // Show a notification about updating the view
+        toast("Assignments saved successfully! Updating teacher assignments...", {
+          icon: '✅',
           duration: 2000
         });
-      }
 
-      // Reload data to refresh UI without page refresh
-      try {
-        // Fetch all updated data in parallel for better performance
-        const [
-          updatedTheoryCourses,
-          updatedSessionalCourses,
-        ] = await Promise.all([
-          getTeacherTheoryAssigments(teacherId),
-          getTeacherSessionalAssignment(teacherId)
-        ]);
+        // Update the course teachers cache to include the current teacher for successfully assigned courses
+        const updatedCache = { ...courseTeachersCache };
+        
+        selectedSessionalSchedules.forEach(schedule => {
+          const cacheKey = `${schedule.course_id}-${schedule.section}`;
+          const existingTeachers = updatedCache[cacheKey] || [];
+          
+          // Check if the current teacher is already in the list
+          const teacherExists = existingTeachers.some(teacher => teacher.initial === teacherId);
+          
+          if (!teacherExists) {
+            // Add the current teacher to the list
+            updatedCache[cacheKey] = [
+              ...existingTeachers,
+              {
+                initial: teacherId,
+                name: teacher?.name || teacherId
+              }
+            ];
+          }
+        });
+        
+        setCourseTeachersCache(updatedCache);
 
-        // Update other state variables with fresh data
-        if (updatedSessionalCourses) {
-          setAssignedSessionalCourses(updatedSessionalCourses);
-          onAssignmentChange();
-        }
+        // Trigger a refresh of CourseTeachers components
+        setRefreshKey(prev => prev + 1);
 
-        if (updatedTheoryCourses) {
-          setAssignedTheoryCourses(updatedTheoryCourses);
-        }
-
-        // After updating assignments, also fetch updated schedules
+        // Also update the assigned sessional courses state
         try {
-          // Create arrays to hold the promises for each course
-          const theoryPromises = updatedTheoryCourses.map(course =>
-            getCourseAllSchedule(course.course_id).catch(error => {
-              console.error(`Error fetching schedule for course ${course.course_id}:`, error);
-              return []; // Return empty array for failed requests
-            })
-          );
-
-          const sessionalPromises = updatedSessionalCourses.map(course =>
-            getCourseSectionalSchedule(course.course_id, course.section).catch(error => {
-              console.error(`Error fetching sessional schedules for ${course.course_id} ${course.section}:`, error);
-              return []; // Return empty array for failed requests
-            })
-          );
-
-          // Execute all schedule fetch promises in parallel
-          const [theoryResults, sessionalResults] = await Promise.all([
-            Promise.all(theoryPromises),
-            Promise.all(sessionalPromises)
-          ]);
-
-          // Flatten results
-          const theorySchedules = theoryResults.flat();
-          const sessionalSchedules = sessionalResults.flat();
-
-          // Update schedule states
-          setTheorySchedule(theorySchedules);
-          setSessionalSchedule(sessionalSchedules);
-        } catch (scheduleError) {
-          console.error("Error updating schedule data:", scheduleError);
+          const updatedSessionalCourses = await getTeacherSessionalAssignment(teacherId);
+          if (updatedSessionalCourses) {
+            setAssignedSessionalCourses(updatedSessionalCourses);
+            onAssignmentChange();
+          }
+        } catch (error) {
+          console.error("Error refreshing sessional assignments:", error);
         }
-      } catch (error) {
-        console.error("Error refreshing assignment data:", error);
-        toast.error("Could not fully refresh assignment data. Some information may be outdated.");
       }
 
     } catch (error) {
@@ -1146,6 +1139,76 @@ export default function TeacherDetails(props) {
       toast.error(errorMessage);
     } finally {
       setSubmittingSessional(false);
+    }
+  };
+
+  /**
+   * Handle unassigning a teacher from a sessional course
+   * @param {object} courseInfo - The course information containing course_id and section
+   */
+  const handleUnassignCourse = async (courseInfo) => {
+    try {
+      // Show confirmation dialog
+      if (!window.confirm(`Are you sure you want to unassign yourself from ${courseInfo.course_id} (Section ${courseInfo.section})?`)) {
+        return;
+      }
+
+      // Show loading state
+      const loadingToast = toast.loading(`Unassigning from ${courseInfo.course_id}...`);
+      
+      // Prepare unassignment data (this might need to be adjusted based on your backend API)
+      const unassignmentData = {
+        initial: teacherId,
+        course_id: courseInfo.course_id,
+        batch: courseInfo.batch,
+        section: courseInfo.section
+      };
+
+      try {
+        // Call the API to remove assignment
+        const result = await deleteTeacherSessionalAssignment(unassignmentData);
+        
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+
+        if (result && result.success) {
+          // Success - update local state
+          toast.success(`Successfully unassigned from ${courseInfo.course_id} (Section ${courseInfo.section})`);
+
+          // Update the assigned sessional courses state
+          const updatedCourses = assignedSessionalCourses.filter(course => 
+            !(course.course_id === courseInfo.course_id && course.section === courseInfo.section)
+          );
+          setAssignedSessionalCourses(updatedCourses);
+
+          // Update the course teachers cache to remove the current teacher
+          const cacheKey = `${courseInfo.course_id}-${courseInfo.section}`;
+          setCourseTeachersCache(prevCache => ({
+            ...prevCache,
+            [cacheKey]: (prevCache[cacheKey] || []).filter(teacher => teacher.initial !== teacherId)
+          }));
+
+          // Trigger refresh of CourseTeachers components
+          setRefreshKey(prev => prev + 1);
+
+          // Notify parent component of assignment change
+          onAssignmentChange();
+        } else {
+          toast.error("Failed to unassign from course. Please try again.");
+        }
+      } catch (error) {
+        toast.dismiss(loadingToast);
+        console.error("Error unassigning course:", error);
+        
+        if (error.response?.data?.message) {
+          toast.error(`Error: ${error.response.data.message}`);
+        } else {
+          toast.error("Failed to unassign from course. Please try again.");
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleUnassignCourse:", error);
+      toast.error("An unexpected error occurred. Please try again.");
     }
   };
 
