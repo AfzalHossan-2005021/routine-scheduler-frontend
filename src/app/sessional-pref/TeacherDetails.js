@@ -19,24 +19,34 @@ import toast from 'react-hot-toast';
 // Add some custom styles for the schedule table
 const scheduleTableStyle = {
   table: {
-    tableLayout: 'fixed',
     width: '100%',
-    borderCollapse: 'collapse',
-    border: '1px solid #dee2e6',
+    margin: '0 auto',
+    textAlign: 'center',
+    backgroundColor: '#f8f9fa',
+    boxShadow: '0 3px 12px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflow: 'hidden',
   },
   headerCell: {
     width: '80px',
     textAlign: 'center',
-    fontWeight: 'bold',
-    padding: '8px 4px',
-    background: '#f8f9fa',
-    border: '1px solid #dee2e6',
+    fontWeight: '600',
+    padding: '12px 8px',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    fontSize: '0.9rem',
   },
   dayCell: {
-    fontWeight: 'bold',
-    background: '#f8f9fa',
-    width: '60px',
-    border: '1px solid #dee2e6',
+    fontWeight: '600',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    width: '40px',
+    border: 'none',
+    padding: '8px',
+    fontSize: '0.85rem',
+    verticalAlign: 'middle',
+    maxWidth: '40px',
   },
   courseCell: {
     height: '80px',
@@ -44,8 +54,8 @@ const scheduleTableStyle = {
     padding: '4px',
     fontSize: '0.85rem',
     verticalAlign: 'middle',
-    overflow: 'auto',  // Add scrolling for cells with multiple entries
-    maxHeight: '120px',
+    overflow: 'hidden',
+    maxWidth: '80px',
   },
   alreadyScheduledCourseItem: {
     backgroundColor: 'rgba(40, 167, 69, 0.2)',
@@ -155,7 +165,7 @@ export default function TeacherDetails(props) {
   const { teacherId, onAssignmentChange } = props;
 
   // Memoized values for configuration settings
-  const { days, possibleLabTimes } = useConfig();
+  const { days, times, possibleLabTimes } = useConfig();
 
   const [departmentalSessionalSchedules, setdepartmentalSessionalSchedules] = useState([]); // All available sessional schedules
 
@@ -1249,7 +1259,7 @@ export default function TeacherDetails(props) {
 
   return (
     <div>
-      <div className="page-header mb-4">
+      <div className="page-header mb-6">
         <div className="row align-items-center">
           <div className="col">
             <h3 className="page-title">
@@ -1264,30 +1274,286 @@ export default function TeacherDetails(props) {
 
       {teacher && (
         <div className="row">
-          {/* Sessional Courses Assignment Table */}
+          {/* Current Assignments Table */}
           <div className="col-12 grid-margin">
             <div className="card">
               {/* Add some padding to the card body on left and right*/}
               <div className="card-body" style={{ padding: '0px 30px' }}>
+                {/* Current Assignments Schedule Table */}
                 <div className="mt-4">
                   <div className="card mb-4">
-                    <h6 className="card-title text-primary">
-                      <i className="mdi mdi-table-large mr-2"></i>Choose from Schedule Table
-                    </h6>
-                    {loadingSchedules ? (
-                      <div className="text-center py-4">
-                        <div className="spinner-border text-info" role="status">
-                          <span className="sr-only">Loading...</span>
+                    <div className="card-header" style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      borderRadius: '8px 8px 0 0',
+                      padding: '1rem 1.5rem'
+                    }}>
+                      <h6 className="card-title mb-0" style={{ color: 'white', fontWeight: '600' }}>
+                        <i className="mdi mdi-clipboard-text mr-2"></i>Current Schedule Assignments
+                      </h6>
+                    </div>
+                    <div className="card-body" style={{ padding: '1.5rem' }}>
+                      {(assignedTheoryCourses.length > 0 || assignedSessionalCourses.length > 0) ? (
+                        <div>
+                          <style jsx="true">{`
+                            .assignment-schedule-table {
+                              border-collapse: separate;
+                              border-spacing: 0;
+                              text-align: center;
+                              background-color: #f8f9fa;
+                              box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+                              border-radius: 8px;
+                              overflow: hidden;
+                              width: 100%;
+                              margin: 0 auto;
+                            }
+                            .assignment-schedule-table thead th {
+                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              color: white;
+                              font-weight: 600;
+                              padding: 12px 8px;
+                              letter-spacing: 0.5px;
+                              border: none;
+                              font-size: 0.9rem;
+                            }
+                            .assignment-schedule-table tbody th {
+                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              color: white;
+                              font-weight: 600;
+                              padding: 8px;
+                              border: none;
+                              width: 100px;
+                              min-width: 100px;
+                              max-width: 100px;
+                              font-size: 0.85rem;
+                            }
+                            .assignment-schedule-table td {
+                              border: 1px solid #dee2e6;
+                              height: 55px;
+                              width: 120px;
+                              min-width: 120px;
+                              max-width: 120px;
+                              padding: 4px;
+                              vertical-align: middle;
+                              position: relative;
+                              background-color: white;
+                            }
+                            .theory-assignment {
+                              background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+                              border: 2px solid #1976d2;
+                              color: #0d47a1;
+                              font-weight: 600;
+                              border-radius: 6px;
+                              padding: 8px;
+                              font-size: 0.8rem;
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                              justify-content: center;
+                              height: 100%;
+                              position: relative;
+                            }
+                            .sessional-assignment {
+                              background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+                              border: 2px solid #7b1fa2;
+                              color: #4a148c;
+                              font-weight: 600;
+                              border-radius: 6px;
+                              padding: 8px;
+                              font-size: 0.8rem;
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                              justify-content: center;
+                              height: 100%;
+                              position: relative;
+                            }
+                            .assignment-unassign-btn {
+                              position: absolute;
+                              top: 2px;
+                              right: 2px;
+                              width: 20px;
+                              height: 20px;
+                              border-radius: 50%;
+                              border: none;
+                              background: rgba(220, 53, 69, 0.9);
+                              color: white;
+                              font-size: 10px;
+                              cursor: pointer;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              opacity: 0.8;
+                              transition: all 0.2s ease;
+                            }
+                            .assignment-unassign-btn:hover {
+                              opacity: 1;
+                              transform: scale(1.1);
+                              background: #dc3545;
+                            }
+                            .empty-slot {
+                              background-color: #f8f9fa;
+                              color: #6c757d;
+                              font-style: italic;
+                              font-size: 0.75rem;
+                            }
+                          `}</style>
+                          <div className="table-responsive">
+                            <table className="table assignment-schedule-table">
+                              <thead>
+                                <tr>
+                                  <th>Day / Time</th>
+                                  {times.map((time) => (
+                                    <th key={time}>{time}:00{time === 12 ? ' PM' : time > 12 ? ' PM' : ' AM'}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {days.map((day) => {
+                                  // Track merged cells to skip rendering
+                                  const merged = Array(times.length).fill(false);
+                                  
+                                  return (
+                                    <tr key={day}>
+                                      <th>{day}</th>
+                                      {times.map((time, timeIndex) => {
+                                        // Skip if this cell is already merged
+                                        if (merged[timeIndex]) return null;
+                                        
+                                        // Check for theory assignment
+                                        const theoryAssignment = theorySchedule.find(schedule =>
+                                          schedule.day === day && schedule.time === time
+                                        );
+                                        
+                                        // Check for sessional assignment - check both direct assignment and through schedule
+                                        let sessionalAssignment = assignedSessionalCourses.find(course =>
+                                          course.day === day && course.time === time
+                                        );
+                                        
+                                        // If not found directly, check through sessionalSchedule
+                                        if (!sessionalAssignment) {
+                                          const scheduleEntry = sessionalSchedule.find(schedule =>
+                                            schedule.day === day && schedule.time === time
+                                          );
+                                          
+                                          if (scheduleEntry) {
+                                            // Find if this schedule entry matches any assigned course
+                                            sessionalAssignment = assignedSessionalCourses.find(course =>
+                                              course.course_id === scheduleEntry.course_id &&
+                                              course.section === scheduleEntry.section
+                                            );
+                                          }
+                                        }
+                                        
+                                        // If sessional assignment, merge 3 cells
+                                        if (sessionalAssignment) {
+                                          // Mark next 2 cells as merged
+                                          if (timeIndex + 1 < times.length) merged[timeIndex + 1] = true;
+                                          if (timeIndex + 2 < times.length) merged[timeIndex + 2] = true;
+                                          
+                                          return (
+                                            <td 
+                                              key={`${day}-${time}`} 
+                                              colSpan={3}
+                                              style={{ width: '360px', minWidth: '360px', maxWidth: '360px' }}
+                                            >
+                                              <div className="sessional-assignment">
+                                                <button
+                                                  onClick={() => handleUnassignCourse(sessionalAssignment)}
+                                                  className="assignment-unassign-btn"
+                                                  title="Unassign from this course"
+                                                >
+                                                  <i className="mdi mdi-close"></i>
+                                                </button>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                                                  {sessionalAssignment.course_id}
+                                                </div>
+                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                                  Section {sessionalAssignment.section}
+                                                </div>
+                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                                  <i className="mdi mdi-flask"></i> Lab
+                                                </div>
+                                              </div>
+                                            </td>
+                                          );
+                                        }
+                                        
+                                        // If theory assignment, single cell
+                                        if (theoryAssignment) {
+                                          return (
+                                            <td key={`${day}-${time}`}>
+                                              <div className="theory-assignment">
+                                                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                                                  {theoryAssignment.course_id}
+                                                </div>
+                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                                  Section {theoryAssignment.section || 'All'}
+                                                </div>
+                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                                  <i className="mdi mdi-book-open-variant"></i> Theory
+                                                </div>
+                                              </div>
+                                            </td>
+                                          );
+                                        }
+                                        
+                                        // Empty slot
+                                        return (
+                                          <td key={`${day}-${time}`}>
+                                            <div className="empty-slot"></div>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
-                        <p className="mt-2 text-muted">Loading available schedules...</p>
-                      </div>
-                    ) : departmentalSessionalSchedules.length > 0 ? (
-                      <div>
-                        <SessionalScheduleTable
-                          schedules={departmentalSessionalSchedules}
-                          selectedSchedules={selectedSessionalSchedules}
-                          onSelectSchedule={handleSessionalScheduleSelect}
-                        />
+                      ) : (
+                        <div className="text-center py-4">
+                          <div className="mb-3">
+                            <i className="mdi mdi-clipboard-text-outline" style={{ fontSize: '3rem', color: '#6c757d', opacity: 0.5 }}></i>
+                          </div>
+                          <h6 className="text-muted mb-2">No Current Assignments</h6>
+                          <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
+                            This teacher has no theory or sessional course assignments yet.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="card mb-4">
+                    <div className="card-header" style={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      borderRadius: '8px 8px 0 0',
+                      padding: '1rem 1.5rem'
+                    }}>
+                      <h6 className="card-title mb-0" style={{ color: 'white', fontWeight: '600' }}>
+                        <i className="mdi mdi-table-large mr-2"></i>Sessional Choice Table
+                      </h6>
+                    </div>
+                    <div className="card-body" style={{ padding: '1.5rem' }}>
+                      {loadingSchedules ? (
+                        <div className="text-center py-4">
+                          <div className="spinner-border text-info" role="status">
+                            <span className="sr-only">Loading...</span>
+                          </div>
+                          <p className="mt-2 text-muted">Loading available schedules...</p>
+                        </div>
+                      ) : departmentalSessionalSchedules.length > 0 ? (
+                        <div>
+                          <SessionalScheduleTable
+                            schedules={departmentalSessionalSchedules}
+                            selectedSchedules={selectedSessionalSchedules}
+                            onSelectSchedule={handleSessionalScheduleSelect}
+                          />
                         {selectedSessionalSchedules.length > 0 && (
                           <div className="mt-4 card shadow-lg" style={{
                             borderRadius: '10px',
@@ -1314,41 +1580,46 @@ export default function TeacherDetails(props) {
                             <div className="card-body p-0">
                               <div className="table-responsive">
                                 <table className="table mb-0">
-                                  <thead style={{ backgroundColor: '#f8fafc' }}>
+                                  <thead>
                                     <tr>
                                       <th style={{
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        color: 'white',
                                         fontSize: '14px',
                                         fontWeight: '600',
-                                        color: '#495057',
-                                        borderBottom: '2px solid #eaedf2',
+                                        borderBottom: 'none',
                                         padding: '12px 16px'
                                       }}>Course</th>
                                       <th style={{
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        color: 'white',
                                         fontSize: '14px',
                                         fontWeight: '600',
-                                        color: '#495057',
-                                        borderBottom: '2px solid #eaedf2',
+                                        borderBottom: 'none',
                                         padding: '12px 16px'
                                       }}>Section</th>
                                       <th style={{
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        color: 'white',
                                         fontSize: '14px',
                                         fontWeight: '600',
-                                        color: '#495057',
-                                        borderBottom: '2px solid #eaedf2',
+                                        borderBottom: 'none',
                                         padding: '12px 16px'
                                       }}>Day</th>
                                       <th style={{
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        color: 'white',
                                         fontSize: '14px',
                                         fontWeight: '600',
-                                        color: '#495057',
-                                        borderBottom: '2px solid #eaedf2',
+                                        borderBottom: 'none',
                                         padding: '12px 16px'
                                       }}>Time</th>
                                       <th style={{
+                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                        color: 'white',
                                         fontSize: '14px',
                                         fontWeight: '600',
-                                        color: '#495057',
-                                        borderBottom: '2px solid #eaedf2',
+                                        borderBottom: 'none',
                                         padding: '12px 16px',
                                         textAlign: 'center'
                                       }}>Action</th>
@@ -1464,25 +1735,37 @@ export default function TeacherDetails(props) {
                             </div>
                           </div>
                         )}
-                      </div>
-                    ) : (
-                      <div className="alert alert-warning border-left border-warning" style={{ borderLeftWidth: '4px' }}>
-                        <div className="d-flex align-items-center">
-                          <i className="mdi mdi-alert-circle-outline mr-3" style={{ fontSize: '24px' }}></i>
-                          <span>No schedules found for sessional courses.</span>
                         </div>
+                      ) : (
+                        <div className="alert alert-warning border-left border-warning" style={{ borderLeftWidth: '4px' }}>
+                          <div className="d-flex align-items-center">
+                            <i className="mdi mdi-alert-circle-outline mr-3" style={{ fontSize: '24px' }}></i>
+                            <span>No schedules found for sessional courses.</span>
+                          </div>
+                        </div>
+                      )}
+                      <div className="d-flex justify-content-end mt-3">
+                        <button
+                          className="btn"
+                          onClick={handleSessionalCourseAssign}
+                          disabled={submittingSessional || selectedSessionalSchedules.length === 0}
+                          style={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.75rem 1.5rem',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            borderRadius: '6px',
+                            boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {submittingSessional ?
+                            <><span className="spinner-border spinner-border-sm mr-2"></span>Assigning...</> :
+                            <><i className="mdi mdi-check-circle mr-2"></i>Assign {selectedSessionalSchedules.length} Sessional Course{selectedSessionalSchedules.length !== 1 ? 's' : ''}</>}
+                        </button>
                       </div>
-                    )}
-                    <div className="d-flex justify-content-end mt-3">
-                      <button
-                        className="btn btn-gradient-primary"
-                        onClick={handleSessionalCourseAssign}
-                        disabled={submittingSessional || selectedSessionalSchedules.length === 0}
-                      >
-                        {submittingSessional ?
-                          <><span className="spinner-border spinner-border-sm mr-2"></span>Assigning...</> :
-                          <><i className="mdi mdi-check-circle mr-2"></i>Assign {selectedSessionalSchedules.length} Sessional Course{selectedSessionalSchedules.length !== 1 ? 's' : ''}</>}
-                      </button>
                     </div>
                   </div>
                 </div>
