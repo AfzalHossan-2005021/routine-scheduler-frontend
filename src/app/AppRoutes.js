@@ -37,6 +37,8 @@ const TeacherDetails = lazy(() => import("./sessional-pref//TeacherDetails"));
 const pdfPage = lazy(() => import("./pdf/ShowPdf"));
 const TheorySchedule = lazy(() => import("./theory-schedule/TheorySchedule"));
 
+const SessionalDistribution = lazy(() => import("./sessional-distribution/showSessionalDistribution"));
+
 
 export default function AppRoutes() {
   const { user } = useContext(UserContext);
@@ -65,6 +67,7 @@ export default function AppRoutes() {
             <Route path="/lab-schedule" component={ SessionalSchedule } />
             <Route path="/pdf" component={pdfPage} />
             <Route path="/theory-schedule" component={TheorySchedule} />
+            <Route path="/sessional-distribution" component={SessionalDistribution} />
             <Route path="/account" component={Account} />
             <Redirect to="/dashboard" />
           </Switch>

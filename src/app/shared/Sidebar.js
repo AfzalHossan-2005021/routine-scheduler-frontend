@@ -172,6 +172,12 @@ class Sidebar extends Component {
               <i className="mdi mdi-door menu-icon"></i>
             </Link>
           </li>
+          <li className={this.isPathActive('/sessional-distribution') ? 'nav-item active' : 'nav-item'}>
+            <Link className="nav-link" to="/sessional-distribution">
+              <span className="menu-title">Sessional Distribution</span>
+              <i className="mdi mdi-file-pdf-box menu-icon"></i>
+            </Link>
+          </li>
           <li className={this.isPathActive('/pdf') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/pdf">
               <span className="menu-title">Generate Routine</span>
