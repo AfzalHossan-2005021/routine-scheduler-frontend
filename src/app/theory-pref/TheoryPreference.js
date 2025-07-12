@@ -145,7 +145,7 @@ export default function TheoryPreference() {
             onClick={(e) => {
               // Show a loading toast
               const loadingToast = toast.loading("Sending emails...");
-              
+
               initiate().then((res) => {
                 getStatus().then((res) => {
                   // Sort the teachers in the status by seniority rank
@@ -156,15 +156,15 @@ export default function TheoryPreference() {
                   if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
                     modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
                   }
-                  
+
                   // Update status with modified response, ensuring status is set to 1
-                  setStatus({ 
-                    values: [], 
-                    submitted: [], 
+                  setStatus({
+                    values: [],
+                    submitted: [],
                     ...modifiedRes,
-                    status: 1 
+                    status: 1
                   });
-                  
+
                   // Update the status in the backend
                   setTheoryAssignStatus(1)
                     .then(() => {
@@ -828,7 +828,7 @@ export default function TheoryPreference() {
           onClick={() => {
             setTheoryAssignStatus(3);
             setStatus({ ...status, status: 3 });
-            if( parseInt(status.status) >= 3) {
+            if (parseInt(status.status) >= 3) {
               setShowAssignConfirm(true);
             }
           }}
@@ -907,10 +907,10 @@ export default function TheoryPreference() {
             }}
             onClick={() => {
               setShowAssignConfirm(false);
-              
+
               // Show loading toast
               const loadingToast = toast.loading("Finalizing assignments...");
-              
+
               finalize()
                 .then(() => {
                   return getStatus();
@@ -924,18 +924,18 @@ export default function TheoryPreference() {
                   if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
                     modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
                   }
-                  
+
                   // Update backend status
                   return setTheoryAssignStatus(3)
                     .then(() => {
                       // Set complete status with all updates at once
-                      setStatus({ 
-                        values: [], 
-                        submitted: [], 
+                      setStatus({
+                        values: [],
+                        submitted: [],
                         ...modifiedRes,
-                        status: 3 
+                        status: 3
                       });
-                      
+
                       // Dismiss loading and show success
                       toast.dismiss(loadingToast);
                       toast.success("Assignments finalized successfully");
@@ -1093,9 +1093,10 @@ export default function TheoryPreference() {
                                         background: course.teachers && course.teachers[teacherIndex] ? "linear-gradient(to right, rgba(182, 109, 255, 0.1), rgba(255, 255, 255, 0.9))" : "#fff",
                                         color: course.teachers && course.teachers[teacherIndex] ? "rgb(154, 77, 226)" : "#3e4b5b",
                                         boxShadow: course.teachers && course.teachers[teacherIndex] ? "0 4px 12px rgba(174, 117, 228, 0.1)" : "none",
-                                        padding: "12px 16px",
+                                        padding: "12px 12px 12px 12px",
                                         fontWeight: "500",
-                                        transition: "all 0.3s ease"
+                                        transition: "all 0.3s ease",
+                                        maxWidth: "240px"
                                       }}
                                       className="custom-select-styled"
                                       value={(course.teachers && course.teachers[teacherIndex])
@@ -1106,6 +1107,23 @@ export default function TheoryPreference() {
                                         const oldInitial = course.teachers && course.teachers[teacherIndex]
                                           ? course.teachers[teacherIndex].initial
                                           : null;
+
+                                        // check if the selected teacher is already assigned to this course
+                                        const isAlreadyAssigned = course.teachers && course.teachers.some(t => t.initial === newInitial);
+                                        if (isAlreadyAssigned) {
+                                          toast.error(`${newName} (${newInitial}) is already assigned to this course`);
+                                          return;
+                                        }
+
+                                        // check if the selected teacher is already assigned to another course
+                                        if (oldInitial !== newInitial) {
+                                          const existingCourses = status.assignment.filter(c =>
+                                            c.teachers && c.teachers.some(t => t.initial === newInitial)
+                                          );
+                                          if (existingCourses.length > 0) {
+                                            toast(`${newName} (${newInitial}) is already assigned to ${existingCourses.map(c => c.course_id).join(", ")}`, { icon: "⚠️" });
+                                          }
+                                        }
 
                                         setTeacherAssignment({ course_id: course.course_id, initial: newInitial, old_initial: oldInitial })
                                           .then((res) => {
@@ -1129,6 +1147,8 @@ export default function TheoryPreference() {
                                                   : c
                                               ),
                                             }));
+                                            // Show a toast notification for successful assignment
+                                            toast.success(`Assigned ${newName} (${newInitial}) to ${course.course_id}`)
                                           });
                                       }}
                                       disabled={parseInt(status.status) === 3 && !status.assignment}
@@ -1236,13 +1256,13 @@ export default function TheoryPreference() {
                   try {
                     // Show loading toast
                     const loadingToast = toast.loading("Resending email...");
-                    
+
                     // Resend email
                     await resendTheoryPrefMail(selectedTeacherRow.initial);
-                    
+
                     // Refresh status data to update UI
                     const res = await getStatus();
-                    
+
                     // Sort the teachers in the status by seniority rank
                     let modifiedRes = { ...res };
                     if (modifiedRes.values && modifiedRes.values.length > 0) {
@@ -1251,10 +1271,10 @@ export default function TheoryPreference() {
                     if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
                       modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
                     }
-                    
+
                     // Update the state with the new data
                     setStatus({ values: [], submitted: [], ...modifiedRes });
-                    
+
                     // Dismiss loading and show success
                     toast.dismiss(loadingToast);
                     toast.success("Resent email successfully");

@@ -425,7 +425,12 @@ export default function TeachersList() {
             document.activeElement.blur();
           }
         }}
-        size="xl"
+        size="lg"
+        aria-labelledby="teacher-details-modal"
+        scrollable
+        animation={true}
+        keyboard={true}
+        backdrop="static"
         centered
         dialogClassName="teacher-details-modal"
       >
