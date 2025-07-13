@@ -3,6 +3,12 @@ import { useConfig } from '../shared/ConfigContext';
 import toast from 'react-hot-toast';
 import { getDepartmentalSessionalSchedule } from '../api/sessional-schedule';
 import { getSessionalTeachers } from '../api/theory-assign';
+import { getTeachers } from '../api/db-crud';
+import { 
+  setTeacherSessionalAssignment,
+  getTeacherSessionalAssignment,
+  deleteTeacherSessionalAssignment
+} from '../api/theory-assign';
 
 /**
  * CourseTeachers Component
@@ -93,7 +99,7 @@ const scheduleTableStyle = {
     fontWeight: '600',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: 'white',
-    width: '120px',
+    width: '80px',
     border: 'none',
     padding: '12px 8px',
     fontSize: '0.9rem',
@@ -182,6 +188,59 @@ export default function ShowSessionalDistribution() {
   // State variables
   const [loading, setLoading] = useState(true);
   const [sessionalSchedules, setSessionalSchedules] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [teachers, setTeachers] = useState([]);
+  const [showTeachersList, setShowTeachersList] = useState(false);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+
+  // Modal Style
+  const modalStyle = {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    zIndex: 1000,
+    minWidth: '300px',
+  };
+
+  const overlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 999,
+  };
+
+  const buttonStyle = {
+    padding: '8px 16px',
+    margin: '5px',
+    borderRadius: '4px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: '500',
+    transition: 'all 0.2s',
+  };
+
+  // Fetch teachers when component mounts
+  useEffect(() => {
+    const loadTeachers = async () => {
+      try {
+        const data = await getTeachers();
+        setTeachers(data);
+      } catch (error) {
+        console.error("Error loading teachers:", error);
+        toast.error("Failed to load teachers");
+      }
+    };
+    loadTeachers();
+  }, []);
 
   // Fetch sessional schedules on component mount
   useEffect(() => {
@@ -211,6 +270,60 @@ export default function ShowSessionalDistribution() {
     return sessionalSchedules.filter(schedule => 
       schedule.day === day && schedule.time === time
     );
+  };
+
+  const handleCourseClick = (course) => {
+    setSelectedCourse(course);
+    setShowModal(true);
+    setShowTeachersList(false);
+  };
+
+  const handleAssignTeacher = async () => {
+    try {
+      setLoadingTeachers(true);
+      const currentTeachers = await getSessionalTeachers(selectedCourse.course_id, selectedCourse.section);
+      
+      if (currentTeachers.length >= 3) {
+        toast.error(`There are already 3 teachers assigned in course ${selectedCourse.course_id}`);
+        setShowTeachersList(false);
+        return;
+      }
+
+      // Filter out already assigned teachers
+      const assignedTeacherInitials = currentTeachers.map(t => t.initial);
+      const availableTeachers = teachers.filter(t => !assignedTeacherInitials.includes(t.initial));
+      
+      setTeachers(availableTeachers);
+      setShowTeachersList(true);
+    } catch (error) {
+      console.error("Error checking current teachers:", error);
+      toast.error("Failed to check current teachers");
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
+
+  const handleTeacherSelect = async (teacherInitial) => {
+    try {
+      const assignment = {
+        teacher_initial: teacherInitial,
+        course_id: selectedCourse.course_id,
+        section: selectedCourse.section,
+      };
+
+      await setTeacherSessionalAssignment(assignment);
+      toast.success(`Teacher ${teacherInitial} assigned to ${selectedCourse.course_id}`);
+      
+      // Refresh the course data
+      const data = await getDepartmentalSessionalSchedule();
+      setSessionalSchedules(data);
+      
+      setShowTeachersList(false);
+      setShowModal(false);
+    } catch (error) {
+      console.error("Error assigning teacher:", error);
+      toast.error("Failed to assign teacher");
+    }
   };
 
   if (loading) {
@@ -254,61 +367,139 @@ export default function ShowSessionalDistribution() {
                 </div>
               ) : (
                 <div className="table-responsive" style={{ overflowX: 'auto', maxHeight: '80vh' }}>
-                <table style={{
-                  ...scheduleTableStyle.table,
-                  minWidth: `${possibleLabTimes.length * 200 + 100}px`
-                }}>
-                  <thead>
-                    <tr>
-                      <th style={scheduleTableStyle.headerCell}>Day / Time</th>
-                      {possibleLabTimes.map(time => (
-                        <th key={time} style={{
-                          ...scheduleTableStyle.headerCell,
-                          width: '200px',
-                          minWidth: '200px'
-                        }}>{time}:00</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {days.map(day => (
-                      <tr key={day}>
-                        <td style={scheduleTableStyle.dayCell}>{day}</td>
-                        {possibleLabTimes.map(time => {
-                          const scheduledCourses = getScheduledCourses(day, time);
-                          return (
-                            <td key={`${day}-${time}`} style={scheduleTableStyle.courseCell}>
-                              {scheduledCourses.map((schedule, index) => (
-                                <div 
-                                  key={index} 
-                                  style={{
-                                    ...scheduleTableStyle.courseItem,
-                                    ...scheduleTableStyle.alreadyScheduledCourseItem
-                                  }}
-                                >
-                                  <div style={scheduleTableStyle.courseTitle}>
-                                    {schedule.course_id}
-                                  </div>
-                                  <div style={scheduleTableStyle.sectionBadge}>
-                                    <i className="mdi mdi-account-group mr-1"></i>
-                                    Section {schedule.section}
-                                  </div>
-                                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                                    <CourseTeachers 
-                                      courseId={schedule.course_id} 
-                                      section={schedule.section}
-                                    />
-                                  </div>
-                                </div>
-                              ))}
-                            </td>
-                          );
-                        })}
+                  <table style={{
+                    ...scheduleTableStyle.table,
+                    minWidth: `${possibleLabTimes.length * 200 + 100}px`
+                  }}>
+                    <thead>
+                      <tr>
+                        <th style={scheduleTableStyle.headerCell}>Day / Time</th>
+                        {possibleLabTimes.map(time => (
+                          <th key={time} style={{
+                            ...scheduleTableStyle.headerCell,
+                            width: '200px',
+                            minWidth: '200px'
+                          }}>{time}:00</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {days.map(day => (
+                        <tr key={day}>
+                          <td style={scheduleTableStyle.dayCell}>{day}</td>
+                          {possibleLabTimes.map(time => {
+                            const scheduledCourses = getScheduledCourses(day, time);
+                            return (
+                              <td key={`${day}-${time}`} style={scheduleTableStyle.courseCell}>
+                                {scheduledCourses.map((schedule, index) => (
+                                  <div 
+                                    key={index} 
+                                    style={{
+                                      ...scheduleTableStyle.courseItem,
+                                      ...scheduleTableStyle.alreadyScheduledCourseItem,
+                                      cursor: 'pointer',
+                                    }}
+                                    onClick={() => handleCourseClick(schedule)}
+                                  >
+                                    <div style={scheduleTableStyle.courseTitle}>
+                                      {schedule.course_id}
+                                    </div>
+                                    <div style={scheduleTableStyle.sectionBadge}>
+                                      <i className="mdi mdi-account-group mr-1"></i>
+                                      Section {schedule.section}
+                                    </div>
+                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                      <CourseTeachers 
+                                        courseId={schedule.course_id} 
+                                        section={schedule.section}
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Modal */}
+              {showModal && (
+                <>
+                  <div style={overlayStyle} onClick={() => setShowModal(false)} />
+                  <div style={modalStyle}>
+                    <h5 style={{ marginBottom: '20px', color: '#333' }}>
+                      {selectedCourse.course_id} - Section {selectedCourse.section}
+                    </h5>
+                    
+                    {!showTeachersList ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                        <button
+                          style={{
+                            ...buttonStyle,
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                          }}
+                          onClick={handleAssignTeacher}
+                          disabled={loadingTeachers}
+                        >
+                          {loadingTeachers ? (
+                            <><i className="mdi mdi-loading mdi-spin mr-2"></i>Loading...</>
+                          ) : (
+                            <><i className="mdi mdi-account-plus mr-2"></i>Assign Teacher</>
+                          )}
+                        </button>
+                        <button
+                          style={{
+                            ...buttonStyle,
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                          }}
+                        >
+                          <i className="mdi mdi-delete mr-2"></i>Remove Course
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <h6 style={{ marginBottom: '15px', color: '#666' }}>Select a Teacher</h6>
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                          {teachers.map(teacher => (
+                            <div
+                              key={teacher.initial}
+                              style={{
+                                padding: '10px',
+                                margin: '5px 0',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                backgroundColor: '#f8f9fa',
+                              }}
+                              onClick={() => handleTeacherSelect(teacher.initial)}
+                            >
+                              {teacher.name} ({teacher.initial})
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: '15px', textAlign: 'right' }}>
+                          <button
+                            style={{
+                              ...buttonStyle,
+                              backgroundColor: '#6c757d',
+                              color: 'white',
+                            }}
+                            onClick={() => setShowTeachersList(false)}
+                          >
+                            Back
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>
