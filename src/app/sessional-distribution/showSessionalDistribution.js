@@ -192,6 +192,10 @@ export default function ShowSessionalDistribution() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [teachers, setTeachers] = useState([]);
   const [showTeachersList, setShowTeachersList] = useState(false);
+  const [showRemoveTeacherList, setShowRemoveTeacherList] = useState(false);
+  const [assignedTeachers, setAssignedTeachers] = useState([]);
+  const [selectedTeacherToRemove, setSelectedTeacherToRemove] = useState(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
 
   // Modal Style
@@ -233,6 +237,7 @@ export default function ShowSessionalDistribution() {
     const loadTeachers = async () => {
       try {
         const data = await getTeachers();
+
         setTeachers(data);
       } catch (error) {
         console.error("Error loading teachers:", error);
@@ -284,14 +289,25 @@ export default function ShowSessionalDistribution() {
       const currentTeachers = await getSessionalTeachers(selectedCourse.course_id, selectedCourse.section);
       
       if (currentTeachers.length >= 3) {
-        toast.error(`There are already 3 teachers assigned in course ${selectedCourse.course_id}`);
-        setShowTeachersList(false);
-        return;
+        toast('Warning: There are already 3 teachers assigned in course ' + selectedCourse.course_id, {
+          icon: '⚠️',
+          style: {
+            background: '#FFF3CD',
+            color: '#856404',
+            border: '1px solid #FFEEBA'
+          }
+        });
       }
 
-      // Filter out already assigned teachers
+      // Get the latest list of teachers and filter active ones
+      const teacherData = await getTeachers();
+      const activeTeachers = teacherData
+        .filter(teacher => teacher.active === 1)
+        .sort((a, b) => a.seniority_rank - b.seniority_rank);
+
+      // Filter out already assigned teachers from active teachers
       const assignedTeacherInitials = currentTeachers.map(t => t.initial);
-      const availableTeachers = teachers.filter(t => !assignedTeacherInitials.includes(t.initial));
+      const availableTeachers = activeTeachers.filter(t => !assignedTeacherInitials.includes(t.initial));
       
       setTeachers(availableTeachers);
       setShowTeachersList(true);
@@ -303,13 +319,61 @@ export default function ShowSessionalDistribution() {
     }
   };
 
+  const handleRemoveTeacher = async () => {
+    try {
+      setLoadingTeachers(true);
+      const currentTeachers = await getSessionalTeachers(selectedCourse.course_id, selectedCourse.section);
+      setAssignedTeachers(currentTeachers);
+      setShowRemoveTeacherList(true);
+      setShowTeachersList(false);
+    } catch (error) {
+      console.error("Error fetching assigned teachers:", error);
+      toast.error("Failed to fetch assigned teachers");
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
+
+  const handleTeacherRemoval = async () => {
+    if (!selectedTeacherToRemove) return;
+
+    try {
+      const unassignData = {
+        initial: selectedTeacherToRemove,
+        course_id: selectedCourse.course_id,
+        batch: selectedCourse.batch,
+        section: selectedCourse.section,        
+      };
+
+      console.log(unassignData);
+
+      await deleteTeacherSessionalAssignment(unassignData);
+      toast.success(`Teacher ${selectedTeacherToRemove} removed from ${selectedCourse.course_id}`);
+      
+      // Refresh the course data
+      const data = await getDepartmentalSessionalSchedule();
+      setSessionalSchedules(data);
+      
+      setShowConfirmation(false);
+      setShowRemoveTeacherList(false);
+      setShowModal(false);
+      setSelectedTeacherToRemove(null);
+    } catch (error) {
+      console.error("Error removing teacher:", error);
+      toast.error("Failed to remove teacher");
+    }
+  };
+
   const handleTeacherSelect = async (teacherInitial) => {
     try {
       const assignment = {
-        teacher_initial: teacherInitial,
+        initial: teacherInitial,
         course_id: selectedCourse.course_id,
+        batch: selectedCourse.batch,
         section: selectedCourse.section,
       };
+
+      console.log(assignment);
 
       await setTeacherSessionalAssignment(assignment);
       toast.success(`Teacher ${teacherInitial} assigned to ${selectedCourse.course_id}`);
@@ -431,11 +495,35 @@ export default function ShowSessionalDistribution() {
                 <>
                   <div style={overlayStyle} onClick={() => setShowModal(false)} />
                   <div style={modalStyle}>
-                    <h5 style={{ marginBottom: '20px', color: '#333' }}>
-                      {selectedCourse.course_id} - Section {selectedCourse.section}
-                    </h5>
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={() => setShowModal(false)}
+                        style={{
+                          position: 'absolute',
+                          right: '-10px',
+                          top: '-10px',
+                          background: '#ff4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          fontSize: '14px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        ×
+                      </button>
+                      <h5 style={{ marginBottom: '20px', color: '#333' }}>
+                        {selectedCourse.course_id} - Section {selectedCourse.section}
+                      </h5>
                     
-                    {!showTeachersList ? (
+                    {!showTeachersList && !showRemoveTeacherList ? (
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
                         <button
                           style={{
@@ -458,9 +546,67 @@ export default function ShowSessionalDistribution() {
                             backgroundColor: '#f44336',
                             color: 'white',
                           }}
+                          onClick={handleRemoveTeacher}
+                          disabled={loadingTeachers}
                         >
-                          <i className="mdi mdi-delete mr-2"></i>Remove Course
+                          {loadingTeachers ? (
+                            <><i className="mdi mdi-loading mdi-spin mr-2"></i>Loading...</>
+                          ) : (
+                            <><i className="mdi mdi-account-remove mr-2"></i>Remove Teacher</>
+                          )}
                         </button>
+                      </div>
+                    ) : showRemoveTeacherList ? (
+                      <div>
+                        <h6 style={{ marginBottom: '15px', color: '#666' }}>Select Teacher to Remove</h6>
+                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                          {assignedTeachers.map(teacher => (
+                            <div
+                              key={teacher.initial}
+                              style={{
+                                padding: '10px',
+                                margin: '5px 0',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                backgroundColor: teacher.initial === selectedTeacherToRemove ? '#ffebee' : '#f8f9fa',
+                                borderColor: teacher.initial === selectedTeacherToRemove ? '#f44336' : '#ddd',
+                              }}
+                              onClick={() => setSelectedTeacherToRemove(teacher.initial)}
+                            >
+                              {teacher.name} ({teacher.initial})
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-between' }}>
+                          <button
+                            style={{
+                              ...buttonStyle,
+                              backgroundColor: '#6c757d',
+                              color: 'white',
+                            }}
+                            onClick={() => {
+                              setShowRemoveTeacherList(false);
+                              setSelectedTeacherToRemove(null);
+                            }}
+                          >
+                            Back
+                          </button>
+                          <button
+                            style={{
+                              ...buttonStyle,
+                              backgroundColor: '#dc3545',
+                              color: 'white',
+                              opacity: selectedTeacherToRemove ? 1 : 0.5,
+                              cursor: selectedTeacherToRemove ? 'pointer' : 'not-allowed',
+                            }}
+                            onClick={() => selectedTeacherToRemove && setShowConfirmation(true)}
+                            disabled={!selectedTeacherToRemove}
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div>
@@ -498,6 +644,47 @@ export default function ShowSessionalDistribution() {
                         </div>
                       </div>
                     )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Confirmation Modal */}
+              {showConfirmation && (
+                <>
+                  <div style={overlayStyle} />
+                  <div style={{
+                    ...modalStyle,
+                    zIndex: 1001,
+                    maxWidth: '400px',
+                    textAlign: 'center'
+                  }}>
+                    <h6 style={{ marginBottom: '20px', color: '#dc3545' }}>Confirm Removal</h6>
+                    <p style={{ marginBottom: '20px' }}>
+                      Do you really want to remove {selectedTeacherToRemove} from {selectedCourse.course_id}?
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                      <button
+                        style={{
+                          ...buttonStyle,
+                          backgroundColor: '#6c757d',
+                          color: 'white',
+                        }}
+                        onClick={() => setShowConfirmation(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        style={{
+                          ...buttonStyle,
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                        }}
+                        onClick={handleTeacherRemoval}
+                      >
+                        Yes, Remove
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
