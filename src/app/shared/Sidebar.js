@@ -86,18 +86,18 @@ class Sidebar extends Component {
                     <i className="mdi mdi-database-export menu-icon"></i>
                   </Link>
                 </li>
-                <li className={this.isPathActive('/database/restore') ? 'nav-item active' : 'nav-item'}>
+                {/* <li className={this.isPathActive('/database/restore') ? 'nav-item active' : 'nav-item'}>
                   <Link className="nav-link" to="/database/restore">
                     <span className="menu-title">Restore</span>
                     <i className="mdi mdi-database-import menu-icon"></i>
                   </Link>
-                </li>
-                <li className={this.isPathActive('/database/clear') ? 'nav-item active' : 'nav-item'}>
+                </li> */}
+                {/* <li className={this.isPathActive('/database/clear') ? 'nav-item active' : 'nav-item'}>
                   <Link className="nav-link" to="/database/clear">
                     <span className="menu-title">Clear</span>
                     <i className="mdi mdi-database-remove menu-icon"></i>
                   </Link>
-                </li>
+                </li> */}
               </ul>
             </Collapse>
           </li>
