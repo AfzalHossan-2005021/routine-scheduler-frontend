@@ -58,8 +58,8 @@ const scheduleTableStyle = {
     maxWidth: '80px',
   },
   alreadyScheduledCourseItem: {
-    backgroundColor: 'rgba(40, 167, 69, 0.2)',
-    border: '1px solid #28a745',
+    backgroundColor: 'rgba(0, 123, 255, 0.25)',
+    border: '1px solid #007bff',
     fontWeight: 'bold',
   },
   scheduledCell: {
@@ -125,7 +125,7 @@ function CourseTeachers({ courseId, section, fetchTeachers, isAlreadyScheduled, 
     };
   }, [courseId, section, fetchTeachers, refreshKey]); // Added refreshKey as dependency
 
-  const textStyle = isAlreadyScheduled ? { color: '#155724' } : {};
+  const textStyle = isAlreadyScheduled ? { color: '#0066cc' } : {};
 
   if (loading) {
     return <span style={{ ...textStyle, fontSize: '0.85rem' }}>Loading teachers...</span>;
@@ -602,6 +602,7 @@ export default function TeacherDetails(props) {
                               onClick={() => onSelectSchedule({ ...courseInfo, day, time })}
                               style={{
                                 ...scheduleTableStyle.courseItem,
+                                ...getCourseColorStyles(courseInfo.course_id, courseInfo.section),
                                 ...(selectedSchedules.some(selected =>
                                   selected.day === day &&
                                   selected.time === time &&
@@ -775,7 +776,7 @@ export default function TeacherDetails(props) {
                                             {conflictIcon}
                                             <span
                                               className="ml-2 font-semibold"
-                                              style={{ color: isAlreadyScheduled ? '#155724' : '#dc3545' }}
+                                              style={{ color: isAlreadyScheduled ? '#0066cc' : '#dc3545' }}
                                             >
                                               {isAlreadyScheduled ? 'Already Assigned' : 'Cannot Select Time Slot'}
                                             </span>
@@ -813,6 +814,7 @@ export default function TeacherDetails(props) {
                                     ...scheduleTableStyle.courseItem,
                                     ...(isSelected ? scheduleTableStyle.selectedCourseItem : {}),
                                     ...(isAlreadyScheduled ? scheduleTableStyle.alreadyScheduledCourseItem : {}),
+                                    ...(!isAlreadyScheduled && !isSelected ? getCourseColorStyles(courseInfo.course_id, courseInfo.section) : {}),
                                     ...((conflict && conflictType !== 'selected' && !isAlreadyScheduled) ? { opacity: 0.7 } : {}),
                                     cursor: 'pointer', // Make all courses clickable
                                     position: 'relative'
@@ -820,7 +822,7 @@ export default function TeacherDetails(props) {
                                   // Keep a simple title for non-conflict items
                                   title={!conflict ? `${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})` : ''}
                                 >
-                                  <strong style={isAlreadyScheduled ? { color: '#155724' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
+                                  <strong style={isAlreadyScheduled ? { color: '#0066cc' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
                                   <br />
                                   {courseInfo.section && (
                                     <CourseTeachers
@@ -838,10 +840,10 @@ export default function TeacherDetails(props) {
                                       top: '3px',
                                       right: '6px',
                                       fontSize: '11px',
-                                      color: '#155724',
+                                      color: '#0066cc',
                                       fontWeight: 'normal'
                                     }}>
-                                      <i className="mdi mdi-check-circle ml-1" style={{ fontSize: '14px', color: '#155724' }}></i>
+                                      <i className="mdi mdi-check-circle ml-1" style={{ fontSize: '14px', color: '#0066cc' }}></i>
                                     </div>
                                   )}
                                 </div>
@@ -873,11 +875,27 @@ export default function TeacherDetails(props) {
 
     // Check if we already have this data cached
     if (courseTeachersCache[cacheKey]) {
+      console.log(`DEBUG: Using cached teachers for ${cacheKey}:`, courseTeachersCache[cacheKey]);
       return courseTeachersCache[cacheKey];
     }
 
     try {
+      console.log(`DEBUG: Fetching teachers for ${courseId}-${section} from API...`);
       const teachers = await getSessionalTeachers(courseId, section);
+      
+      console.log(`DEBUG: API returned teachers for ${courseId}-${section}:`, teachers);
+      
+      if (teachers && teachers.length > 0) {
+        teachers.forEach((teacher, index) => {
+          console.log(`DEBUG: Teacher ${index + 1} from API:`, {
+            initial: teacher.initial,
+            name: teacher.name,
+            full_time_status: teacher.full_time_status,
+            full_time_status_type: typeof teacher.full_time_status,
+            allProperties: teacher
+          });
+        });
+      }
 
       // Update the cache with the fetched data
       setCourseTeachersCache(prevCache => ({
@@ -1220,6 +1238,54 @@ export default function TeacherDetails(props) {
       console.error("Error in handleUnassignCourse:", error);
       toast.error("An unexpected error occurred. Please try again.");
     }
+  };
+
+  /**
+   * Check if a course has permanent teachers assigned
+   * @param {string} courseId - The course ID
+   * @param {string} section - The section
+   * @returns {boolean} - True if the course has permanent teachers
+   */
+  const hasPermanentTeachers = (courseId, section) => {
+    const cacheKey = `${courseId}-${section}`;
+    const teachers = courseTeachersCache[cacheKey] || [];
+    
+    // Debug logging
+    console.log(`DEBUG: Checking permanent teachers for ${courseId}-${section}:`);
+    console.log(`Teachers cache:`, teachers);
+    
+    if (teachers.length > 0) {
+      teachers.forEach((teacher, index) => {
+        console.log(`Teacher ${index + 1}:`, {
+          initial: teacher.initial,
+          name: teacher.name,
+          full_time_status: teacher.full_time_status,
+          full_time_status_type: typeof teacher.full_time_status
+        });
+      });
+    } else {
+      console.log('No teachers found in cache for this course');
+    }
+    
+    const hasPermanent = teachers.some(teacher => teacher.full_time_status === true);
+    console.log(`Has permanent teachers: ${hasPermanent}`);
+    
+    return hasPermanent;
+  };
+
+  /**
+   * Get the course color based on permanent teacher status
+   * @param {string} courseId - The course ID
+   * @param {string} section - The section
+   * @returns {object} - Color styles for the course
+   */
+  const getCourseColorStyles = (courseId, section) => {
+    const hasPermanent = hasPermanentTeachers(courseId, section);
+    return {
+      backgroundColor: hasPermanent ? '#d4edda' : '#f8d7da', // green for permanent, red for non-permanent
+      borderColor: hasPermanent ? '#28a745' : '#dc3545',
+      color: hasPermanent ? '#155724' : '#721c24'
+    };
   };
 
   if (loading) {

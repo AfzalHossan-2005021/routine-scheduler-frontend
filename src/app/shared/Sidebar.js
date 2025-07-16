@@ -86,18 +86,18 @@ class Sidebar extends Component {
                     <i className="mdi mdi-database-export menu-icon"></i>
                   </Link>
                 </li>
-                <li className={this.isPathActive('/database/restore') ? 'nav-item active' : 'nav-item'}>
+                {/* <li className={this.isPathActive('/database/restore') ? 'nav-item active' : 'nav-item'}>
                   <Link className="nav-link" to="/database/restore">
                     <span className="menu-title">Restore</span>
                     <i className="mdi mdi-database-import menu-icon"></i>
                   </Link>
-                </li>
-                <li className={this.isPathActive('/database/clear') ? 'nav-item active' : 'nav-item'}>
+                </li> */}
+                {/* <li className={this.isPathActive('/database/clear') ? 'nav-item active' : 'nav-item'}>
                   <Link className="nav-link" to="/database/clear">
                     <span className="menu-title">Clear</span>
                     <i className="mdi mdi-database-remove menu-icon"></i>
                   </Link>
-                </li>
+                </li> */}
               </ul>
             </Collapse>
           </li>
@@ -170,6 +170,12 @@ class Sidebar extends Component {
             <Link className="nav-link" to="/theory-room-assign">
               <span className="menu-title">Theory Room Assign</span>
               <i className="mdi mdi-door menu-icon"></i>
+            </Link>
+          </li>
+          <li className={this.isPathActive('/sessional-distribution') ? 'nav-item active' : 'nav-item'}>
+            <Link className="nav-link" to="/sessional-distribution">
+              <span className="menu-title">Sessional Distribution</span>
+              <i className="mdi mdi-file-pdf-box menu-icon"></i>
             </Link>
           </li>
           <li className={this.isPathActive('/pdf') ? 'nav-item active' : 'nav-item'}>
