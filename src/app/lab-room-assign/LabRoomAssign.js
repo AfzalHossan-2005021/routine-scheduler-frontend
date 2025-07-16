@@ -7,8 +7,10 @@ import Icon from '@mdi/react';
 import { getLabCourses, getLabRooms } from "../api/db-crud";
 import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
 import { getAllSchedule } from "../api/theory-schedule";
+import { useConfig } from '../shared/ConfigContext';
 
 export default function LabRoomAssign() {
+  const { days, possibleLabTimes } = useConfig();
   const [offeredCourse, setOfferedCourse] = useState([]);
   const [sessionalSchedule, setSessionalSchedule] = useState([]);
 
@@ -163,29 +165,11 @@ export default function LabRoomAssign() {
     });
 
   const generateRoomAssignments = () => {
-    // Create a schedule grid to track room bookings
-    // Format: roomBookings[day][time] = [{room: "roomName", course: courseObject}]
-    const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
-    const timeSlots = [8, 11, 2]
-
-    // Log available schedule data for debugging
-    console.log("Sessional Schedule Data:", sessionalSchedule);
-
-    // Check if there are any scheduling issues
-    // const schedulingIssues = sessionalSchedule.filter(schedule => 
-    //   !days.includes(schedule.day) || !timeSlots.includes(Number(schedule.time))
-    // );
-
-    // if (schedulingIssues.length > 0) {
-    //   console.warn("Found scheduling issues:", schedulingIssues);
-    //   toast.error(`Found ${schedulingIssues.length} invalid schedule entries. Check console for details.`);
-    // }
-
     // Initialize the roomBookings structure with a safer approach
     const roomBookings = {};
     days.forEach(day => {
       roomBookings[day] = {};
-      timeSlots.forEach(time => {
+      possibleLabTimes.forEach(time => {
         roomBookings[day][time] = [];
       });
     });
@@ -214,7 +198,7 @@ export default function LabRoomAssign() {
       const { day, time, course_id, section } = schedule;
 
       // Skip if day or time is missing or not valid
-      if (!day || !time || !days.includes(day) || !timeSlots.includes(Number(time))) {
+      if (!day || !time || !days.includes(day) || !possibleLabTimes.includes(Number(time))) {
         console.warn(`Invalid day or time in schedule: ${day} - ${time}`);
         return;
       }
