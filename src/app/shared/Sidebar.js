@@ -186,7 +186,7 @@ class Sidebar extends Component {
           </li>
           <li className={this.isPathActive('/online') ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/online">
-              <span className="menu-title">Online</span>
+              <span className="menu-title">Theory Course Teacher</span>
             </Link>
           </li>
         </ul>
