@@ -184,11 +184,6 @@ class Sidebar extends Component {
               <i className="mdi mdi-file-pdf-box menu-icon"></i>
             </Link>
           </li>
-          <li className={this.isPathActive('/online') ? 'nav-item active' : 'nav-item'}>
-            <Link className="nav-link" to="/online">
-              <span className="menu-title">Online</span>
-            </Link>
-          </li>
         </ul>
       </nav>
     );

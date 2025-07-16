@@ -39,8 +39,6 @@ const TheorySchedule = lazy(() => import("./theory-schedule/TheorySchedule"));
 
 const SessionalDistribution = lazy(() => import("./sessional-distribution/showSessionalDistribution"));
 
-const online = lazy(() => import("./online/Online"));
-
 
 export default function AppRoutes() {
   const { user } = useContext(UserContext);
@@ -71,7 +69,6 @@ export default function AppRoutes() {
             <Route path="/theory-schedule" component={TheorySchedule} />
             <Route path="/sessional-distribution" component={SessionalDistribution} />
             <Route path="/account" component={Account} />
-            <Route path="/online" component={online} />
             <Redirect to="/dashboard" />
           </Switch>
         ) : (
