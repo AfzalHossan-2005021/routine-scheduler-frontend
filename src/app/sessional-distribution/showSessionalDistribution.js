@@ -320,48 +320,48 @@ export default function ShowSessionalDistribution() {
   };
 
   const handleRemoveTeacher = async () => {
-    try {
-      setLoadingTeachers(true);
-      const currentTeachers = await getSessionalTeachers(selectedCourse.course_id, selectedCourse.section);
-      setAssignedTeachers(currentTeachers);
-      setShowRemoveTeacherList(true);
-      setShowTeachersList(false);
-    } catch (error) {
-      console.error("Error fetching assigned teachers:", error);
-      toast.error("Failed to fetch assigned teachers");
-    } finally {
-      setLoadingTeachers(false);
-    }
+    // try {
+    //   setLoadingTeachers(true);
+    //   const currentTeachers = await getSessionalTeachers(selectedCourse.course_id, selectedCourse.section);
+    //   setAssignedTeachers(currentTeachers);
+    //   setShowRemoveTeacherList(true);
+    //   setShowTeachersList(false);
+    // } catch (error) {
+    //   console.error("Error fetching assigned teachers:", error);
+    //   toast.error("Failed to fetch assigned teachers");
+    // } finally {
+    //   setLoadingTeachers(false);
+    // }
   };
 
   const handleTeacherRemoval = async () => {
-    if (!selectedTeacherToRemove) return;
+    // if (!selectedTeacherToRemove) return;
 
-    try {
-      const unassignData = {
-        initial: selectedTeacherToRemove,
-        course_id: selectedCourse.course_id,
-        batch: selectedCourse.batch,
-        section: selectedCourse.section,        
-      };
+    // try {
+    //   const unassignData = {
+    //     initial: selectedTeacherToRemove,
+    //     course_id: selectedCourse.course_id,
+    //     batch: selectedCourse.batch,
+    //     section: selectedCourse.section,        
+    //   };
 
-      console.log(unassignData);
+    //   console.log(unassignData);
 
-      await deleteTeacherSessionalAssignment(unassignData);
-      toast.success(`Teacher ${selectedTeacherToRemove} removed from ${selectedCourse.course_id}`);
+    //   await deleteTeacherSessionalAssignment(unassignData);
+    //   toast.success(`Teacher ${selectedTeacherToRemove} removed from ${selectedCourse.course_id}`);
       
-      // Refresh the course data
-      const data = await getDepartmentalSessionalSchedule();
-      setSessionalSchedules(data);
+    //   // Refresh the course data
+    //   const data = await getDepartmentalSessionalSchedule();
+    //   setSessionalSchedules(data);
       
-      setShowConfirmation(false);
-      setShowRemoveTeacherList(false);
-      setShowModal(false);
-      setSelectedTeacherToRemove(null);
-    } catch (error) {
-      console.error("Error removing teacher:", error);
-      toast.error("Failed to remove teacher");
-    }
+    //   setShowConfirmation(false);
+    //   setShowRemoveTeacherList(false);
+    //   setShowModal(false);
+    //   setSelectedTeacherToRemove(null);
+    // } catch (error) {
+    //   console.error("Error removing teacher:", error);
+    //   toast.error("Failed to remove teacher");
+    // }
   };
 
   const handleTeacherSelect = async (teacherInitial) => {
@@ -463,7 +463,7 @@ export default function ShowSessionalDistribution() {
                                       ...scheduleTableStyle.alreadyScheduledCourseItem,
                                       cursor: 'pointer',
                                     }}
-                                    onClick={() => handleCourseClick(schedule)}
+                                    //onClick={() => handleCourseClick(schedule)}
                                   >
                                     <div style={scheduleTableStyle.courseTitle}>
                                       {schedule.course_id}
@@ -531,7 +531,7 @@ export default function ShowSessionalDistribution() {
                             backgroundColor: '#4CAF50',
                             color: 'white',
                           }}
-                          onClick={handleAssignTeacher}
+                          //onClick={handleAssignTeacher}
                           disabled={loadingTeachers}
                         >
                           {loadingTeachers ? (
@@ -624,7 +624,7 @@ export default function ShowSessionalDistribution() {
                                 transition: 'all 0.2s',
                                 backgroundColor: '#f8f9fa',
                               }}
-                              onClick={() => handleTeacherSelect(teacher.initial)}
+                              //onClick={() => handleTeacherSelect(teacher.initial)}
                             >
                               {teacher.name} ({teacher.initial})
                             </div>
