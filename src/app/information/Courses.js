@@ -1,17 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
-import Select from 'react-select';
 
 import { toast } from "react-hot-toast";
-import {
-  addCourse,
-  deleteCourse,
-  editCourse,
-  getCourses,
-  getSections,
-} from "../api/db-crud";
-import { mdiBookOpenPageVariant, mdiPlusCircle, mdiFormatListBulletedType, mdiSchool, mdiCalendar, mdiAccount, mdiCheckCircle, mdiPencil, mdiDeleteOutline, mdiContentSave, mdiClose } from '@mdi/js';
+import { addCourse, deleteCourse, editCourse, getCourses } from "../api/db-crud";
+import { getDepartments, getAllLevelTermsName } from "../api/academic-config";
+import { mdiBookOpenPageVariant, mdiPlusCircle, mdiFormatListBulletedType, mdiSchool, mdiCheckCircle, mdiPencil, mdiDeleteOutline, mdiContentSave, mdiClose, mdiClock, mdiNotebookCheck, mdiOfficeBuilding } from '@mdi/js';
 import Icon from '@mdi/react';
 
 const validateCourse = (course) => {
@@ -24,17 +18,23 @@ const validateCourse = (course) => {
   if (course.type === "") {
     return "Type cannot be empty";
   }
-  if (course.batch === "") {
-    return "Batch cannot be empty";
-  }
-  if (course.sections.length === 0) {
-    return "Sections cannot be empty";
-  }
-  if (course.session === "") {
-    return "Session cannot be empty";
-  }
   if (course.class_per_week === "") {
-    return "Class per week cannot be empty";
+    return "Credit cannot be empty";
+  }
+  if (course.class_per_week <= 0) {
+    return "Credit must be a positive number";
+  }
+  if (course.level === "") {
+    return "Level cannot be empty";
+  }
+  if (course.from === "") {
+    return "From cannot be empty";
+  }
+  if (course.to === "") {
+    return "To cannot be empty";
+  }
+  if (course.from !== "CSE" && course.to !== "CSE") {
+    return "Offering or Host Department must be CSE";
   }
   return null;
 };
@@ -71,38 +71,22 @@ const modalButtonStyle = {
 };
 
 export default function Courses() {
-  const sessionValue = ["Jan-23"]; // it will be fetched from database
-
-  const [sections, setSections] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [allDepartmentNames, setAllDepartmentNames] = useState([]);
+  const [allLevelTermNames, setAllLevelTermNames] = useState([]);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [deleteCourseSelected, setDeleteCourseSelected] = useState(null);
-  const [selectedCheckboxes, setSelectedCheckboxes] = useState([]);
-
-  const handleCheckboxChange = (e) => {
-    const checkboxValue = e.target.value;
-    const isChecked = e.target.checked;
-
-    setSelectedCheckboxes((prevSelected) => {
-      let updated;
-      if (isChecked) {
-        updated = [...prevSelected, checkboxValue];
-      } else {
-        updated = prevSelected.filter((item) => item !== checkboxValue);
-      }
-      // Also update selectedCourse.sections directly
-      setSelectedCourse((prev) => prev ? { ...prev, sections: updated } : prev);
-      return updated;
-    });
-  };
 
   useEffect(() => {
     getCourses().then((res) => {
       setCourses(res);
     });
-    getSections().then((res) => {
-      setSections(res);
+    getDepartments().then((res) => {
+      setAllDepartmentNames(res);
+    });
+    getAllLevelTermsName().then((res) => {
+      setAllLevelTermNames(res);
     });
   }, []);
 
@@ -203,16 +187,12 @@ export default function Courses() {
                       course_id: "",
                       name: "",
                       type: 0,
-                      batch: 0,
-                      sections: [],
-                      session: sessionValue[0],
                       class_per_week: 0,
-                      teacher_credit: 0,
                       from: "",
                       to: "",
-                      level_term: "",
+                      teacher_credit: 0,
+                      level_term: ""
                     });
-                    setSelectedCheckboxes([]);
                   }}
                   onMouseEnter={e => {
                     e.target.style.background = "rgb(154, 77, 226)";
@@ -236,28 +216,28 @@ export default function Courses() {
                       backgroundColor: "rgba(174, 117, 228, 0.08)",
                       borderBottom: "2px solid rgba(174, 117, 228, 0.1)"
                     }}>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiBookOpenPageVariant} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Course ID
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <Icon path={mdiNotebookCheck} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Course ID
                       </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
                         <Icon path={mdiBookOpenPageVariant} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Course Name
                       </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiFormatListBulletedType} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Type
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <Icon path={mdiFormatListBulletedType} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Type
                       </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiSchool} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Batch
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <Icon path={mdiSchool} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Level/Term
                       </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiFormatListBulletedType} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Sections
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <Icon path={mdiOfficeBuilding} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Offering Dept
                       </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiCalendar} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Session
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <Icon path={mdiOfficeBuilding} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Host Dept
                       </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiAccount} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Class Per Week
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <Icon path={mdiClock} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Credit
                       </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                      <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
                         <Icon path={mdiCheckCircle} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Action
                       </th>
                     </tr>
@@ -270,11 +250,11 @@ export default function Courses() {
                       >
                         <td> {course.course_id} </td>
                         <td> {course.name} </td>
-                        <td> {course.type} </td>
-                        <td> {course.batch} </td>
-                        <td> {Array.isArray(course.sections) ? course.sections.join(", ") : ""} </td>
-                        <td> {course.session} </td>
-                        <td> {course.class_per_week} </td>
+                        <td style={{ textAlign: "center" }}>{course.type === 0 ? "Theory" : "Sessional"}</td>
+                        <td style={{ textAlign: "center" }}> {course.level_term} </td>
+                        <td style={{ textAlign: "center" }}> {course.from} </td>
+                        <td style={{ textAlign: "center" }}> {course.to} </td>
+                        <td style={{ textAlign: "center" }}> {course.class_per_week} </td>
                         <td>
                           <div className="d-flex">
                             <button
@@ -295,7 +275,10 @@ export default function Courses() {
                               className="btn"
                               onClick={() => {
                                 setSelectedCourse(course);
-                                setSelectedCheckboxes(course.sections || []);
+                                setSelectedCourse(prev => ({
+                                  ...prev,
+                                  course_id_old: course.course_id
+                                }));
                               }}
                               onMouseOver={e => {
                                 e.currentTarget.style.background = "rgb(154, 77, 226)";
@@ -306,8 +289,7 @@ export default function Courses() {
                                 e.currentTarget.style.color = "rgb(154, 77, 226)";
                               }}
                             >
-                              <Icon path={mdiPencil} size={0.7} style={{ marginRight: "6px" }} />
-                              Edit
+                              <Icon path={mdiPencil} size={0.7} />
                             </button>
                             <button
                               type="button"
@@ -334,8 +316,7 @@ export default function Courses() {
                                 e.currentTarget.style.color = "#dc3545";
                               }}
                             >
-                              <Icon path={mdiDeleteOutline} size={0.7} style={{ marginRight: "6px" }} />
-                              Delete
+                              <Icon path={mdiDeleteOutline} size={0.7} />
                             </button>
                           </div>
                         </td>
@@ -351,7 +332,7 @@ export default function Courses() {
       {selectedCourse !== null && (
         <Modal
           show={true}
-          onHide={() => { setSelectedCourse(null); setSelectedCheckboxes([]); }}
+          onHide={() => setSelectedCourse(null)}
           size="md"
           centered
           contentClassName="border-0 shadow add-course-modal-content"
@@ -421,7 +402,7 @@ export default function Courses() {
                 <Icon path={mdiBookOpenPageVariant} size={1} color="white" />
               </div>
               <h4 className="add-course-modal-title">
-                {selectedCourse.prev_course_id ? "Edit" : "Add"} Course
+                {selectedCourse.course_id ? "Edit" : "Add"} Course
               </h4>
             </div>
           </Modal.Header>
@@ -429,7 +410,7 @@ export default function Courses() {
             <div style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 4px 24px rgba(174, 117, 228, 0.08)", padding: "2rem 1.5rem", marginBottom: "1.5rem" }}>
               <Form className="px-2 py-1">
                 <Row>
-                  <Col md={4} className="px-2 py-1">
+                  <Col md={6} className="px-2 py-1">
                     <FormGroup>
                       <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Course ID</Form.Label>
                       <FormControl
@@ -438,9 +419,32 @@ export default function Courses() {
                         value={selectedCourse.course_id}
                         style={inputCellStyle}
                         onChange={(e) => setSelectedCourse({ ...selectedCourse, course_id: e.target.value })}
+                        disabled={!!selectedCourse.course_id_old}
                       />
                     </FormGroup>
                   </Col>
+                  <Col className="px-2 py-1">
+                    <FormGroup>
+                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Credit</Form.Label>
+                      <FormControl
+                        type="text"
+                        placeholder="e.g. 1.5"
+                        value={selectedCourse.class_per_week}
+                        style={inputCellStyle}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (/^\d*\.?\d*$/.test(value)) {
+                            setSelectedCourse({
+                              ...selectedCourse,
+                              class_per_week: value,
+                            });
+                          }
+                        }}
+                      />
+                    </FormGroup>
+                  </Col>
+                </Row>
+                <Row>
                   <Col className="px-2 py-1">
                     <FormGroup>
                       <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Course Name</Form.Label>
@@ -460,27 +464,7 @@ export default function Courses() {
                   </Col>
                 </Row>
                 <Row>
-                  <Col className="px-2 py-1">
-                    <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Class Per Week</Form.Label>
-                      <FormControl
-                        type="text"
-                        placeholder="Enter Class Per Week"
-                        value={selectedCourse.class_per_week}
-                        style={inputCellStyle}
-                        onChange={(e) =>
-                          setSelectedCourse({
-                            ...selectedCourse,
-                            class_per_week: Number.parseFloat(
-                              e.target.value || "0"
-                            ),
-                          })
-                        }
-                      />
-                    </FormGroup>
-                  </Col>
-
-                  <Col md={4} className="px-2 py-1 d-flex align-items-center">
+                  <Col md={6} className="px-2 py-1">
                     <FormGroup>
                       <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Type</Form.Label>
                       <br />
@@ -502,108 +486,9 @@ export default function Courses() {
                   </Col>
                   <Col className="px-2 py-1">
                     <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Batch</Form.Label>
-                      <FormControl
-                        type="text"
-                        placeholder="Enter Batch"
-                        value={selectedCourse.batch}
-                        style={inputCellStyle}
-                        onChange={(e) =>
-                          setSelectedCourse({
-                            ...selectedCourse,
-                            batch: Number.parseInt(e.target.value || "0"),
-                          })
-                        }
-                      />
-                    </FormGroup>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={4} className="px-2 py-1 d-flex align-items-center">
-                    <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Session</Form.Label>
-                      <br />
+                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Level-Term</Form.Label>
                       <Form.Select
                         size="lg"
-                        value={sessionValue.indexOf(selectedCourse.session)}
-                        style={inputCellStyle}
-                        onChange={(e) =>
-                          setSelectedCourse({
-                            ...selectedCourse,
-                            session:
-                              sessionValue[Number.parseInt(e.target.value)],
-                          })
-                        }
-                      >
-                        {sessionValue.map((session, index) => (
-                          <option key={index} value={index}>
-                            {session}
-                          </option>
-                        ))}
-                      </Form.Select>
-                    </FormGroup>
-                  </Col>
-                  <Col className="px-2 py-1">
-                    <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Teacher Credit</Form.Label>
-                      <FormControl
-                        type="text"
-                        placeholder="Enter Teacher Credit"
-                        value={selectedCourse.teacher_credit}
-                        style={inputCellStyle}
-                        onChange={(e) =>
-                          setSelectedCourse({
-                            ...selectedCourse,
-                            teacher_credit: Number.parseFloat(
-                              e.target.value || "0"
-                            ),
-                          })
-                        }
-                      />
-                    </FormGroup>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col className="px-2 py-1">
-                    <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>From</Form.Label>
-                      <FormControl
-                        type="text"
-                        placeholder="Enter offering department"
-                        value={selectedCourse.from}
-                        style={inputCellStyle}
-                        onChange={(e) =>
-                          setSelectedCourse({
-                            ...selectedCourse,
-                            from: e.target.value || "CSE",
-                          })
-                        }
-                      />
-                    </FormGroup>
-                  </Col>
-                  <Col md={4} className="px-2 py-1 d-flex align-items-center">
-                    <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>To</Form.Label>
-                      <FormControl
-                        type="text"
-                        placeholder="Enter Offered department"
-                        value={selectedCourse.to}
-                        style={inputCellStyle}
-                        onChange={(e) =>
-                          setSelectedCourse({
-                            ...selectedCourse,
-                            to: e.target.value || "CSE",
-                          })
-                        }
-                      />
-                    </FormGroup>
-                  </Col>
-                  <Col className="px-2 py-1">
-                    <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Level-Term</Form.Label>
-                      <FormControl
-                        type="text"
-                        placeholder="Enter Level-Term (e.g. L-2 T-1)"
                         value={selectedCourse.level_term}
                         style={inputCellStyle}
                         onChange={(e) =>
@@ -612,69 +497,53 @@ export default function Courses() {
                             level_term: e.target.value || "",
                           })
                         }
-                      />
+                      >
+                        <option value="">Select Level-Term</option>
+                        {allLevelTermNames && allLevelTermNames.length > 0 ?
+                          allLevelTermNames.map((levelTerm, i) => (
+                            <option key={i} value={levelTerm}>{levelTerm}</option>
+                          )) :
+                          <option disabled>No level-terms available</option>
+                        }
+                      </Form.Select>
                     </FormGroup>
                   </Col>
                 </Row>
                 <Row>
-                  <Col className="px-2 py-1 d-flex align-items-center">
+                  <Col className="px-2 py-1">
                     <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Sections</Form.Label>
-                      <Select
-                        isMulti
-                        name="sections"
-                        options={(
-                          selectedCourse.batch && selectedCourse.type !== undefined && selectedCourse.session && selectedCourse.to
-                            ? sections.filter(
-                                (s) =>
-                                  s.batch === selectedCourse.batch &&
-                                  s.type === selectedCourse.type &&
-                                  s.session === selectedCourse.session &&
-                                  s.department === selectedCourse.to
-                              )
-                            : sections
-                        ).map((section) => ({ value: section.section, label: section.section }))}
-                        value={selectedCheckboxes.map(val => ({ value: val, label: val }))}
-                        onChange={selectedOptions => {
-                          const values = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
-                          setSelectedCheckboxes(values);
-                          setSelectedCourse(prev => prev ? { ...prev, sections: values } : prev);
-                        }}
-                        placeholder="Select sections..."
-                        noOptionsMessage={() => "No sections available"}
-                        styles={{
-                          control: (base) => ({
-                            ...base,
-                            minWidth: "110px",
-                            width: "100%",
-                            borderRadius: "12px",
-                            border: "1.5px solid rgba(194, 137, 248, 0.3)",
-                            boxShadow: "0 2px 5px rgba(194, 137, 248, 0.05)",
-                            fontWeight: 500,
-                            color: "#333",
-                            background: "#f8faff",
-                            fontSize: "1rem",
-                            padding: "2px 0",
-                            minHeight: "40px",
-                            transition: "all 0.3s ease"
-                          }),
-                          multiValue: (base) => ({
-                            ...base,
-                            background: "#e9d8fd",
-                            borderRadius: "8px",
-                            color: "#7c4fd5"
-                          }),
-                          multiValueLabel: (base) => ({
-                            ...base,
-                            color: "#7c4fd5",
-                            fontWeight: 500
-                          }),
-                          placeholder: (base) => ({
-                            ...base,
-                            color: "#b39ddb"
-                          })
-                        }}
+                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Offering Department</Form.Label>
+                      <FormControl
+                        type="text"
+                        placeholder="e.g. CSE"
+                        value={selectedCourse.from}
+                        style={inputCellStyle}
+                        onChange={(e) => setSelectedCourse({ ...selectedCourse, from: e.target.value })}
                       />
+                    </FormGroup>
+                  </Col>
+                  <Col md={6} className="px-2 py-1 d-flex align-items-center">
+                    <FormGroup>
+                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Host Department</Form.Label>
+                      <Form.Select
+                        size="lg"
+                        value={selectedCourse.to}
+                        style={inputCellStyle}
+                        onChange={(e) =>
+                          setSelectedCourse({
+                            ...selectedCourse,
+                            to: e.target.value || "CSE",
+                          })
+                        }
+                      >
+                        <option value="">Select Department</option>
+                        {allDepartmentNames && allDepartmentNames.length > 0 ?
+                          allDepartmentNames.map((dept, i) => (
+                            <option key={i} value={dept}>{dept}</option>
+                          )) :
+                          <option disabled>No departments available</option>
+                        }
+                      </Form.Select>
                     </FormGroup>
                   </Col>
                 </Row>
@@ -696,7 +565,7 @@ export default function Courses() {
                 e.target.style.color = "rgb(154, 77, 226)";
                 e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
               }}
-              onClick={() => { setSelectedCourse(null); setSelectedCheckboxes([]); }}
+              onClick={() => setSelectedCourse(null)}
             >
               <Icon path={mdiClose} size={0.9} style={{ marginRight: 6 }} />
               Close
@@ -717,23 +586,34 @@ export default function Courses() {
               onClick={() => {
                 const result = validateCourse(selectedCourse);
                 if (result === null) {
-                  if (!selectedCourse.prev_course_id) {
+                  if (!selectedCourse.course_id) {
                     addCourse(selectedCourse)
                       .then((res) => {
-                        setCourses([...courses, selectedCourse]);
-                        toast.success("Course added successfully");
+                        if (res.message && res.message.includes("Successfully Saved")) {
+                          getCourses().then((res) => {
+                            setCourses(res);
+                            setSelectedCourse(null);
+                            toast.success("Course added successfully");
+                          });
+                        } else {
+                          setSelectedCourse(null);
+                          toast.error("Failed to add course: " + res.message);
+                        }
                       })
                       .catch(console.log);
                   } else {
-                    editCourse(selectedCourse.prev_course_id, selectedCourse)
+                    editCourse(selectedCourse.course_id, selectedCourse)
                       .then((res) => {
-                        const index = courses.findIndex(
-                          (t) => t.course_id === selectedCourse.prev_course_id
-                        );
-                        const newCourses = [...courses];
-                        newCourses[index] = selectedCourse;
-                        setCourses(newCourses);
-                        toast.success("Course updated successfully");
+                        if (res.message && res.message.includes("Successfully Updated")) {
+                          getCourses().then((res) => {
+                            setCourses(res);
+                            setSelectedCourse(null);
+                            toast.success("Course updated successfully");
+                          });
+                        } else {
+                          setSelectedCourse(null);
+                          toast.error("Failed to update course: " + res.message);
+                        }
                       })
                       .catch(console.log);
                   }
@@ -754,42 +634,75 @@ export default function Courses() {
           onHide={() => setDeleteCourseSelected(null)}
           size="md"
           centered
+          contentClassName="border-0 shadow"
+          backdrop="static"
         >
-          <Modal.Header closeButton>Delete {deleteCourseSelected.course_id}</Modal.Header>
+          <Modal.Header
+            style={{
+              background: "linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.1) 100%)",
+              borderBottom: "1px solid rgba(220, 53, 69, 0.2)",
+              paddingTop: "16px",
+              paddingBottom: "16px"
+            }}
+          >
+            <div className="d-flex align-items-center">
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(220, 53, 69, 0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: "10px"
+              }}>
+                <i className="mdi mdi-alert-circle-outline" style={{ fontSize: "18px", color: "#dc3545" }}></i>
+              </div>
+              <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "#dc3545" }}>Delete Course</Modal.Title>
+            </div>
+          </Modal.Header>
           <Modal.Body className="px-4">
-            <p>Are you sure you want to delete this course?</p>
+            <p>Are you sure you want to delete course: {deleteCourseSelected.course_id}?</p>
+            <p>This action cannot be undone.</p>
           </Modal.Body>
           <Modal.Footer>
             <Button
-              style={modalButtonStyle}
-              onMouseEnter={(e) => {
-                e.target.style.background = "rgb(154, 77, 226)";
-                e.target.style.color = "white";
-                e.target.style.borderColor = "rgb(154, 77, 226)";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                e.target.style.color = "rgb(154, 77, 226)";
-                e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+              style={{
+                background: "rgba(154, 77, 226, 0.15)",
+                color: "rgb(154, 77, 226)",
+                border: "1.5px solid rgba(154, 77, 226, 0.5)",
+                borderRadius: "8px",
+                padding: "8px 20px",
+                fontWeight: "500",
+                fontSize: "1rem",
+                marginRight: "10px",
+                transition: "all 0.3s ease"
               }}
               onClick={() => setDeleteCourseSelected(null)}
+              onMouseOver={e => {
+                e.currentTarget.style.background = "rgb(154, 77, 226)";
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.borderColor = "rgb(154, 77, 226)";
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = "rgba(154, 77, 226, 0.15)";
+                e.currentTarget.style.color = "rgb(154, 77, 226)";
+                e.currentTarget.style.borderColor = "rgba(154, 77, 226, 0.5)";
+              }}
             >
-              Close
+              <i className="mdi mdi-close mr-1"></i>
+              Cancel
             </Button>
             <Button
               style={{
-                borderRadius: "12px",
-                padding: "12px 28px",
-                fontWeight: "600",
-                background: "linear-gradient(135deg, #dc3545, #c82333)",
-                border: "none",
-                boxShadow: "0 6px 16px rgba(220, 53, 69, 0.25)",
-                transition: "all 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                fontSize: "1rem",
-                color: "white"
+                background: "rgba(220, 53, 69, 0.1)",
+                color: "#dc3545",
+                border: "1.5px solid rgba(220, 53, 69, 0.3)",
+                borderRadius: "8px",
+                padding: "8px 20px",
+                fontWeight: "500",
+                marginLeft: "10px",
+                transition: "all 0.3s ease"
               }}
               onClick={(e) => {
                 deleteCourse(deleteCourseSelected.course_id).then((res) => {
@@ -802,7 +715,16 @@ export default function Courses() {
                   setDeleteCourseSelected(null);
                 });
               }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = "#dc3545";
+                e.currentTarget.style.color = "white";
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = "rgba(220, 53, 69, 0.1)";
+                e.currentTarget.style.color = "#dc3545";
+              }}
             >
+              <i className="mdi mdi-delete-outline mr-1"></i>
               Delete
             </Button>
           </Modal.Footer>

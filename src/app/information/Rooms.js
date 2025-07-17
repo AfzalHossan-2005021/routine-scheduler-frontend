@@ -625,8 +625,7 @@ export default function Rooms() {
         contentClassName="border-0 shadow"
         backdrop="static"
       >
-        <Modal.Header 
-          closeButton
+        <Modal.Header
           style={{
             background: "linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.1) 100%)",
             borderBottom: "1px solid rgba(220, 53, 69, 0.2)",
@@ -647,13 +646,12 @@ export default function Rooms() {
             }}>
               <i className="mdi mdi-alert-circle-outline" style={{ fontSize: "18px", color: "#dc3545" }}></i>
             </div>
-            <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "#444" }}>Delete Room</Modal.Title>
+            <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "#dc3545" }}>Delete Room</Modal.Title>
           </div>
         </Modal.Header>
         <Modal.Body className="px-4 py-4">
-          <p style={{ fontSize: "15px", color: "#555" }}>
-            Are you sure you want to delete this room? This action cannot be undone.
-          </p>
+          <p>Are you sure you want to delete this room?</p>
+          <p>This action cannot be undone.</p>
         </Modal.Body>
         <Modal.Footer style={{ borderTop: "1px solid rgba(220, 53, 69, 0.2)", padding: "16px" }}>
           <Button
@@ -680,6 +678,7 @@ export default function Rooms() {
               e.currentTarget.style.borderColor = "rgba(154, 77, 226, 0.5)";
             }}
           >
+            <i className="mdi mdi-close mr-1"></i>
             Cancel
           </Button>
           <Button
