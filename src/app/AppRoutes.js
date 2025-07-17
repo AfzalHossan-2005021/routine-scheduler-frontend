@@ -18,7 +18,6 @@ const Restore = lazy(() => import("./database/Restore"));
 const Clear = lazy(() => import("./database/Clear"));
 
 const Teachers = lazy(() => import("./information/Teachers"));
-const Sections = lazy(() => import("./information/Sections"));
 const Rooms = lazy(() => import("./information/Rooms"));
 const Courses = lazy(() => import("./information/Courses"));
 
@@ -39,8 +38,6 @@ const TheorySchedule = lazy(() => import("./theory-schedule/TheorySchedule"));
 
 const SessionalDistribution = lazy(() => import("./sessional-distribution/showSessionalDistribution"));
 
-const online = lazy(() => import("./online/Online"));
-
 
 export default function AppRoutes() {
   const { user } = useContext(UserContext);
@@ -58,7 +55,6 @@ export default function AppRoutes() {
             <Route path="/database/restore" component={Restore} />
             <Route path="/database/clear" component={Clear} />
             <Route path="/information/teachers" component={Teachers} />
-            <Route path="/information/sections" component={Sections} />
             <Route path="/information/rooms" component={Rooms} />
             <Route path="/information/courses" component={Courses} />
             <Route path="/theory-assign" component={TheoryPreference} />
@@ -71,7 +67,6 @@ export default function AppRoutes() {
             <Route path="/theory-schedule" component={TheorySchedule} />
             <Route path="/sessional-distribution" component={SessionalDistribution} />
             <Route path="/account" component={Account} />
-            <Route path="/online" component={online} />
             <Redirect to="/dashboard" />
           </Switch>
         ) : (

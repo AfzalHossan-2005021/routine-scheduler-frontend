@@ -86,18 +86,6 @@ class Sidebar extends Component {
                     <i className="mdi mdi-database-export menu-icon"></i>
                   </Link>
                 </li>
-                {/* <li className={this.isPathActive('/database/restore') ? 'nav-item active' : 'nav-item'}>
-                  <Link className="nav-link" to="/database/restore">
-                    <span className="menu-title">Restore</span>
-                    <i className="mdi mdi-database-import menu-icon"></i>
-                  </Link>
-                </li> */}
-                {/* <li className={this.isPathActive('/database/clear') ? 'nav-item active' : 'nav-item'}>
-                  <Link className="nav-link" to="/database/clear">
-                    <span className="menu-title">Clear</span>
-                    <i className="mdi mdi-database-remove menu-icon"></i>
-                  </Link>
-                </li> */}
               </ul>
             </Collapse>
           </li>
@@ -115,22 +103,16 @@ class Sidebar extends Component {
                     <i className="mdi mdi-account-multiple menu-icon"></i>
                   </Link>
                 </li>
-                <li className={this.isPathActive('/information/sections') ? 'nav-item active' : 'nav-item'}>
-                  <Link className="nav-link" to="/information/sections">
-                    <span className="menu-title">Sections</span>
-                    <i className="mdi mdi-account-group menu-icon"></i>
+                <li className={this.isPathActive('/information/courses') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/information/courses">
+                    <span className="menu-title">Courses</span>
+                    <i className="mdi mdi-book-open-variant menu-icon"></i>
                   </Link>
                 </li>
                 <li className={this.isPathActive('/information/rooms') ? 'nav-item active' : 'nav-item'}>
                   <Link className="nav-link" to="/information/rooms">
                     <span className="menu-title">Rooms</span>
                     <i className="mdi mdi-home-modern menu-icon"></i>
-                  </Link>
-                </li>
-                <li className={this.isPathActive('/information/courses') ? 'nav-item active' : 'nav-item'}>
-                  <Link className="nav-link" to="/information/courses">
-                    <span className="menu-title">Courses</span>
-                    <i className="mdi mdi-book-open-variant menu-icon"></i>
                   </Link>
                 </li>
               </ul>
@@ -182,11 +164,6 @@ class Sidebar extends Component {
             <Link className="nav-link" to="/pdf">
               <span className="menu-title">Generate Routine</span>
               <i className="mdi mdi-file-pdf-box menu-icon"></i>
-            </Link>
-          </li>
-          <li className={this.isPathActive('/online') ? 'nav-item active' : 'nav-item'}>
-            <Link className="nav-link" to="/online">
-              <span className="menu-title">Online</span>
             </Link>
           </li>
         </ul>

@@ -4,21 +4,14 @@ import { useConfig } from '../shared/ConfigContext';
 import { MultiSet } from "mnemonist";
 
 /**
- * Custom component for displaying a table with divided cells for subsections
- * This component handles the display of sessional schedules with upper and lower sections
+ * Custom component for displaying a table with divided cells for multiple subsections
+ * This component handles the display of sessional schedules with any number of subsections
  */
 const SectionScheduleTable = React.memo(function SectionScheduleTable({
   filled = [],
-  selectedUpper = [],
-  selectedLower = [],
-  onChangeUpper = () => {},
-  onChangeLower = () => {},
+  subsections = [], // Array of subsection objects: { key, name, selected, onChange }
   labTimes = [],
-  upperSectionName,
-  lowerSectionName,
   allSessionalCourses = [],
-  upperSectionKey,
-  lowerSectionKey,
   labSchedulesBySection = {}
 }) {
   // Memoized values for configuration settings
@@ -66,11 +59,19 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
   
   // Convert arrays to MultiSets for efficient lookup
   const extendedBlockedSet = useMemo(() => MultiSet.from(extendedBlockedSlots), [extendedBlockedSlots]);
-  const selectedUpperSet = useMemo(() => MultiSet.from(selectedUpper), [selectedUpper]);
-  const selectedLowerSet = useMemo(() => MultiSet.from(selectedLower), [selectedLower]);
+  
+  // Create a map of selected sets for each subsection
+  const selectedSets = useMemo(() => {
+    const sets = {};
+    subsections.forEach(subsection => {
+      sets[subsection.key] = MultiSet.from(subsection.selected || []);
+    });
+    return sets;
+  }, [subsections]);
+  
   const labTimesSet = useMemo(() => 
     MultiSet.from(labTimes.length ? labTimes : days.map((day) => `${day} 2`)),
-    [labTimes]
+    [labTimes, days]
   );
   
   // Check if a slot is blocked (filled by any theory course or within 2 slots of a theory course)
@@ -93,40 +94,26 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
     return slot ? slot.course_id : null;
   }, [labSchedulesBySection]);
   
-  // Helper functions for specific sections that use the generic function
-  const upperSectionCourse = useCallback((slotKey) => 
-    getSectionCourse(upperSectionKey, slotKey), 
-    [getSectionCourse, upperSectionKey]
-  );
-  
-  const lowerSectionCourse = useCallback((slotKey) => 
-    getSectionCourse(lowerSectionKey, slotKey), 
-    [getSectionCourse, lowerSectionKey]
-  );
+  // Helper function to get section course for any subsection
+  const getSubsectionCourse = useCallback((subsectionKey, slotKey) => {
+    return getSectionCourse(subsectionKey, slotKey);
+  }, [getSectionCourse]);
   
   // Cell style calculation - memoized to prevent recalculation
-  const getUpperCellStyle = useCallback((day, time) => {
+  const getCellStyle = useCallback((subsectionKey, day, time) => {
     const key = `${day} ${time}`;
-    if (extendedBlockedSet.has(key)) return "filled-upper blocked-cell";
-    if (selectedUpperSet.has(key)) return "selected-upper";
+    if (extendedBlockedSet.has(key)) return "filled-section blocked-cell";
+    if (selectedSets[subsectionKey] && selectedSets[subsectionKey].has(key)) return "selected-section";
     return "";
-  }, [selectedUpperSet, extendedBlockedSet]);
-
-  const getLowerCellStyle = useCallback((day, time) => {
-    const key = `${day} ${time}`;
-    if (extendedBlockedSet.has(key)) return "filled-lower blocked-cell";
-    if (selectedLowerSet.has(key)) return "selected-lower";
-    return "";
-  }, [selectedLowerSet, extendedBlockedSet]);
+  }, [selectedSets, extendedBlockedSet]);
   
-  // Event handlers
-  const handleUpperCourseChange = useCallback((day, time, courseId) => {
-    onChangeUpper(day, time, courseId);
-  }, [onChangeUpper]);
-  
-  const handleLowerCourseChange = useCallback((day, time, courseId) => {
-    onChangeLower(day, time, courseId);
-  }, [onChangeLower]);
+  // Event handler for course changes
+  const handleCourseChange = useCallback((subsectionKey, day, time, courseId) => {
+    const subsection = subsections.find(s => s.key === subsectionKey);
+    if (subsection && subsection.onChange) {
+      subsection.onChange(day, time, courseId);
+    }
+  }, [subsections]);
 
   // Memoized table style for consistent rendering with improved appearance
   const tableStyle = useMemo(() => ({
@@ -148,10 +135,7 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
         .cell-container {
           display: flex;
           flex-direction: column;
-          min-height: 100px;
-          max-height: 140px;
-          height: auto;
-          width: 100%;
+          width: auto;
           overflow: hidden;
           padding: 0;
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -159,28 +143,7 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           border-radius: 6px;
           box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
         }
-        
-        /* Responsive adjustments for different screen sizes */
-        @media (max-width: 768px) {
-          .cell-container {
-            min-height: 80px;
-            max-height: 120px;
-          }
-        }
-        
-        @media (max-width: 576px) {
-          .cell-container {
-            min-height: 70px;
-            max-height: 100px;
-          }
-        }
-        
-        @media (min-width: 1200px) {
-          .cell-container {
-            min-height: 110px;
-            max-height: 150px;
-          }
-        }
+
         td:hover .cell-container {
           transform: scale(1.03);
           box-shadow: inset 0 0 0 1px rgba(194, 137, 248, 0.3);
@@ -272,30 +235,6 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           padding: 4px;
         }
         
-        /* Responsive table cell adjustments */
-        @media (max-width: 768px) {
-          .routine-table td {
-            min-width: 100px;
-            max-width: 150px;
-            padding: 2px;
-          }
-        }
-        
-        @media (max-width: 576px) {
-          .routine-table td {
-            min-width: 80px;
-            max-width: 120px;
-            padding: 1px;
-          }
-        }
-        
-        @media (min-width: 1200px) {
-          .routine-table td {
-            min-width: 140px;
-            max-width: 220px;
-            padding: 6px;
-          }
-        }
         .routine-table td:hover {
           background-color: #f0e9ff !important;
           transform: translateY(-3px) scale(1.02);
@@ -333,9 +272,8 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           opacity: 1;
           transform: scale(1);
         }
-        .upper-cell, .lower-cell {
+        .section-cell {
           flex: 1;
-          min-height: 50%;
           position: relative;
           font-size: 0.85rem;
           border: none;
@@ -346,21 +284,11 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           display: flex;
           align-items: center;
           justify-content: center;
+          border-bottom: 1px solid #dee2e6;
         }
         
-        /* Responsive adjustments for cell content */
-        @media (max-width: 768px) {
-          .upper-cell, .lower-cell {
-            font-size: 0.8rem;
-            padding: 0.2rem 0.3rem;
-          }
-        }
-        
-        @media (max-width: 576px) {
-          .upper-cell, .lower-cell {
-            font-size: 0.75rem;
-            padding: 0.15rem 0.25rem;
-          }
+        .section-cell:last-child {
+          border-bottom: none;
         }
         .dropdown-cell {
           appearance: none;
@@ -386,7 +314,7 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.25), 0 4px 8px rgba(194, 137, 248, 0.15);
           color: rgb(94, 37, 126);
           background-image: none;
-          background-color: #fcfaff;
+          background-color: rgba(246, 235, 255, 1);
           transform: translateY(-1px);
           letter-spacing: 0.01em;
         }
@@ -414,18 +342,19 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           font-size: 0.9rem;
           padding: 8px;
         }
-        .upper-cell {
-          border-bottom: 1px solid #dee2e6;
+        .section-cell:first-child {
           border-top-left-radius: 4px;
           border-top-right-radius: 4px;
         }
-        .lower-cell {
+        .section-cell:last-child {
           border-bottom-left-radius: 4px;
           border-bottom-right-radius: 4px;
         }
         .section-labels {
           display: flex;
-          justify-content: space-between;
+          flex-wrap: wrap;
+          justify-content: flex-start;
+          gap: 10px;
           margin-bottom: 15px;
         }
         .section-label {
@@ -459,16 +388,16 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
         .section-label:hover:after {
           transform: translateX(100%);
         }
-        .selected-upper, .selected-lower {
+        .selected-section {
           font-weight: bold;
           border-color: rgb(194, 137, 248) !important;
-          background-color: rgba(233, 245, 255, 0.8);
+          background-color: rgba(194, 137, 248, 0.3);
           box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.3);
           animation: selected-pulse 2s infinite ease-in-out;
           position: relative;
           z-index: 2;
         }
-        .selected-upper:hover, .selected-lower:hover {
+        .selected-section:hover {
           transform: translateY(-4px) scale(1.04);
           box-shadow: 0 10px 20px rgba(154, 77, 226, 0.25);
           z-index: 4;
@@ -484,14 +413,14 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
             box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.3);
           }
         }
-        .filled-upper, .filled-lower {
+        .filled-section {
           color: #495057;
           font-style: italic;
           background-color: #f7f5fa;
           position: relative;
           transition: all 0.3s ease;
         }
-        .filled-upper:hover, .filled-lower:hover {
+        .filled-section:hover {
           color: #333;
           background-color: #f0ebf7;
           box-shadow: 0 4px 12px rgba(154, 77, 226, 0.12);
@@ -652,21 +581,6 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           background: rgba(194, 137, 248, 0.18);
           border-radius: 4px;
         }
-        @media (max-width: 900px) {
-          .routine-table {
-            min-width: 600px;
-          }
-        }
-        @media (max-width: 600px) {
-          .routine-table {
-            min-width: 480px;
-          }
-        }
-        @media (max-width: 420px) {
-          .routine-table {
-            min-width: 340px;
-          }
-        }
       `}</style>
       <div className="table-scroll-x">
         <table className="table routine-table" style={tableStyle}>
@@ -703,52 +617,43 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
                           textAlign: "center"
                         }}
                       >
-                        <div className="cell-container">
+                        <div className="cell-container" style={{ 
+                          height: `${subsections.length * 50}px`,
+                          maxHeight: `${subsections.length * 60}px`
+                        }}>
                           {isSlotBlocked(day, time) && (
                             <div className="blocked-cell-content">
                               ⚠️ {`Slot filled by theory class`}
                             </div>
                           )}
-                          <Form.Select
-                            className={`upper-cell dropdown-cell ${getUpperCellStyle(day, time)}`}
-                            value={upperSectionCourse(slotKey) || ''}
-                            onChange={(e) => handleUpperCourseChange(day, time, e.target.value)}
-                            title={isSlotBlocked(day, time) 
-                              ? `Slot filled by theory class` 
-                              : `${upperSectionName} - ${day} ${time}`}
-                            style={{ color: (upperSectionCourse(slotKey) || "") === "" || isSlotBlocked(day, time) ? 'transparent' : undefined }}
-                            disabled={isSlotBlocked(day, time)}
-                          >
-                            <option value="">{isSlotBlocked(day, time) ? "" : "None"}</option>
-                            {filteredCourses.map(course => (
-                              <option 
-                                key={`upper-${day}-${time}-${course.course_id}`}
-                                value={course.course_id}
-                              >
-                                {course.course_id} - {course.name || 'Unknown'}
-                              </option>
-                            ))}
-                          </Form.Select>
-                          <Form.Select
-                            className={`lower-cell dropdown-cell ${getLowerCellStyle(day, time)}`}
-                            value={lowerSectionCourse(slotKey) || ''}
-                            onChange={(e) => handleLowerCourseChange(day, time, e.target.value)}
-                            title={isSlotBlocked(day, time) 
-                              ? `Slot filled by theory class` 
-                              : `${lowerSectionName} - ${day} ${time}`}
-                            style={{ color: (lowerSectionCourse(slotKey) || "") === "" || isSlotBlocked(day, time) ? 'transparent' : undefined }}
-                            disabled={isSlotBlocked(day, time)}
-                          >
-                            <option value="">{isSlotBlocked(day, time) ? "" : "None"}</option>
-                            {filteredCourses.map(course => (
-                              <option 
-                                key={`lower-${day}-${time}-${course.course_id}`}
-                                value={course.course_id}
-                              >
-                                {course.course_id} - {course.name || 'Unknown'} 
-                              </option>
-                            ))}
-                          </Form.Select>
+                          
+                          {subsections.map((subsection, index) => (
+                            <Form.Select
+                              key={`${subsection.key}-${day}-${time}`}
+                              className={`section-cell dropdown-cell section-${index} ${getCellStyle(subsection.key, day, time)}`}
+                              value={getSubsectionCourse(subsection.key, slotKey) || ''}
+                              onChange={(e) => handleCourseChange(subsection.key, day, time, e.target.value)}
+                              title={isSlotBlocked(day, time) 
+                                ? `Slot filled by theory class` 
+                                : `${subsection.name} - ${day} ${time}`}
+                              style={{ 
+                                color: (getSubsectionCourse(subsection.key, slotKey) || "") === "" || isSlotBlocked(day, time) ? 'transparent' : undefined,
+                                flex: 1,
+                                Height: `${50 * subsections.length}px`
+                              }}
+                              disabled={isSlotBlocked(day, time)}
+                            >
+                              <option value="">{isSlotBlocked(day, time) ? "" : "None"}</option>
+                              {filteredCourses.map(course => (
+                                <option 
+                                  key={`${subsection.key}-${day}-${time}-${course.course_id}`}
+                                  value={course.course_id}
+                                >
+                                  {course.course_id} - {course.name || 'Unknown'}
+                                </option>
+                              ))}
+                            </Form.Select>
+                          ))}
                         </div>
                       </td>
                     );
