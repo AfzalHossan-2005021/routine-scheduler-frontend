@@ -152,12 +152,14 @@ export default function SessionalSchedule() {
     if (!allSessionalSections || !allSessionalSections.length) {
       return {};
     }
-    
+
     const groups = {};
     allSessionalSections.forEach(section => {
-      // Extract main section letter and subsection number
+      // Extract main section letter and subsection identifier
+      // The first character is the main section (e.g., 'A' from 'A1')
       const mainSection = section.section.charAt(0);  // A, B, C
-      const subSection = section.section.charAt(1);   // 1, 2
+      // The rest of the characters form the subsection identifier (could be '1', '2', '3', etc.)
+      const subSection = section.section.substring(1); 
       
       if (!groups[mainSection]) {
         groups[mainSection] = { subsections: {} };
@@ -797,52 +799,25 @@ export default function SessionalSchedule() {
       ) : (
         // Render section tables
         Object.keys(groupedSections).map((mainSection) => {
-          // Extract the two subsections
+          // Get all subsections for this main section
           const subsections = groupedSections[mainSection].subsections;
           const subsectionKeys = Object.keys(subsections);
           
-          // If we don't have exactly 2 subsections, show alternative rendering
-          if (subsectionKeys.length !== 2) {
-            return (
-              <div className="row mb-4" key={`section-${mainSection}`}>
-                <div className="col-12">
-                  <div className="card" style={{
-                    borderRadius: "16px",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-                    border: "none",
-                    background: "white"
-                  }}>
-                    <div className="card-body" style={{ padding: "2rem" }}>
-                      <h4 className="card-title" style={{ 
-                        color: "rgb(194, 137, 248)", 
-                        borderBottom: "3px solid rgb(194, 137, 248)",
-                        paddingBottom: "16px",
-                        fontWeight: "600",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px"
-                      }}>
-                        No sections found
-                      </h4>
-                      <p>No sections were found for the selected department and level-term.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          }
-        
-          // Get the subsection objects
-          const upperSection = subsections[subsectionKeys[0]];
-          const lowerSection = subsections[subsectionKeys[1]];
-          
-          // Get the section keys for each subsection
-          const upperSectionKey = upperSection.sectionKey;
-          const lowerSectionKey = lowerSection.sectionKey;
-          
-          // Get selected slots for each subsection
-          const upperSelectedSlots = getSelectedCourseSlots(upperSectionKey);
-          const lowerSelectedSlots = getSelectedCourseSlots(lowerSectionKey);
+          // Create an array of subsection data to pass to the component
+          const subsectionsData = subsectionKeys.map(key => {
+            const section = subsections[key];
+            const sectionKey = section.sectionKey;
+            
+            // Get selected slots for this subsection
+            const selectedSlots = getSelectedCourseSlots(sectionKey);
+            
+            return {
+              key: sectionKey,
+              name: `Section ${section.section}`,
+              selected: selectedSlots,
+              onChange: (day, time, courseId) => handleSlotChange(day, time, courseId, sectionKey)
+            };
+          });
           
           return (
             <div className="row mb-4" key={`section-${mainSection}`}>
@@ -877,23 +852,16 @@ export default function SessionalSchedule() {
                           marginRight: "8px",
                           boxShadow: "0 2px 4px rgba(154, 77, 226, 0.3)"
                         }}>{mainSection}</span>
-                        Section {mainSection}
+                        Section {mainSection} ({subsectionsData.length} Subsections)
                       </h4>
                     </div>
                     
                     {/* Schedule table with divided cells */}
                     <SectionScheduleTable
-                      filled={theorySchedules[mainSection]}
-                      selectedUpper={upperSelectedSlots}
-                      selectedLower={lowerSelectedSlots}
-                      onChangeUpper={(day, time, courseId) => handleSlotChange(day, time, courseId, upperSectionKey)}
-                      onChangeLower={(day, time, courseId) => handleSlotChange(day, time, courseId, lowerSectionKey)}
+                      filled={hasTheorySchedules(theorySchedules, mainSection) ? theorySchedules[mainSection] : []}
+                      subsections={subsectionsData}
                       labTimes={labTimes}
-                      upperSectionName={`Section ${upperSection.section}`}
-                      lowerSectionName={`Section ${lowerSection.section}`}
                       allSessionalCourses={allSessionalCourses}
-                      upperSectionKey={upperSectionKey}
-                      lowerSectionKey={lowerSectionKey}
                       labSchedulesBySection={labSchedulesBySection}
                     />
                   </div>
@@ -980,6 +948,13 @@ export default function SessionalSchedule() {
 }
 
 // Utility functions
+
+// Helper function to check if there are theory schedules for a main section
+const hasTheorySchedules = (theorySchedules, mainSection) => {
+  return theorySchedules[mainSection] && 
+         theorySchedules[mainSection].mainSection && 
+         theorySchedules[mainSection].mainSection.length > 0;
+};
 
 // Section key validation helper
 const validateSectionKey = (sectionKey) => {
