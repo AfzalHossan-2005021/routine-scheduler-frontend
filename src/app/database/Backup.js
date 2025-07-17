@@ -26,7 +26,7 @@ const Backup = () => {
             const data = await getVersions();
             setVersions(data);
         } catch (err) {
-            // Error is handled by the global axios interceptor in App.js
+            toast.error('Failed to fetch backup versions.');
         } finally {
             setLoading(false);
         }
@@ -50,36 +50,32 @@ const Backup = () => {
             setNewVersionName('');
             fetchVersions();
         } catch (err) {
-            // Error handled by interceptor
+            toast.error('Failed to save backup version.');
         } finally {
             setActionLoading(null);
         }
     };
 
     const handleLoad = async (filename) => {
-        if (!window.confirm(`Are you sure you want to load "${filename}"? This will overwrite the current routine.`)) return;
-
         setActionLoading(filename);
         try {
             const data = await loadVersion(filename);
             toast.success(`${data.message} Please refresh to see changes.`);
         } catch (err) {
-            // Error handled by interceptor
+            toast.error('Failed to load backup version.');
         } finally {
             setActionLoading(null);
         }
     };
 
     const handleDelete = async (filename) => {
-        if (!window.confirm(`Are you sure you want to permanently delete "${filename}"?`)) return;
-
         setActionLoading(filename);
         try {
             const data = await deleteVersion(filename);
             toast.success(data.message);
             fetchVersions();
         } catch (err) {
-            // Error handled by interceptor
+            toast.error('Failed to delete backup version.');
         } finally {
             setActionLoading(null);
         }
