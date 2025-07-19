@@ -489,6 +489,20 @@ export default function ShowSessionalDistribution() {
         return;
       }
 
+      // First check if this section already has a course in this time slot
+      const existingCourseInSlot = sessionalSchedules.find(schedule => 
+        schedule.day === day && 
+        schedule.time === time && 
+        schedule.batch === course.batch &&
+        schedule.section === course.section &&
+        schedule.department === course.department
+      );
+
+      if (existingCourseInSlot) {
+        toast.error(`Section ${course.section} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
+        return;
+      }
+
       // Check for teacher schedule conflicts
       try {
         const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
@@ -542,7 +556,7 @@ export default function ShowSessionalDistribution() {
       setAllSessionalSchedules(Array.isArray(data) ? data : []);
       
       // Close the modal
-      setShowLabCoursesModal(false);
+      //setShowLabCoursesModal(false);
       
       toast.success('Course added successfully');
     } catch (error) {
