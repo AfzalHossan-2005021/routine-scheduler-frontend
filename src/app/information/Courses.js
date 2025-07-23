@@ -665,7 +665,7 @@ export default function Courses() {
             <p>Are you sure you want to delete course: {deleteCourseSelected.course_id}?</p>
             <p>This action cannot be undone.</p>
           </Modal.Body>
-          <Modal.Footer>
+          <Modal.Footer style={{ borderTop: "1px solid rgba(220, 53, 69, 0.2)", padding: "16px" }}>
             <Button
               style={{
                 background: "rgba(154, 77, 226, 0.15)",

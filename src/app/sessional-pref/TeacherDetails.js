@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useConfig } from '../shared/ConfigContext';
+import { Button, Modal } from 'react-bootstrap';
 
 // Database and API imports
 import { getTeacher } from '../api/db-crud';
@@ -187,6 +188,8 @@ export default function TeacherDetails(props) {
   const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [submittingSessional, setSubmittingSessional] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Add refresh key to trigger re-renders
+
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
 
 
   useEffect(() => {
@@ -795,15 +798,7 @@ export default function TeacherDetails(props) {
 
                                     // For already assigned courses, show options
                                     if (isAlreadyScheduled) {
-                                      // Create a custom dialog for already assigned courses
-                                      // const shouldUnassign = window.confirm(
-                                      //   `You are already assigned to ${courseInfo.course_id} (Section ${courseInfo.section}).\n\n` +
-                                      //   `Would you like to unassign yourself from this course?`
-                                      // );
-                                      
-                                      // if (shouldUnassign) {
-                                      // }
-                                      handleUnassignCourse(courseInfo);
+                                      setSelectedAssignment(courseInfo);
                                       return;
                                     }
 
@@ -1077,22 +1072,6 @@ export default function TeacherDetails(props) {
       // Dismiss loading toast
       toast.dismiss(loadingToast);
 
-      // Show success/failure messages
-      if (successCount > 0) {
-        toast.success(
-          `Successfully assigned ${successCount} course${successCount !== 1 ? 's' : ''}`,
-          { duration: 3000 }
-        );
-
-        // Notify user if all assignments were successful
-        if (failCount === 0) {
-          toast.success(
-            "All assignments were saved successfully!",
-            { duration: 2000 }
-          );
-        }
-      }
-
       if (failCount > 0) {
         toast.error(
           <div>
@@ -1113,10 +1092,10 @@ export default function TeacherDetails(props) {
       // If at least one assignment succeeded, update the teacher cache and refresh data
       if (successCount > 0) {
         // Show a notification about updating the view
-        toast("Assignments saved successfully! Updating teacher assignments...", {
-          icon: '✅',
-          duration: 2000
-        });
+        toast.success(
+          `Successfully assigned ${successCount} course${successCount !== 1 ? 's' : ''}`,
+          { duration: 3000 }
+        );
 
         // Update the course teachers cache to include the current teacher for successfully assigned courses
         const updatedCache = { ...courseTeachersCache };
@@ -1176,11 +1155,6 @@ export default function TeacherDetails(props) {
    */
   const handleUnassignCourse = async (courseInfo) => {
     try {
-      // Show confirmation dialog
-      if (!window.confirm(`Are you sure you want to unassign yourself from ${courseInfo.course_id} (Section ${courseInfo.section})?`)) {
-        return;
-      }
-
       // Show loading state
       const loadingToast = toast.loading(`Unassigning from ${courseInfo.course_id}...`);
       
@@ -1525,7 +1499,7 @@ export default function TeacherDetails(props) {
                                             >
                                               <div className="sessional-assignment">
                                                 <button
-                                                  onClick={() => handleUnassignCourse(sessionalAssignment)}
+                                                  onClick={() => setSelectedAssignment(sessionalAssignment)}
                                                   className="assignment-unassign-btn"
                                                   title="Unassign from this course"
                                                 >
@@ -1840,6 +1814,105 @@ export default function TeacherDetails(props) {
             </div>
           </div>
         </div>
+      )}
+      {selectedAssignment && (
+        <Modal
+          show={selectedAssignment !== null}
+          onHide={() => setSelectedAssignment(null)}
+          size="md"
+          centered
+          contentClassName="border-0 shadow"
+          backdrop="static"
+        >
+          <Modal.Header
+            style={{
+              background: "linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.1) 100%)",
+              borderBottom: "1px solid rgba(220, 53, 69, 0.2)",
+              paddingTop: "16px",
+              paddingBottom: "16px"
+            }}
+          >
+            <div className="d-flex align-items-center">
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                backgroundColor: "rgba(220, 53, 69, 0.15)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: "10px"
+              }}>
+                <i className="mdi mdi-alert-circle-outline" style={{ fontSize: "18px", color: "#dc3545" }}></i>
+              </div>
+              <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "#dc3545" }}>Unassign Course</Modal.Title>
+            </div>
+          </Modal.Header>
+          <Modal.Body className="px-4">
+            <p style={{ fontSize: "16px", color: "#495057" }}>
+              Are you sure you want to unassign the assignment: <strong>{selectedAssignment.course_id}</strong>?
+            </p>
+            <p style={{ fontSize: "14px", color: "#6c757d" }}>
+              This action cannot be undone. Assignment related to this course will be removed.
+            </p>
+          </Modal.Body>
+          <Modal.Footer style={{ borderTop: "1px solid rgba(220, 53, 69, 0.2)", padding: "16px" }}>
+            <Button
+              style={{
+                background: "rgba(154, 77, 226, 0.15)",
+                color: "rgb(154, 77, 226)",
+                border: "1.5px solid rgba(154, 77, 226, 0.5)",
+                borderRadius: "8px",
+                padding: "8px 20px",
+                fontWeight: "500",
+                fontSize: "1rem",
+                marginRight: "10px",
+                transition: "all 0.3s ease"
+              }}
+              onClick={() => setSelectedAssignment(null)}
+              onMouseOver={e => {
+                e.currentTarget.style.background = "rgb(154, 77, 226)";
+                e.currentTarget.style.color = "white";
+                e.currentTarget.style.borderColor = "rgb(154, 77, 226)";
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = "rgba(154, 77, 226, 0.15)";
+                e.currentTarget.style.color = "rgb(154, 77, 226)";
+                e.currentTarget.style.borderColor = "rgba(154, 77, 226, 0.5)";
+              }}
+            >
+              <i className="mdi mdi-close mr-1"></i>
+              Cancel
+            </Button>
+            <Button
+              style={{
+                background: "rgba(220, 53, 69, 0.1)",
+                color: "#dc3545",
+                border: "1.5px solid rgba(220, 53, 69, 0.3)",
+                borderRadius: "8px",
+                padding: "8px 20px",
+                fontWeight: "500",
+                marginLeft: "10px",
+                transition: "all 0.3s ease"
+              }}
+              onClick={(e) => {
+                handleUnassignCourse(selectedAssignment)
+                setSelectedAssignment(null);
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = "#dc3545";
+                e.currentTarget.style.color = "white";
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = "rgba(220, 53, 69, 0.1)";
+                e.currentTarget.style.color = "#dc3545";
+              }}
+            >
+              <i className="mdi mdi-delete-outline mr-1"></i>
+              Unassign
+            </Button>
+          </Modal.Footer>
+        </Modal>
       )}
     </div>
   );
