@@ -556,7 +556,7 @@ export default function ShowSessionalDistribution() {
       setAllSessionalSchedules(Array.isArray(data) ? data : []);
       
       // Close the modal
-      //setShowLabCoursesModal(false);
+      // setShowLabCoursesModal(false);
       
       toast.success('Course added successfully');
     } catch (error) {
