@@ -131,10 +131,27 @@ class Sidebar extends Component {
             </Link>
           </li>
           <li className={this.isPathActive('/room-assign') ? 'nav-item active' : 'nav-item'}>
-            <Link className="nav-link" to="/room-assign">
+            <div className={this.state.roomAssignMenuOpen ? 'nav-link menu-expanded' : 'nav-link'} onClick={() => this.toggleMenuState('roomAssignMenuOpen')} data-toggle="collapse">
               <span className="menu-title">Lab Room Assign</span>
+              <i className={this.state.roomAssignMenuOpen ? 'mdi mdi-chevron-down menu-icon' : 'mdi mdi-chevron-right menu-icon'}></i>
               <i className="mdi mdi-lightbulb-variant-outline menu-icon"></i>
-            </Link>
+            </div>
+            <Collapse in={this.state.roomAssignMenuOpen}>
+              <ul className="nav flex-column sub-menu">
+                <li className={this.isPathActive('/room-assign/departmental') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/room-assign/departmental">
+                    <span className="menu-title">Departmental</span>
+                    <i className="mdi mdi-account-multiple menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/room-assign/non-departmental') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/room-assign/non-departmental">
+                    <span className="menu-title">Non-Departmental</span>
+                    <i className="mdi mdi-account-multiple-outline menu-icon"></i>
+                  </Link>
+                </li>
+              </ul>
+            </Collapse>
           </li>
           <li className={this.props.location.pathname === '/theory-schedule' ? 'nav-item active' : 'nav-item'}>
             <Link className="nav-link" to="/theory-schedule">

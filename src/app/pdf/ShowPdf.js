@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Container, Row, Col, Form, FormGroup, Button } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Form } from "react-bootstrap";
 import {
   getAllInitial,
   getPdfForStudent,
@@ -260,7 +260,7 @@ export default function ShowPdf() {
               // Auto-load the consolidated PDF after regeneration
               displayPdf();
             } else {
-              toast.warning(`No data found for ${selectedType} schedules`);
+              toast.error(`No data found for ${selectedType} schedules`);
             }
           } else {
             toast.success(`PDF generated successfully for ${selectedType} ${selectedValue}`);

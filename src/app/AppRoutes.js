@@ -25,7 +25,8 @@ const TheoryPreference = lazy(() => import("./theory-pref/TheoryPreference"));
 const TheorySelect = lazy(() => import("./forms/TheorySelect"));
 const SessionalSelect = lazy(() => import("./forms/SessionalSelect"));
 
-const LabRoomAssign = lazy(() => import("./lab-room-assign/LabRoomAssign"));
+const DepartmentalLabRoomAssign = lazy(() => import("./lab-room-assign/Departmental"));
+const NonDepartmentalLabRoomAssign = lazy(() => import("./lab-room-assign/NonDepartmental"));
 const TheoryRoomAssign = lazy(() => import("./theory-room-assign/TheoryRoomAssign"));
 const SessionalSchedule = lazy(() => import("./sessional-schedule/SessionalSchedule"));
 
@@ -58,7 +59,8 @@ export default function AppRoutes() {
             <Route path="/information/rooms" component={Rooms} />
             <Route path="/information/courses" component={Courses} />
             <Route path="/theory-assign" component={TheoryPreference} />
-            <Route path="/room-assign" component={ LabRoomAssign } />
+            <Route path="/room-assign/departmental" component={ DepartmentalLabRoomAssign } />
+            <Route path="/room-assign/non-departmental" component={ NonDepartmentalLabRoomAssign } />
             <Route path="/theory-room-assign" component={ TheoryRoomAssign } />
             <Route path="/lab-assign" component={ TeachersList } />
             <Route path="/lab-assign/:teacherId" component={TeacherDetails} />

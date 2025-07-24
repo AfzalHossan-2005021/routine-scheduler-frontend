@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { finalize, getStatus, setTheoryAssignStatus, initiate, setTeacherAssignment, resendTheoryPrefMail, saveReorderedTeacherPreference } from "../api/theory-assign";
+import { finalize, getStatus, setTheoryAssignStatus, initiate, setTeacherAssignment, resendTheoryPrefMail, saveReorderedTeacherPreference, getAllTheoryTeacherAssignment, addTheoryTeacherAssignment, deleteTheoryTeacherAssignment } from "../api/theory-assign";
 import { toast } from "react-hot-toast";
 import { getTeachers } from "../api/db-crud";
-import { Alert, Button, Modal } from "react-bootstrap";
+import { Alert, Button, Modal, Dropdown } from "react-bootstrap";
 import { Form, FormGroup } from "react-bootstrap";
 import CardWithButton from "../shared/CardWithButton";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import Icon from '@mdi/react';
-import { mdiContentSave, mdiClose, mdiCheckCircle, mdiReload } from '@mdi/js';
+import { mdiContentSave, mdiClose, mdiCheckCircle, mdiReload, mdiDeleteOutline, mdiPlus } from '@mdi/js';
 
 export default function TheoryPreference() {
   const [status, setStatus] = useState({
@@ -23,6 +23,7 @@ export default function TheoryPreference() {
   const [selectedTeacherRow, setSelectedTeacherRow] = useState(null);
   const [allCourses] = useState([]);
   const [showAssignConfirm, setShowAssignConfirm] = useState(false);
+  const [allTheoryTeacherAssignment, setAllTheoryTeacherAssignment] = useState([]);
 
   useEffect(() => {
     getStatus().then((res) => {
@@ -41,6 +42,9 @@ export default function TheoryPreference() {
       // Sort teachers by seniority rank (lower rank means more senior)
       const sortedTeachers = [...res].sort((a, b) => a.seniority_rank - b.seniority_rank);
       setAllTeachers(sortedTeachers);
+    });
+    getAllTheoryTeacherAssignment().then((res) => {
+      setAllTheoryTeacherAssignment(res);
     });
   }, []);
 
@@ -1145,8 +1149,13 @@ export default function TheoryPreference() {
                                                       ]
                                                   }
                                                   : c
-                                              ),
+                                              )
                                             }));
+
+                                            // Refresh the theory teacher assignment list
+                                            getAllTheoryTeacherAssignment().then((res) => {
+                                              setAllTheoryTeacherAssignment(res);
+                                            });
                                             // Show a toast notification for successful assignment
                                             toast.success(`Assigned ${newName} (${newInitial}) to ${course.course_id}`)
                                           });
@@ -1169,6 +1178,232 @@ export default function TheoryPreference() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 grid-margin">
+            <div className="card" style={{
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+              border: "none",
+              transition: "all 0.3s ease",
+              background: "white"
+            }}>
+              <div className="card-body" style={{ padding: "2rem" }}>
+                <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 className="card-title" style={{
+                    color: "rgb(174, 117, 228)",
+                    marginBottom: 0,
+                    fontWeight: "700",
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: "1.5rem",
+                    letterSpacing: "0.3px"
+                  }}>
+                    <span style={{ marginRight: "12px" }}>
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="rgb(194, 137, 248)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    Sectionwise Assigned Teachers
+                  </h4>
+                </div>
+                <div className="table-responsive">
+                  <table className="table" style={{ margin: 0 }}>
+                    <thead>
+                      <tr style={{
+                        backgroundColor: "rgba(174, 117, 228, 0.08)",
+                        borderBottom: "2px solid rgba(174, 117, 228, 0.1)"
+                      }}>
+                        <th style={{
+                          padding: "18px 20px",
+                          color: "rgb(174, 117, 228)",
+                          fontWeight: "700",
+                          fontSize: "0.95rem",
+                          border: "none"
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                            <path d="M3 3H21C21.5523 3 22 3.44772 22 4V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V4C2 3.44772 2.44772 3 3 3Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M16 2V6" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M8 2V6" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M2 10H22" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Course ID
+                        </th>
+                        <th style={{
+                          padding: "18px 20px",
+                          color: "rgb(174, 117, 228)",
+                          fontWeight: "700",
+                          fontSize: "0.95rem",
+                          border: "none"
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                            <path d="M2 3H8C9.06087 3 10.0783 3.42143 10.8284 4.17157C11.5786 4.92172 12 5.93913 12 7V21C12 20.2044 11.6839 19.4413 11.1213 18.8787C10.5587 18.3161 9.79565 18 9 18H2V3Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M22 3H16C14.9391 3 13.9217 3.42143 13.1716 4.17157C12.4214 4.92172 12 5.93913 12 7V21C12 20.2044 12.3161 19.4413 12.8787 18.8787C13.4413 18.3161 14.2044 18 15 18H22V3Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Sections
+                        </th>
+                        <th style={{
+                          padding: "18px 20px",
+                          color: "rgb(174, 117, 228)",
+                          fontWeight: "700",
+                          fontSize: "0.95rem",
+                          border: "none"
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: "8px", verticalAlign: "middle" }}>
+                            <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="rgb(174, 117, 228)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Teachers
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allTheoryTeacherAssignment.map((course) => (
+                        course.sections.map((section, index) => (
+                          <tr key={`${course.course_id}-${section.section}`} style={{
+                            borderBottom: "1px solid #f0f0f0",
+                            transition: "all 0.2s ease",
+                            backgroundColor: "white"
+                          }}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = "rgba(194, 137, 248, 0.05)"}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = "white"}>
+                            {index === 0 && (
+                              <td rowSpan={course.sections.length} style={{ verticalAlign: "middle", fontWeight: "bold" }}>
+                                {course.course_id}
+                              </td>
+                            )}
+                            <td style={{ borderLeft: "1px solid #f0f0f0" }}>{section.section}</td>
+                            <td style={{ position: "relative" }}>
+                              <div className="d-flex flex-wrap align-items-center">
+                                {section.teachers.map((teacher) => (
+                                  <div key={`${course.course_id}-${section.section}-${teacher}`}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      background: "rgba(174, 117, 228, 0.1)",
+                                      borderRadius: "4px",
+                                      padding: "4px 8px",
+                                      margin: "2px",
+                                      border: "1px solid rgba(174, 117, 228, 0.2)"
+                                    }}
+                                  >
+                                    <span style={{ color: "#333", fontWeight: "500", marginRight: "5px" }}>{teacher}</span>
+                                    <button
+                                      onClick={() => {
+                                        const loadingToast = toast.loading("Removing teacher...");
+
+                                        deleteTheoryTeacherAssignment(course.course_id, section.section, teacher)
+                                          .then(() => {
+                                            getAllTheoryTeacherAssignment().then(setAllTheoryTeacherAssignment);
+                                            toast.dismiss(loadingToast);
+                                            toast.success(`Removed ${teacher} from ${course.course_id} section ${section.section}`);
+                                          })
+                                          .catch(error => {
+                                            toast.dismiss(loadingToast);
+                                            toast.error("Failed to remove teacher");
+                                            console.error("Error removing teacher:", error);
+                                          });
+                                      }}
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        padding: "2px",
+                                        color: "#dc3545"
+                                      }}
+                                    >
+                                      <Icon path={mdiDeleteOutline} size={0.7} />
+                                    </button>
+                                  </div>
+                                ))}
+
+                                <Dropdown style={{ marginLeft: "5px" }}>
+                                  <Dropdown.Toggle
+                                    variant="outline-primary"
+                                    id={`dropdown-${course.course_id}-${section.section}`}
+                                    size="sm"
+                                    style={{
+                                      padding: "6px 12px",
+                                      borderRadius: "4px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      fontSize: "0.95rem"
+                                    }}
+                                  >
+                                    <Icon path={mdiPlus} size={0.7} />
+                                  </Dropdown.Toggle>
+
+                                  <Dropdown.Menu style={{
+                                    padding: "8px",
+                                    borderRadius: "8px",
+                                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.1)",
+                                    border: "1px solid rgba(174, 117, 228, 0.2)"
+                                  }}>
+                                    {status.assignment
+                                      .filter((a => a.course_id === course.course_id))
+                                      .map((assignment) => (
+                                        assignment.teachers && assignment.teachers.length > 0 && assignment.teachers
+                                          .filter(teacher => !section.teachers.includes(teacher.initial))
+                                          .map((teacher) => (
+                                            <Dropdown.Item
+                                              key={teacher.initial}
+                                              onClick={() => {
+                                                const loadingToast = toast.loading("Adding teacher...");
+
+                                                addTheoryTeacherAssignment(course.course_id, section.section, teacher.initial)
+                                                  .then(() => {
+                                                    getAllTheoryTeacherAssignment().then(setAllTheoryTeacherAssignment);
+                                                    toast.dismiss(loadingToast);
+                                                    toast.success(`Added ${teacher.initial} to ${course.course_id} section ${section.section}`);
+                                                  })
+                                                  .catch(error => {
+                                                    toast.dismiss(loadingToast);
+                                                    toast.error("Failed to add teacher");
+                                                    console.error("Error adding teacher:", error);
+                                                  });
+                                              }}
+                                              style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                padding: "8px 12px",
+                                                borderRadius: "4px",
+                                                transition: "background 0.2s ease"
+                                              }}
+                                            >
+                                              <span style={{ flex: 1, color: "#333", fontWeight: "500" }}>
+                                                {teacher.initial} - {teacher.name}
+                                              </span>
+                                            </Dropdown.Item>
+                                          ))
+                                      ))}
+                                    {allTeachers.filter(teacher => !section.teachers.includes(teacher.initial)).length === 0 && (
+                                      <Dropdown.Item disabled style={{ color: "#999" }}>
+                                        No available teachers
+                                      </Dropdown.Item>
+                                    )}
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ))}
+                      {allTheoryTeacherAssignment.length === 0 && (
+                        <tr>
+                          <td colSpan="3" className="text-center py-4">
+                            No assignments found
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

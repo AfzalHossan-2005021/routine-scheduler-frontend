@@ -12,3 +12,9 @@ export const getAllSectionRoomAllocation = () =>
 
 export const updateSectionRoomAllocation = (allocation) =>
   axios.put(api_url(`/theory_room_assignment/section/update`), allocation).then((res) => res.data);
+
+export const getAllNonDepartmentalLabRoomAssignment = () =>
+  axios.get(api_url("/theory_room_assignment/non-departmental/get/all")).then((res) => res.data);
+
+export const updateNonDepartmentalLabRoomAssignment = (assignment) =>
+  axios.put(api_url(`/theory_room_assignment/non-departmental/update`), assignment).then((res) => res.data);

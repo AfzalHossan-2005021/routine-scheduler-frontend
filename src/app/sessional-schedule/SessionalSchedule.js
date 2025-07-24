@@ -383,7 +383,7 @@ export default function SessionalSchedule() {
       return;
     }
     if (getAllSectionKeys.length === 0) {
-      toast.warning("No sections found to save schedules for");
+      toast.error("No sections found to save schedules for");
       return;
     }
     setIsLoading(true);
@@ -444,7 +444,7 @@ export default function SessionalSchedule() {
         if (failures.length === 0) {
           toast.success("All schedules saved successfully");
         } else if (failures.length < totalCount) {
-          toast.warning(`Saved ${successCount} out of ${totalCount} schedules`);
+          toast.error(`Saved ${successCount} out of ${totalCount} schedules`);
         } else {
           toast.error("Failed to save any schedules");
         }

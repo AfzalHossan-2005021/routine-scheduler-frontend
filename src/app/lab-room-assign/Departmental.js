@@ -456,7 +456,7 @@ export default function LabRoomAssign() {
           }}>
             <Icon path={mdiLockCheck} size={1} color="white" />
           </div>
-          Lab Room Assignment
+          Departmental Lab Room Assignment
         </h3>
       </div>
       {!alreadySaved && showAssignmentCard && (
@@ -1100,7 +1100,6 @@ export default function LabRoomAssign() {
                 </ul>
               </div>
               <div className="card-body" style={{ ...cardBodyStyle, padding: "24px" }}>
-                <div className="tab-content">
                   {/* Statistics Tab */}
                   {!viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment && (
                     <div className="tab-pane fade show active">
@@ -1580,7 +1579,6 @@ export default function LabRoomAssign() {
                     </Button>
                   </div>
                 )}
-              </div>
             </div>
           </div>
         </div>

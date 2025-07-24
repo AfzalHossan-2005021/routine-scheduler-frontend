@@ -407,7 +407,7 @@ export default function TheorySchedule(props) {
         if (failures.length === 0) {
           toast.success("All schedules saved successfully");
         } else if (failures.length < totalCount) {
-          toast.warning(`Saved ${successCount} out of ${totalCount} schedules`);
+          toast.error(`Saved ${successCount} out of ${totalCount} schedules`);
         } else {
           toast.error("Failed to save any schedules");
         }

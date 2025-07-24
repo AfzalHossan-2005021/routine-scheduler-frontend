@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Form, Button, Table, Row, Col, Modal } from 'react-bootstrap';
-import { getDefaultAllSectionCount, setDefaultSectionCount, deleteDefaultSectionCount, getBatches, addBatch, deleteBatch, getAllSectionCount, setSectionCount } from '../api/academic-config';
+import { getDefaultAllSectionCount, setDefaultSectionCount, deleteDefaultSectionCount, getBatches, addBatch, deleteBatch, getAllSectionCount, setSectionCount, getHostedDepartments, addHostedDepartment, deleteHostedDepartment } from '../api/academic-config';
 import { getConfiguration, setConfiguration } from '../api/config';
 import { toast } from 'react-hot-toast';
 import {
@@ -10,7 +10,6 @@ import {
     mdiDelete,
     mdiPencil,
     mdiDomain,
-    mdiRefresh,
     mdiSchool,
     mdiViewGrid,
     mdiViewGridPlus,
@@ -19,6 +18,9 @@ import {
 import Icon from '@mdi/react';
 
 const AcademicConfig = () => {
+    const [hostedDepartments, setHostedDepartments] = useState([]);
+    const [showHostedDepartmentModal, setShowHostedDepartmentModal] = useState(false);
+    const [currentHostedDepartment, setCurrentHostedDepartment] = useState('');
     const [departments, setDepartments] = useState([]);
     const [batches, setBatches] = useState([]);
     const [sectionCounts, setSectionCounts] = useState([]);
@@ -81,6 +83,21 @@ const AcademicConfig = () => {
         return true;
     };
 
+    // Load hosted departments
+    const loadHostedDepartments = async () => {
+        try {
+            setLoading(true);
+            const data = await getHostedDepartments();
+            setHostedDepartments(data);
+        } catch (err) {
+            console.error('Error loading hosted departments:', err);
+            toast.error('Failed to load hosted departments');
+            setHostedDepartments([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Load departments with section counts
     const loadDepartments = async () => {
         try {
@@ -141,6 +158,37 @@ const AcademicConfig = () => {
         } catch (err) {
             console.error('Error loading level-term configuration:', err);
             toast.error('Failed to load level-term configuration');
+        }
+    };
+
+    const handleAddHostedDepartment = (department) => {
+        if (!department || department.trim() === '') {
+            toast.error('Hosted Department is required');
+            return;
+        }
+
+        addHostedDepartment({ department })
+            .then(() => {
+                toast.success('Hosted Department added successfully');
+                loadHostedDepartments();
+            })
+            .catch((err) => {
+                console.error('Error adding Hosted Department:', err);
+                toast.error('Failed to add Hosted Department');
+            });
+    };
+
+    const handleDeleteHostedDepartment = (department) => {
+        if(window.confirm(`Are you sure you want to delete hosted department ${department}?`)) {
+            deleteHostedDepartment({ department })
+                .then(() => {
+                    toast.success('Hosted Department deleted successfully');
+                    loadHostedDepartments();
+                })
+                .catch((err) => {
+                    console.error('Error deleting Hosted Department:', err);
+                    toast.error('Failed to delete Hosted Department');
+                });
         }
     };
 
@@ -329,6 +377,7 @@ const AcademicConfig = () => {
             try {
                 setLoading(true);
                 await Promise.all([
+                    loadHostedDepartments(),
                     loadDepartments(),
                     loadBatches(),
                     loadSectionCounts(),
@@ -519,6 +568,184 @@ const AcademicConfig = () => {
                 </Card.Body>
             </Card>
 
+            {/* Hosted Departments Card */}
+            <Card style={{
+                borderRadius: "12px",
+                boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
+                border: "none",
+                overflow: "hidden",
+                marginBottom: "2rem"
+            }}>
+                <Card.Body style={{ padding: "2rem" }}>
+                    <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h4 className="card-title" style={{
+                            color: "rgb(174, 117, 228)",
+                            marginBottom: 0,
+                            fontWeight: "700",
+                            display: "flex",
+                            alignItems: "center",
+                            fontSize: "1.5rem",
+                            letterSpacing: "0.3px"
+                        }}>
+                            <span style={{ marginRight: "12px" }}>
+                                <Icon path={mdiViewGrid} size={1.2} color="rgb(194, 137, 248)" />
+                            </span>
+                            Hosted Departments
+                        </h4>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                type="button"
+                                style={{
+                                    borderRadius: "6px",
+                                    padding: "7px 14px",
+                                    fontWeight: "500",
+                                    background: "rgba(154, 77, 226, 0.15)",
+                                    border: "1px solid rgba(154, 77, 226, 0.5)",
+                                    color: "rgb(154, 77, 226)",
+                                    transition: "all 0.3s ease",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    fontSize: "0.95rem",
+                                    cursor: "pointer",
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    minWidth: "auto",
+                                    justifyContent: "center"
+                                }}
+                                onClick={() => setShowHostedDepartmentModal(true)}
+                                onMouseEnter={e => {
+                                    e.target.style.background = "rgb(154, 77, 226)";
+                                    e.target.style.color = "white";
+                                }}
+                                onMouseLeave={e => {
+                                    e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                                    e.target.style.color = "rgb(154, 77, 226)";
+                                }}
+                            >
+                                <Icon path={mdiPlus} size={1} />
+                                Add New Hosted Department
+                            </button>
+                        </div>
+                    </div>
+                    <div className="batch-list" style={{ padding: "0 1.25rem" }}>
+                        {loading ? (
+                            <div className="text-center py-4">
+                                <div className="spinner-border text-primary" role="status">
+                                    <span className="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        ) : !Array.isArray(hostedDepartments) || hostedDepartments.length === 0 ? (
+                            <div className="text-center py-4">No hosted departments found</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                {hostedDepartments.map((department) => (
+                                    <div
+                                        key={department}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: '6px',
+                                            background: 'rgba(154, 77, 226, 0.1)',
+                                            border: '1px solid rgba(154, 77, 226, 0.3)',
+                                            color: 'rgb(154, 77, 226)',
+                                            position: 'relative',
+                                            paddingRight: '36px'
+                                        }}
+                                    >
+                                        {department}
+                                        <button
+                                            onClick={() => handleDeleteHostedDepartment(department)}
+                                            style={{
+                                                position: 'absolute',
+                                                right: '8px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                padding: '0',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                color: 'rgba(220, 53, 69, 0.7)'
+                                            }}
+                                            title="Delete Batch"
+                                        >
+                                            <Icon path={mdiDelete} size={0.7} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </Card.Body>
+            </Card>
+            {/* Hosted Department Modal */}
+            <Modal 
+                show={showHostedDepartmentModal} 
+                onHide={() => setShowHostedDepartmentModal(false)} 
+                centered
+                backdrop="static"
+            >
+                <Modal.Header style={{
+                    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+                    color: "white",
+                    borderBottom: "none"
+                }}>
+                    <Modal.Title>Add Hosted Department</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group controlId="hostedDepartment" className='mb-3'>
+                            <Form.Label style={{ display: 'flex', alignItems: 'center', color: 'rgb(154, 77, 226)' }}>
+                                Hosted Department
+                            </Form.Label>
+                            <Form.Control
+                                type="text"
+                                placeholder="Enter hosted department"
+                                name='hostedDepartment'
+                                value={currentHostedDepartment || ''}
+                                onChange={(e) => setCurrentHostedDepartment(e.target.value)}
+                            />
+                            <Form.Text className="text-muted">
+                                Please enter the name of the hosted department.
+                            </Form.Text>
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        variant="secondary"
+                        onClick={() => { setShowHostedDepartmentModal(false); setCurrentHostedDepartment(''); }}
+                        style={{
+                            ...modalButtonStyle,
+                            background: "#f8f9fa",
+                            color: "#6c757d",
+                            border: "1px solid #dee2e6"
+                        }}
+                    >
+                        <Icon path={mdiClose} size={0.8} />
+                        Close
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            handleAddHostedDepartment(currentHostedDepartment);
+                            setCurrentHostedDepartment('');
+                            setShowHostedDepartmentModal(false);
+                        }}
+                        style={{
+                            ...modalButtonStyle,
+                            background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+                            border: "none"
+                        }}
+                        disabled={!currentHostedDepartment || currentHostedDepartment.trim() === ''}
+                    >
+                        <Icon path={mdiPlus} size={0.8} />
+                        Add Hosted Department
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
             {/* Department Section Count Table Card */}
             <Card style={{
                 borderRadius: "12px",
@@ -541,7 +768,7 @@ const AcademicConfig = () => {
                             <span style={{ marginRight: "12px" }}>
                                 <Icon path={mdiDomain} size={1.2} color="rgb(194, 137, 248)" />
                             </span>
-                            Departments & Default Section Count
+                            Offered Departments & Default Section Count
                         </h4>
                         <div style={{ display: 'flex', gap: '12px' }}>
                             <button

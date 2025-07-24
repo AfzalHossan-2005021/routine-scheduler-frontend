@@ -60,3 +60,15 @@ export const addTheoryPreference = (initial, response) =>
 
 export const saveReorderedTeacherPreference = (initial, response) =>
   axios.post(api_url("/assign/theory/save-preference"), {initial, response,}).then((res) => res.data);
+
+export const getAllTheoryTeacherAssignment = () =>
+  axios.get(api_url("/assign/theory-teacher/get/all")).then((res) => res.data);
+
+export const getTheoryTeacherAssignment = (course_id, section) =>
+  axios.get(api_url(`/assign/theory-teacher/get/${course_id}/${section}`)).then((res) => res.data);
+
+export const addTheoryTeacherAssignment = (course_id, section, initial) =>
+  axios.post(api_url("/assign/theory-teacher/add"), { course_id, section, initial }).then((res) => res.data);
+
+export const deleteTheoryTeacherAssignment = (course_id, section, initial) =>
+  axios.delete(api_url(`/assign/theory-teacher/delete/${course_id}/${section}/${initial}`)).then((res) => res.data);

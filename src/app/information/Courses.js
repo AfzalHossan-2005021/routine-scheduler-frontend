@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
 
 import { toast } from "react-hot-toast";
 import { addCourse, deleteCourse, editCourse, getCourses } from "../api/db-crud";
-import { getDepartments, getAllLevelTermsName } from "../api/academic-config";
+import { getDepartments, getAllLevelTermsName, getHostedDepartments } from "../api/academic-config";
 import { mdiBookOpenPageVariant, mdiPlusCircle, mdiFormatListBulletedType, mdiSchool, mdiCheckCircle, mdiPencil, mdiDeleteOutline, mdiContentSave, mdiClose, mdiClock, mdiNotebookCheck, mdiOfficeBuilding } from '@mdi/js';
 import Icon from '@mdi/react';
 
@@ -72,15 +72,20 @@ const modalButtonStyle = {
 
 export default function Courses() {
   const [courses, setCourses] = useState([]);
+  const [allHostedDepartments, setAllHostedDepartments] = useState([]);
   const [allDepartmentNames, setAllDepartmentNames] = useState([]);
   const [allLevelTermNames, setAllLevelTermNames] = useState([]);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [deleteCourseSelected, setDeleteCourseSelected] = useState(null);
+  const [addNewCourse, setAddNewCourse] = useState(false);
 
   useEffect(() => {
     getCourses().then((res) => {
       setCourses(res);
+    });
+    getHostedDepartments().then((res) => {
+      setAllHostedDepartments(res);
     });
     getDepartments().then((res) => {
       setAllDepartmentNames(res);
@@ -183,6 +188,7 @@ export default function Courses() {
                     justifyContent: "center"
                   }}
                   onClick={(e) => {
+                    setAddNewCourse(true);
                     setSelectedCourse({
                       course_id: "",
                       name: "",
@@ -229,10 +235,10 @@ export default function Courses() {
                         <Icon path={mdiSchool} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Level/Term
                       </th>
                       <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiOfficeBuilding} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Offering Dept
+                        <Icon path={mdiOfficeBuilding} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Offering From
                       </th>
                       <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiOfficeBuilding} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Host Dept
+                        <Icon path={mdiOfficeBuilding} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} /> Offering To
                       </th>
                       <th style={{ padding: "20px 15px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
                         <Icon path={mdiClock} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Credit
@@ -402,7 +408,7 @@ export default function Courses() {
                 <Icon path={mdiBookOpenPageVariant} size={1} color="white" />
               </div>
               <h4 className="add-course-modal-title">
-                {selectedCourse.course_id ? "Edit" : "Add"} Course
+                {addNewCourse ? "Add" : "Edit"} Course
               </h4>
             </div>
           </Modal.Header>
@@ -512,19 +518,31 @@ export default function Courses() {
                 <Row>
                   <Col className="px-2 py-1">
                     <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Offering Department</Form.Label>
-                      <FormControl
-                        type="text"
-                        placeholder="e.g. CSE"
+                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Offering From</Form.Label>
+                      <Form.Select
+                        size="lg"
                         value={selectedCourse.from}
                         style={inputCellStyle}
-                        onChange={(e) => setSelectedCourse({ ...selectedCourse, from: e.target.value })}
-                      />
+                        onChange={(e) =>
+                          setSelectedCourse({
+                            ...selectedCourse,
+                            from: e.target.value || "CSE",
+                          })
+                        }
+                      >
+                        <option value="">Select Department</option>
+                        {allHostedDepartments && allHostedDepartments.length > 0 ?
+                          allHostedDepartments.map((dept, i) => (
+                            <option key={i} value={dept}>{dept}</option>
+                          )) :
+                          <option disabled>No departments available</option>
+                        }
+                      </Form.Select>
                     </FormGroup>
                   </Col>
                   <Col md={6} className="px-2 py-1 d-flex align-items-center">
                     <FormGroup>
-                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Host Department</Form.Label>
+                      <Form.Label style={{ fontWeight: 600, color: "#7c4fd5" }}>Offering To</Form.Label>
                       <Form.Select
                         size="lg"
                         value={selectedCourse.to}
@@ -586,7 +604,8 @@ export default function Courses() {
               onClick={() => {
                 const result = validateCourse(selectedCourse);
                 if (result === null) {
-                  if (!selectedCourse.course_id) {
+                  if (addNewCourse) {
+                    console.log("IN add course")
                     addCourse(selectedCourse)
                       .then((res) => {
                         if (res.message && res.message.includes("Successfully Saved")) {
@@ -602,6 +621,7 @@ export default function Courses() {
                       })
                       .catch(console.log);
                   } else {
+                    console.log("In edit course.")
                     editCourse(selectedCourse.course_id, selectedCourse)
                       .then((res) => {
                         if (res.message && res.message.includes("Successfully Updated")) {

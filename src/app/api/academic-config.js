@@ -65,3 +65,18 @@ export const getAllLevelTermsName = () =>
     axios
         .get(api_url(`/academic_config/get/level_terms`))
         .then((res) => res.data);
+
+export const getHostedDepartments = () =>
+    axios
+        .get(api_url(`/academic_config/get/hosted_departments`))
+        .then((res) => res.data);
+
+export const addHostedDepartment = (data) =>
+    axios
+        .post(api_url(`/academic_config/add/hosted_department`), data)
+        .then((res) => res.data);
+
+export const deleteHostedDepartment = (data) =>
+    axios
+        .delete(api_url(`/academic_config/delete/hosted_department`), { data })
+        .then((res) => res.data);

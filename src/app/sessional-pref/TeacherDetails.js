@@ -251,8 +251,8 @@ export default function TeacherDetails(props) {
 
         // Create arrays to hold the promises for each course
         const theoryPromises = assignedTheoryCourses.map(course =>
-          getCourseAllSchedule(course.course_id).catch(error => {
-            console.error(`Error fetching schedule for course ${course.course_id}:`, error);
+          getCourseAllSchedule(teacherId, course.course_id).catch(error => {
+            console.error(`Error fetching schedule for teacher ${teacherId} course ${course.course_id}:`, error);
             return []; // Return empty array for failed requests
           })
         );

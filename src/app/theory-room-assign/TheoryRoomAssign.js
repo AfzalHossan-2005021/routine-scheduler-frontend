@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button, Modal } from "react-bootstrap";
-import { Form, Row, Col, FormControl, FormGroup } from "react-bootstrap";
+import { Form, FormControl } from "react-bootstrap";
 
 import { toast } from "react-hot-toast";
 import { getAllTheoryRoomAssignment, updateTheoryRoomAssignment, getAllSectionRoomAllocation, updateSectionRoomAllocation } from "../api/theory-room-assign";
@@ -454,7 +454,7 @@ export default function TheoryRoomAssign() {
                   <FormControl
                     type="text"
                     placeholder="Enter Room Number"
-                    value={selectedSection.room_no}
+                    value={selectedSection.room_no ?? ""}
                     onChange={(e) =>
                       setSelectedSection({
                         ...selectedSection,
@@ -641,7 +641,7 @@ export default function TheoryRoomAssign() {
                   <FormControl
                     type="text"
                     placeholder="Enter Room Number"
-                    value={selectedSectionRoom.room_no}
+                    value={selectedSectionRoom.room_no ?? ""}
                     onChange={(e) =>
                       setSelectedSectionRoom({
                         ...selectedSectionRoom,
