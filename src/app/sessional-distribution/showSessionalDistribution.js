@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useConfig } from '../shared/ConfigContext';
 import toast from 'react-hot-toast';
-import { getDepartmentalSessionalSchedule } from '../api/sessional-schedule';
+import { getDepartmentalSessionalSchedule, setSessionalSchedules, teacherContradiction } from '../api/sessional-schedule';
 import { getSessionalTeachers } from '../api/theory-assign';
-import { getTeachers } from '../api/db-crud';
+import { getTeachers, getLabCourses } from '../api/db-crud';
 import { 
   setTeacherSessionalAssignment,
   getTeacherSessionalAssignment,
@@ -128,6 +128,22 @@ const scheduleTableStyle = {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   },
+  addButton: {
+    position: 'absolute',
+    right: '8px',
+    top: '8px',
+    padding: '4px 8px',
+    backgroundColor: '#28a745',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '0.8rem',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#218838'
+    }
+  },
   alreadyScheduledCourseItem: {
     background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
     border: '2px solid #43a047',
@@ -187,9 +203,12 @@ export default function ShowSessionalDistribution() {
 
   // State variables
   const [loading, setLoading] = useState(true);
-  const [sessionalSchedules, setSessionalSchedules] = useState([]);
+  const [sessionalSchedules, setAllSessionalSchedules] = useState(() => Array.isArray(window.initialData?.sessionalSchedules) ? window.initialData.sessionalSchedules : []);
   const [showModal, setShowModal] = useState(false);
+  const [showLabCoursesModal, setShowLabCoursesModal] = useState(false);
+  const [labCourses, setLabCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCell, setSelectedCell] = useState(null);
   const [teachers, setTeachers] = useState([]);
   const [showTeachersList, setShowTeachersList] = useState(false);
   const [showRemoveTeacherList, setShowRemoveTeacherList] = useState(false);
@@ -197,6 +216,7 @@ export default function ShowSessionalDistribution() {
   const [selectedTeacherToRemove, setSelectedTeacherToRemove] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
+  const [courseToRemove, setCourseToRemove] = useState(null);
 
   // Modal Style
   const modalStyle = {
@@ -253,7 +273,8 @@ export default function ShowSessionalDistribution() {
       try {
         setLoading(true);
         const data = await getDepartmentalSessionalSchedule();
-        setSessionalSchedules(data);
+        console.log(data);
+        setAllSessionalSchedules(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Error fetching sessional schedules:", error);
         toast.error("Failed to load sessional schedules");
@@ -272,6 +293,7 @@ export default function ShowSessionalDistribution() {
    * @returns {Array} Array of scheduled courses for this slot
    */
   const getScheduledCourses = (day, time) => {
+    if (!Array.isArray(sessionalSchedules)) return [];
     return sessionalSchedules.filter(schedule => 
       schedule.day === day && schedule.time === time
     );
@@ -352,7 +374,7 @@ export default function ShowSessionalDistribution() {
       
       // Refresh the course data
       const data = await getDepartmentalSessionalSchedule();
-      setSessionalSchedules(data);
+      setAllSessionalSchedules(data);
       
       setShowConfirmation(false);
       setShowRemoveTeacherList(false);
@@ -361,6 +383,47 @@ export default function ShowSessionalDistribution() {
     } catch (error) {
       console.error("Error removing teacher:", error);
       toast.error("Failed to remove teacher");
+    }
+  };
+
+  const handleCourseRemoval = async (courseToRemove) => {
+    try {
+      if (!courseToRemove.batch || !courseToRemove.section || !courseToRemove.department) {
+        console.error('Missing required data:', courseToRemove);
+        toast.error('Missing required data for removing course');
+        return;
+      }
+
+      console.log('Removing course with data:', {
+        batch: courseToRemove.batch,
+        section: courseToRemove.section,
+        department: courseToRemove.department,
+        schedules: {
+          course_id: "None",
+          day: courseToRemove.day,
+          time: courseToRemove.time
+        }
+      });
+
+      const schedules = {
+        course_id: "None",
+        day: courseToRemove.day,
+        time: courseToRemove.time,
+        batch: courseToRemove.batch,
+        section: courseToRemove.section,
+        department: courseToRemove.department
+      };
+      
+      await setSessionalSchedules(courseToRemove.batch, courseToRemove.section, courseToRemove.department, schedules);
+      
+      // Refresh the sessional schedules
+      const data = await getDepartmentalSessionalSchedule();
+      setAllSessionalSchedules(Array.isArray(data) ? data : []);
+      
+      toast.success('Course removed successfully');
+    } catch (error) {
+      console.error('Error removing course:', error);
+      toast.error('Failed to remove course: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -380,13 +443,125 @@ export default function ShowSessionalDistribution() {
       
       // Refresh the course data
       const data = await getDepartmentalSessionalSchedule();
-      setSessionalSchedules(data);
+      setAllSessionalSchedules(data);
       
       setShowTeachersList(false);
       setShowModal(false);
     } catch (error) {
       console.error("Error assigning teacher:", error);
       toast.error("Failed to assign teacher");
+    }
+  };
+
+  // First, let's log the lab courses when they're fetched
+  useEffect(() => {
+    const fetchLabCourses = async () => {
+      try {
+        const courses = await getLabCourses();
+        console.log('Fetched lab courses:', courses);
+        
+        // Filter out courses that are already assigned in any time slot
+        const filteredCourses = courses.filter(course => {
+          // Check if this course exists in any schedule
+          const isAssigned = sessionalSchedules.some(schedule => 
+            schedule.course_id === course.course_id && 
+            schedule.section === course.section
+          );
+          return !isAssigned; // Keep only unassigned courses
+        });
+        
+        console.log('Filtered courses (removing already assigned):', filteredCourses);
+        setLabCourses(filteredCourses);
+      } catch (error) {
+        console.error('Error fetching lab courses:', error);
+      }
+    };
+    if (showLabCoursesModal) {
+      fetchLabCourses();
+    }
+  }, [showLabCoursesModal, sessionalSchedules]);
+
+  const handleAddCourse = async (course, day, time) => {
+    try {
+      if (!course || !day || !time) {
+        console.error('Missing required data:', { course, day, time });
+        toast.error('Missing required data for adding course');
+        return;
+      }
+
+      // First check if this section already has a course in this time slot
+      const existingCourseInSlot = sessionalSchedules.find(schedule => 
+        schedule.day === day && 
+        schedule.time === time && 
+        schedule.batch === course.batch &&
+        schedule.section === course.section &&
+        schedule.department === course.department
+      );
+
+      if (existingCourseInSlot) {
+        toast.error(`Section ${course.section} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
+        return;
+      }
+
+      // Check for teacher schedule conflicts
+      try {
+        const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
+        const contradictions = await teacherContradiction(course.batch, course.section, course.course_id);
+        
+        // Check if any assigned teacher has a schedule conflict
+        for (const contradiction of contradictions) {
+          const conflictingSchedules = contradiction.schedule.filter(
+            schedule => schedule.day === day && schedule.time === time
+          );
+          console.log('Checking teacher conflicts for:', contradiction.initial, conflictingSchedules);
+          if (conflictingSchedules.length > 0) {
+            toast(`Warning: Teacher ${contradiction.initial} is already assigned to ${conflictingSchedules[0].course_id}(${conflictingSchedules[0].section}) at this time slot.`, {
+              icon: '⚠️',
+              duration: 5000,
+              style: {
+                background: '#FFF3CD',
+                color: '#856404',
+                border: '1px solid #FFEEBA'
+              }
+            });
+            // Not returning here, allowing the assignment to proceed
+          }
+        }
+      } catch (error) {
+        console.error('Error checking teacher conflicts:', error);
+      }
+
+      console.log('Adding course with data:', {
+        course_id: course.course_id,
+        batch: course.batch,
+        section: course.section,
+        department: course.department,
+        day,
+        time
+      });
+
+      // Create the schedule for the new course
+      const schedule = {
+        course_id: course.course_id,
+        day: day,
+        time: time
+      };
+            
+      // This will insert a new record in the database
+      await setSessionalSchedules(course.batch, course.section, course.department, schedule);
+      
+      // Refresh the sessional schedules
+      const data = await getDepartmentalSessionalSchedule();
+      console.log('Updated schedules:', data);
+      setAllSessionalSchedules(Array.isArray(data) ? data : []);
+      
+      // Close the modal
+      // setShowLabCoursesModal(false);
+      
+      toast.success('Course added successfully');
+    } catch (error) {
+      console.error('Error adding course:', error);
+      toast.error('Failed to add course: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -419,110 +594,186 @@ export default function ShowSessionalDistribution() {
               </h6>
             </div>
             <div className="card-body" style={{ padding: '1.5rem' }}>
-              {sessionalSchedules.length === 0 ? (
-                <div className="text-center py-4">
-                  <div className="mb-3">
-                    <i className="mdi mdi-clipboard-text-outline" style={{ fontSize: '3rem', color: '#6c757d', opacity: 0.5 }}></i>
-                  </div>
-                  <h6 className="text-muted mb-2">No Sessional Distributions</h6>
-                  <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
-                    There are no sessional courses distributed yet.
-                  </p>
-                </div>
-              ) : (
-                <div className="table-responsive" style={{ overflowX: 'auto', maxHeight: '80vh' }}>
-                  <table style={{
-                    ...scheduleTableStyle.table,
-                    minWidth: `${possibleLabTimes.length * 200 + 100}px`
-                  }}>
-                    <thead>
-                      <tr>
-                        <th style={scheduleTableStyle.headerCell}>Day / Time</th>
-                        {possibleLabTimes.map(time => (
-                          <th key={time} style={{
-                            ...scheduleTableStyle.headerCell,
-                            width: '200px',
-                            minWidth: '200px'
-                          }}>{time}:00</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {days.map(day => (
-                        <tr key={day}>
-                          <td style={scheduleTableStyle.dayCell}>{day}</td>
-                          {possibleLabTimes.map(time => {
-                            const scheduledCourses = getScheduledCourses(day, time);
-                            return (
-                              <td key={`${day}-${time}`} style={scheduleTableStyle.courseCell}>
-                                {scheduledCourses.map((schedule, index) => (
-                                  <div 
-                                    key={index} 
-                                    style={{
-                                      ...scheduleTableStyle.courseItem,
-                                      ...scheduleTableStyle.alreadyScheduledCourseItem,
-                                      cursor: 'pointer',
-                                    }}
-                                    onClick={() => handleCourseClick(schedule)}
-                                  >
-                                    <div style={scheduleTableStyle.courseTitle}>
-                                      {schedule.course_id}
-                                    </div>
-                                    <div style={scheduleTableStyle.sectionBadge}>
-                                      <i className="mdi mdi-account-group mr-1"></i>
-                                      Section {schedule.section}
-                                    </div>
-                                    <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                                      <CourseTeachers 
-                                        courseId={schedule.course_id} 
-                                        section={schedule.section}
-                                      />
-                                    </div>
-                                  </div>
-                                ))}
-                              </td>
-                            );
-                          })}
-                        </tr>
+              <div className="table-responsive" style={{ overflowX: 'auto', maxHeight: '80vh' }}>
+                <table style={{
+                  ...scheduleTableStyle.table,
+                  minWidth: `${possibleLabTimes.length * 200 + 100}px`
+                }}>
+                  <thead>
+                    <tr>
+                      <th style={scheduleTableStyle.headerCell}>Day / Time</th>
+                      {possibleLabTimes.map(time => (
+                        <th key={time} style={{
+                          ...scheduleTableStyle.headerCell,
+                          width: '200px',
+                          minWidth: '200px'
+                        }}>{time}:00</th>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {days.map(day => (
+                      <tr key={day}>
+                        <td style={scheduleTableStyle.dayCell}>{day}</td>
+                        {possibleLabTimes.map(time => {
+                          const scheduledCourses = getScheduledCourses(day, time);
+                          return (
+                            <td key={`${day}-${time}`} style={{
+                              ...scheduleTableStyle.courseCell,
+                              position: 'relative',
+                            }}>
+                              <div style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                zIndex: 2
+                              }}>
+                                <i 
+                                  className="mdi mdi-pencil"
+                                  style={{
+                                    color: '#667eea',
+                                    cursor: 'pointer',
+                                    fontSize: '1rem',
+                                    padding: '4px',
+                                    borderRadius: '50%',
+                                    backgroundColor: 'white',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                    transition: 'all 0.2s ease',
+                                  }}
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setSelectedCell({ day, time });
+                                    try {
+                                      const courses = await getLabCourses();
+                                      console.log('Available lab courses:', courses);
+                                      setLabCourses(courses);
+                                      setShowLabCoursesModal(true);
+                                    } catch (error) {
+                                      console.error("Error fetching lab courses:", error);
+                                      toast.error("Failed to load lab courses");
+                                    }
+                                  }}
+                                  onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1.1)';
+                                    e.currentTarget.style.color = '#764ba2';
+                                  }}
+                                  onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                    e.currentTarget.style.color = '#667eea';
+                                  }}
+                                />
+                              </div>
+                              {scheduledCourses.map((schedule, index) => (
+                                <div 
+                                  key={index} 
+                                  style={{
+                                    ...scheduleTableStyle.courseItem,
+                                    ...scheduleTableStyle.alreadyScheduledCourseItem,
+                                    cursor: 'pointer',
+                                    position: 'relative'
+                                  }}
+                                  //onClick={() => handleCourseClick(schedule)}
+                                >
+                                  <div style={scheduleTableStyle.courseTitle}>
+                                    {schedule.course_id}
+                                  </div>
+                                  <div 
+                                    style={{
+                                      position: 'absolute',
+                                      right: '8px',
+                                      top: '50%',
+                                      transform: 'translateY(-50%)',
+                                      cursor: 'pointer',
+                                      zIndex: 2
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const courseData = {
+                                        course_id: schedule.course_id,
+                                        day,
+                                        time,
+                                        section: schedule.section,
+                                        batch: schedule.batch,
+                                        department: schedule.department
+                                      };
+                                      console.log('Setting course to remove:', courseData);
+                                      setCourseToRemove(courseData);
+                                      setShowConfirmation(true);
+                                    }}
+                                  >
+                                    <i 
+                                      className="mdi mdi-close-circle"
+                                      style={{
+                                        color: '#dc3545',
+                                        fontSize: '1.2rem',
+                                        transition: 'all 0.2s ease'
+                                      }}
+                                      onMouseOver={(e) => {
+                                        e.currentTarget.style.color = '#c82333';
+                                        e.currentTarget.style.transform = 'scale(1.1)';
+                                      }}
+                                      onMouseOut={(e) => {
+                                        e.currentTarget.style.color = '#dc3545';
+                                        e.currentTarget.style.transform = 'scale(1)';
+                                      }}
+                                    />
+                                  </div>
+                                  <div style={scheduleTableStyle.sectionBadge}>
+                                    <i className="mdi mdi-account-group mr-1"></i>
+                                    Section {schedule.section}
+                                  </div>
+                                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                    <CourseTeachers 
+                                      courseId={schedule.course_id} 
+                                      section={schedule.section}
+                                    />
+                                  </div>
 
-              {/* Modal */}
-              {showModal && (
-                <>
-                  <div style={overlayStyle} onClick={() => setShowModal(false)} />
-                  <div style={modalStyle}>
-                    <div style={{ position: 'relative' }}>
-                      <button
-                        onClick={() => setShowModal(false)}
-                        style={{
-                          position: 'absolute',
-                          right: '-10px',
-                          top: '-10px',
-                          background: '#ff4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '24px',
-                          height: '24px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                          fontSize: '14px',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        ×
-                      </button>
-                      <h5 style={{ marginBottom: '20px', color: '#333' }}>
-                        {selectedCourse.course_id} - Section {selectedCourse.section}
-                      </h5>
-                    
+                                </div>
+                              ))}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Modal */}
+            {showModal && (
+              <>
+                <div style={overlayStyle} onClick={() => setShowModal(false)} />
+                <div style={modalStyle}>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowModal(false)}
+                      style={{
+                        position: 'absolute',
+                        right: '-10px',
+                        top: '-10px',
+                        background: '#ff4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ×
+                    </button>
+                    <h5 style={{ marginBottom: '20px', color: '#333' }}>
+                      {selectedCourse.course_id} - Section {selectedCourse.section}
+                    </h5>
+                  
                     {!showTeachersList && !showRemoveTeacherList ? (
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
                         <button
@@ -644,51 +895,188 @@ export default function ShowSessionalDistribution() {
                         </div>
                       </div>
                     )}
-                    </div>
                   </div>
-                </>
-              )}
+                </div>
+              </>
+            )}
 
-              {/* Confirmation Modal */}
-              {showConfirmation && (
-                <>
-                  <div style={overlayStyle} />
-                  <div style={{
-                    ...modalStyle,
-                    zIndex: 1001,
-                    maxWidth: '400px',
-                    textAlign: 'center'
-                  }}>
-                    <h6 style={{ marginBottom: '20px', color: '#dc3545' }}>Confirm Removal</h6>
-                    <p style={{ marginBottom: '20px' }}>
-                      Do you really want to remove {selectedTeacherToRemove} from {selectedCourse.course_id}?
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-                      <button
-                        style={{
-                          ...buttonStyle,
-                          backgroundColor: '#6c757d',
-                          color: 'white',
-                        }}
-                        onClick={() => setShowConfirmation(false)}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        style={{
-                          ...buttonStyle,
-                          backgroundColor: '#dc3545',
-                          color: 'white',
-                        }}
-                        onClick={handleTeacherRemoval}
-                      >
-                        Yes, Remove
-                      </button>
+            {/* Confirmation Modal */}
+            {showConfirmation && courseToRemove && (
+              <>
+                <div style={overlayStyle} onClick={() => {
+                  setShowConfirmation(false);
+                  setCourseToRemove(null);
+                }} />
+                <div style={{
+                  ...modalStyle,
+                  zIndex: 1001,
+                  maxWidth: '400px',
+                  textAlign: 'center'
+                }}>
+                  <h6 style={{ marginBottom: '20px', color: '#dc3545' }}>Confirm Removal</h6>
+                  <p style={{ marginBottom: '20px' }}>
+                    Do you want to remove {courseToRemove.course_id} from {courseToRemove.day}, {courseToRemove.time}:00 slot?
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                    <button
+                      style={{
+                        ...buttonStyle,
+                        backgroundColor: '#6c757d',
+                        color: 'white',
+                      }}
+                      onClick={() => {
+                        setShowConfirmation(false);
+                        setCourseToRemove(null);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      style={{
+                        ...buttonStyle,
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                      }}
+                      onClick={async () => {
+                        await handleCourseRemoval(courseToRemove);
+                        setShowConfirmation(false);
+                        setCourseToRemove(null);
+                      }}
+                    >
+                      Yes, Remove
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Lab Courses Modal */}
+            {showLabCoursesModal && (
+              <>
+                <div style={overlayStyle} onClick={() => setShowLabCoursesModal(false)} />
+                <div style={{
+                  ...modalStyle,
+                  maxWidth: '500px',
+                  maxHeight: '80vh',
+                  overflowY: 'auto'
+                }}>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowLabCoursesModal(false)}
+                      style={{
+                        position: 'absolute',
+                        right: '-10px',
+                        top: '-10px',
+                        background: '#ff4444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      ×
+                    </button>
+                    
+                    <div style={{ 
+                      marginBottom: '20px',
+                      padding: '15px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '8px',
+                      color: 'white',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      fontSize: '1.1rem'
+                    }}>
+                      <i className="mdi mdi-plus-circle-outline mr-2"></i>
+                      Add Sessional Course
+                    </div>
+
+                    <div style={{ 
+                      display: 'grid',
+                      gap: '10px',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))'
+                    }}>
+                      {labCourses.map((course) => (
+                        <div
+                          key={course.course_id + course.section}
+                          style={{
+                            padding: '15px',
+                            borderRadius: '8px',
+                            backgroundColor: '#f8f9fa',
+                            border: '1px solid #e9ecef',
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                            position: 'relative',
+                          }}
+                        >
+                          <div style={{
+                            fontWeight: '600',
+                            color: '#2d3748',
+                            fontSize: '1rem',
+                            marginBottom: '4px'
+                          }}>
+                            {course.course_id} <span style={{ color: '#4a5568' }}>({course.section})</span>
+                          </div>
+                          <div style={{
+                            color: '#718096',
+                            fontSize: '0.875rem',
+                            lineHeight: '1.4'
+                          }}>
+                            {course.name}
+                          </div>
+                          <button
+                            style={{
+                              position: 'absolute',
+                              right: '8px',
+                              top: '8px',
+                              padding: '4px 8px',
+                              backgroundColor: '#28a745',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                backgroundColor: '#218838'
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log('Add button clicked for course:', course);
+                              console.log('Selected cell:', selectedCell);
+                              if (!selectedCell) {
+                                toast.error('No time slot selected');
+                                return;
+                              }
+                              if (!course.batch || !course.section || !course.department) {
+                                console.log('Course details:', course);
+                                toast.error('Course is missing required details');
+                                return;
+                              }
+                              handleAddCourse(course, selectedCell.day, selectedCell.time);
+                            }}
+                          >
+                            <i className="mdi mdi-plus"></i> Add
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
