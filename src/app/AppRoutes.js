@@ -24,7 +24,6 @@ const Courses = lazy(() => import("./information/Courses"));
 const TheoryPreference = lazy(() => import("./theory-pref/TheoryPreference"));
 const TheorySelect = lazy(() => import("./forms/TheorySelect"));
 const SessionalSelect = lazy(() => import("./forms/SessionalSelect"));
-
 const DepartmentalLabRoomAssign = lazy(() => import("./lab-room-assign/Departmental"));
 const NonDepartmentalLabRoomAssign = lazy(() => import("./lab-room-assign/NonDepartmental"));
 const TheoryRoomAssign = lazy(() => import("./theory-room-assign/TheoryRoomAssign"));
@@ -38,7 +37,7 @@ const pdfPage = lazy(() => import("./pdf/ShowPdf"));
 const TheorySchedule = lazy(() => import("./theory-schedule/TheorySchedule"));
 
 const SessionalDistribution = lazy(() => import("./sessional-distribution/showSessionalDistribution"));
-
+const LoadDistribution = lazy(() => import("./load-distribution/LoadDistribution"));
 
 export default function AppRoutes() {
   const { user } = useContext(UserContext);
@@ -68,6 +67,7 @@ export default function AppRoutes() {
             <Route path="/pdf" component={pdfPage} />
             <Route path="/theory-schedule" component={TheorySchedule} />
             <Route path="/sessional-distribution" component={SessionalDistribution} />
+            <Route path="/load-distribution" component={LoadDistribution} />
             <Route path="/account" component={Account} />
             <Redirect to="/dashboard" />
           </Switch>
