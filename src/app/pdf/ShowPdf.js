@@ -43,14 +43,11 @@ export default function ShowPdf() {
 
   const [selectedInitial, setSelectedInitial] = useState("All Teacher");
   const [selectedRoom, setSelectedRoom] = useState("All rooms");
-
   const [lvlTerm, setLvlTerm] = useState("All Level-Term");
-
   const [pdfData, setpdfData] = useState("");
 
   const handleSelect = (e) => {
     const selectedOption = e.target.value;
-    console.log(selectedOption);
     setForStudent(false);
     setForTeacher(false);
     setForRoom(false);
@@ -70,18 +67,25 @@ export default function ShowPdf() {
     }
   };
 
-  const handleRadioChange = (event) => {
-    setLvlTerm(event.target.value);
+  const handleDropdownChange = (e, type) => {
+    const value = e.target.value;
+    if (type === "levelTerm") {
+      setLvlTerm(value);
+    } else if (type === "teacher") {
+      setSelectedInitial(value);
+    } else if (type === "room") {
+      setSelectedRoom(value);
+    }
   };
 
   const displayPdf = () => {
     try {
       const toastId = toast.loading("Loading PDF...");
-      
+
       let pdfPromise;
       let selectedType = "";
       let selectedValue = "";
-      
+
       if (forStudent) {
         if (!lvlTerm) {
           toast.dismiss(toastId);
@@ -145,15 +149,16 @@ export default function ShowPdf() {
         })
         .catch((error) => {
           toast.dismiss(toastId);
-          
-          // Check if it's a 'file not found' error
-          if (error.message?.includes("ENOENT") || 
-              error.message?.includes("no such file") ||
-              error.message?.includes("Empty PDF response")) {
+
+          if (
+            error.message?.includes("ENOENT") ||
+            error.message?.includes("no such file") ||
+            error.message?.includes("Empty PDF response")
+          ) {
             toast.error(
               <div>
                 <p>PDF not found. Please generate it first.</p>
-                <button 
+                <button
                   onClick={() => regeneratePdf()}
                   style={{
                     padding: "4px 10px",
@@ -162,7 +167,7 @@ export default function ShowPdf() {
                     border: "none",
                     color: "white",
                     fontWeight: "500",
-                    marginTop: "8px"
+                    marginTop: "8px",
                   }}
                 >
                   Generate PDF
@@ -187,13 +192,13 @@ export default function ShowPdf() {
       let regeneratePromise;
       let selectedType = "";
       let selectedValue = "";
-      
+
       if (forStudent) {
         if (!lvlTerm) {
           toast.error("Please select a level term");
           return;
         }
-        
+
         if (lvlTerm === "All Level-Term") {
           // Generate consolidated PDF for all level terms
           toastId = toast.loading(`Generating consolidated PDF for all level terms...`);
@@ -211,7 +216,7 @@ export default function ShowPdf() {
           toast.error("Please select a teacher");
           return;
         }
-        
+
         if (selectedInitial === "All Teacher") {
           // Generate consolidated PDF for all teachers
           toastId = toast.loading(`Generating consolidated PDF for all teachers...`);
@@ -229,7 +234,7 @@ export default function ShowPdf() {
           toast.error("Please select a room");
           return;
         }
-        
+
         if (selectedRoom === "All rooms") {
           // Generate consolidated PDF for all rooms
           toastId = toast.loading(`Generating consolidated PDF for all rooms...`);
@@ -246,15 +251,15 @@ export default function ShowPdf() {
         toast.error("Please select a format");
         return;
       }
-      
+
       regeneratePromise
         .then((res) => {
           toast.dismiss(toastId);
-          
+
           // Handle response for consolidated "All" operations
           if (selectedValue.includes("all")) {
             const totalCount = res.totalCount || 0;
-            
+
             if (totalCount > 0) {
               toast.success(`Consolidated PDF generated successfully with ${totalCount} ${selectedType} schedules!`);
               // Auto-load the consolidated PDF after regeneration
@@ -427,75 +432,28 @@ export default function ShowPdf() {
                       </svg>
                       Level Term
                     </label>
-                    <div className="mt-2">
-                      <div className="d-flex flex-wrap align-items-center gap-2">
-                        {/* All Level-Term Option */}
-                        <label
-                          className="custom-radio"
-                          style={{
-                            borderRadius: "8px",
-                            padding: "10px 16px",
-                            background: lvlTerm === "All Level-Term" ? "linear-gradient(135deg, rgb(194, 137, 248), rgb(154, 77, 226))" : "rgba(174, 117, 228, 0.08)",
-                            color: lvlTerm === "All Level-Term" ? "white" : "rgb(174, 117, 228)",
-                            fontWeight: "600",
-                            boxShadow: lvlTerm === "All Level-Term" ? "0 4px 12px rgba(174, 117, 228, 0.25)" : "0 2px 4px rgba(174, 117, 228, 0.1)",
-                            transition: "all 0.2s ease",
-                            border: "1px solid " + (lvlTerm === "All Level-Term" ? "transparent" : "rgba(174, 117, 228, 0.2)"),
-                            display: "inline-flex",
-                            alignItems: "center",
-                            marginBottom: "8px",
-                            marginRight: "8px",
-                            cursor: "pointer",
-                            userSelect: "none",
-                            fontSize: "0.9rem"
-                          }}
-                        >
-                          <Form.Check
-                            type="radio"
-                            id="radio-all-level-term"
-                            value="All Level-Term"
-                            checked={lvlTerm === "All Level-Term"}
-                            onChange={handleRadioChange}
-                            style={{ display: "none" }}
-                          />
-                          All Level-Term
-                        </label>
-                        {/* Individual Level-Term Options */}
-                        {allLevels.map((item) => (
-                          <label
-                            key={item}
-                            className="custom-radio"
-                            style={{
-                              borderRadius: "8px",
-                              padding: "10px 16px",
-                              background: lvlTerm === item ? "linear-gradient(135deg, rgb(194, 137, 248), rgb(154, 77, 226))" : "rgba(174, 117, 228, 0.08)",
-                              color: lvlTerm === item ? "white" : "rgb(174, 117, 228)",
-                              fontWeight: "600",
-                              boxShadow: lvlTerm === item ? "0 4px 12px rgba(174, 117, 228, 0.25)" : "0 2px 4px rgba(174, 117, 228, 0.1)",
-                              transition: "all 0.2s ease",
-                              border: "1px solid " + (lvlTerm === item ? "transparent" : "rgba(174, 117, 228, 0.2)"),
-                              display: "inline-flex",
-                              alignItems: "center",
-                              marginBottom: "8px",
-                              marginRight: "8px",
-                              cursor: "pointer",
-                              userSelect: "none",
-                              fontSize: "0.9rem"
-                            }}
-                          >
-                            <Form.Check
-                              type="radio"
-                              id={`radio-${item}`}
-                              value={item}
-                              checked={lvlTerm === item}
-                              onChange={handleRadioChange}
-                              style={{ display: "none" }}
-                            />
-                            {item}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                    <Form.Select
+                      value={lvlTerm}
+                      onChange={(e) => handleDropdownChange(e, "levelTerm")}
+                      style={{
+                        height: "48px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(174, 117, 228, 0.3)",
+                        boxShadow: "0 2px 8px rgba(174, 117, 228, 0.1)",
+                        fontWeight: "500",
+                        color: "#333",
+                        padding: "0 14px",
+                        transition: "all 0.25s ease",
+                        background: "white"
+                      }}
+                    >
+                      <option value="All Level-Term">All Level-Term</option>
+                      {allLevels.map((level, index) => (
+                        <option key={index} value={level.name || level}>
+                          {level.name || level}
+                        </option>
+                      ))}
+                    </Form.Select>
                   </div>
                 )}
 
@@ -516,75 +474,28 @@ export default function ShowPdf() {
                       </svg>
                       Teacher
                     </label>
-                    <div className="mt-2">
-                      <div className="d-flex flex-wrap align-items-center gap-2">
-                        {/* All Teacher Option */}
-                        <label
-                          className="custom-radio"
-                          style={{
-                            borderRadius: "8px",
-                            padding: "10px 16px",
-                            background: selectedInitial === "All Teacher" ? "linear-gradient(135deg, rgb(194, 137, 248), rgb(154, 77, 226))" : "rgba(174, 117, 228, 0.08)",
-                            color: selectedInitial === "All Teacher" ? "white" : "rgb(174, 117, 228)",
-                            fontWeight: "600",
-                            boxShadow: selectedInitial === "All Teacher" ? "0 4px 12px rgba(174, 117, 228, 0.25)" : "0 2px 4px rgba(174, 117, 228, 0.1)",
-                            transition: "all 0.2s ease",
-                            border: "1px solid " + (selectedInitial === "All Teacher" ? "transparent" : "rgba(174, 117, 228, 0.2)"),
-                            display: "inline-flex",
-                            alignItems: "center",
-                            marginBottom: "8px",
-                            marginRight: "8px",
-                            cursor: "pointer",
-                            userSelect: "none",
-                            fontSize: "0.9rem"
-                          }}
-                        >
-                          <Form.Check
-                            type="radio"
-                            id="radio-all-teacher"
-                            value="All Teacher"
-                            checked={selectedInitial === "All Teacher"}
-                            onChange={(e) => setSelectedInitial(e.target.value)}
-                            style={{ display: "none" }}
-                          />
-                          All Teacher
-                        </label>
-                        {/* Individual Teacher Options */}
-                        {initials.map((item) => (
-                          <label
-                            key={item.initial}
-                            className="custom-radio"
-                            style={{
-                              borderRadius: "8px",
-                              padding: "10px 16px",
-                              background: selectedInitial === item.initial ? "linear-gradient(135deg, rgb(194, 137, 248), rgb(154, 77, 226))" : "rgba(174, 117, 228, 0.08)",
-                              color: selectedInitial === item.initial ? "white" : "rgb(174, 117, 228)",
-                              fontWeight: "600",
-                              boxShadow: selectedInitial === item.initial ? "0 4px 12px rgba(174, 117, 228, 0.25)" : "0 2px 4px rgba(174, 117, 228, 0.1)",
-                              transition: "all 0.2s ease",
-                              border: "1px solid " + (selectedInitial === item.initial ? "transparent" : "rgba(174, 117, 228, 0.2)"),
-                              display: "inline-flex",
-                              alignItems: "center",
-                              marginBottom: "8px",
-                              marginRight: "8px",
-                              cursor: "pointer",
-                              userSelect: "none",
-                              fontSize: "0.9rem"
-                            }}
-                          >
-                            <Form.Check
-                              type="radio"
-                              id={`radio-${item.initial}`}
-                              value={item.initial}
-                              checked={selectedInitial === item.initial}
-                              onChange={(e) => setSelectedInitial(e.target.value)}
-                              style={{ display: "none" }}
-                            />
-                            {item.initial}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                    <Form.Select
+                      value={selectedInitial}
+                      onChange={(e) => handleDropdownChange(e, "teacher")}
+                      style={{
+                        height: "48px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(174, 117, 228, 0.3)",
+                        boxShadow: "0 2px 8px rgba(174, 117, 228, 0.1)",
+                        fontWeight: "500",
+                        color: "#333",
+                        padding: "0 14px",
+                        transition: "all 0.25s ease",
+                        background: "white"
+                      }}
+                    >
+                      <option value="All Teacher">All Teacher</option>
+                      {initials.map((initial, index) => (
+                        <option key={index} value={initial.initial}>
+                          {initial.initial}
+                        </option>
+                      ))}
+                    </Form.Select>
                   </div>
                 )}
 
@@ -605,81 +516,34 @@ export default function ShowPdf() {
                       </svg>
                       Room
                     </label>
-                    <div className="mt-2">
-                      <div className="d-flex flex-wrap align-items-center gap-2">
-                        {/* All rooms Option */}
-                        <label
-                          className="custom-radio"
-                          style={{
-                            borderRadius: "8px",
-                            padding: "10px 16px",
-                            background: selectedRoom === "All rooms" ? "linear-gradient(135deg, rgb(194, 137, 248), rgb(154, 77, 226))" : "rgba(174, 117, 228, 0.08)",
-                            color: selectedRoom === "All rooms" ? "white" : "rgb(174, 117, 228)",
-                            fontWeight: "600",
-                            boxShadow: selectedRoom === "All rooms" ? "0 4px 12px rgba(174, 117, 228, 0.25)" : "0 2px 4px rgba(174, 117, 228, 0.1)",
-                            transition: "all 0.2s ease",
-                            border: "1px solid " + (selectedRoom === "All rooms" ? "transparent" : "rgba(174, 117, 228, 0.2)"),
-                            display: "inline-flex",
-                            alignItems: "center",
-                            marginBottom: "8px",
-                            marginRight: "8px",
-                            cursor: "pointer",
-                            userSelect: "none",
-                            fontSize: "0.9rem"
-                          }}
-                        >
-                          <Form.Check
-                            type="radio"
-                            id="radio-all-rooms"
-                            value="All rooms"
-                            checked={selectedRoom === "All rooms"}
-                            onChange={(e) => setSelectedRoom(e.target.value)}
-                            style={{ display: "none" }}
-                          />
-                          All rooms
-                        </label>
-                        {/* Individual Room Options */}
-                        {rooms.map((item) => (
-                          <label
-                            key={item.room}
-                            className="custom-radio"
-                            style={{
-                              borderRadius: "8px",
-                              padding: "10px 16px",
-                              background: selectedRoom === item.room ? "linear-gradient(135deg, rgb(194, 137, 248), rgb(154, 77, 226))" : "rgba(174, 117, 228, 0.08)",
-                              color: selectedRoom === item.room ? "white" : "rgb(174, 117, 228)",
-                              fontWeight: "600",
-                              boxShadow: selectedRoom === item.room ? "0 4px 12px rgba(174, 117, 228, 0.25)" : "0 2px 4px rgba(174, 117, 228, 0.1)",
-                              transition: "all 0.2s ease",
-                              border: "1px solid " + (selectedRoom === item.room ? "transparent" : "rgba(174, 117, 228, 0.2)"),
-                              display: "inline-flex",
-                              alignItems: "center",
-                              marginBottom: "8px",
-                              marginRight: "8px",
-                              cursor: "pointer",
-                              userSelect: "none",
-                              fontSize: "0.9rem"
-                            }}
-                          >
-                            <Form.Check
-                              type="radio"
-                              id={`radio-${item.room}`}
-                              value={item.room}
-                              checked={selectedRoom === item.room}
-                              onChange={(e) => setSelectedRoom(e.target.value)}
-                              style={{ display: "none" }}
-                            />
-                            {item.room}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
+                    <Form.Select
+                      value={selectedRoom}
+                      onChange={(e) => handleDropdownChange(e, "room")}
+                      style={{
+                        height: "48px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(174, 117, 228, 0.3)",
+                        boxShadow: "0 2px 8px rgba(174, 117, 228, 0.1)",
+                        fontWeight: "500",
+                        color: "#333",
+                        padding: "0 14px",
+                        transition: "all 0.25s ease",
+                        background: "white"
+                      }}
+                    >
+                      <option value="All rooms">All rooms</option>
+                      {rooms.map((room, index) => (
+                        <option key={index} value={room.room || room.name || room}>
+                          {room.room || room.name || room}
+                        </option>
+                      ))}
+                    </Form.Select>
                   </div>
                 )}
 
                 {/* Action Buttons */}
                 <div className="col-md-4 d-flex align-items-end">
-                  <div className="d-flex gap-3 mt-4 w-100">
+                  <div style={{ display: "flex", gap: "12px" }}>
                     <button
                       type="button"
                       onClick={regeneratePdf}
