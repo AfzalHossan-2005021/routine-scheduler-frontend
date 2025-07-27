@@ -105,7 +105,7 @@ export default function LoadDistribution() {
                 className="nav-link"
               >
                 <i className="mdi mdi-book-open-variant me-2"></i>
-                Theory Distribution
+                Theory Course Teacher
               </button>
             </li>
             <li className="nav-item">
@@ -115,7 +115,7 @@ export default function LoadDistribution() {
                 className="nav-link"
               >
                 <i className="mdi mdi-laptop me-2"></i>
-                Sessional Distribution
+                Sessional Course Teacher
               </button>
             </li>
             <li className="nav-item">
@@ -125,7 +125,7 @@ export default function LoadDistribution() {
                 className="nav-link"
               >
                 <i className="mdi mdi-chart-bar me-2"></i>
-                Credit Distribution
+                Course Load
               </button>
             </li>
           </ul>
