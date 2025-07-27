@@ -91,9 +91,9 @@ const scheduleTableStyle = {
     }
   },
   alreadyScheduledCourseItem: {
-    background: 'linear-gradient(135deg, rgba(195, 134, 252, 0.18) 0%, rgba(174, 117, 228, 0.1) 100%)',
-    border: '2px solid rgb(194, 137, 248)',
-    color: 'rgba(133, 47, 214, 1)',
+    background: 'rgba(40, 167, 69, 0.15)',
+    border: '1px solid #28a745',
+    color: '#28a745',
   },
   courseTitle: {
     fontWeight: '600',
@@ -179,7 +179,7 @@ function CourseTeachers({ courseId, section, fetchTeachers, isAlreadyScheduled, 
     };
   }, [courseId, section, fetchTeachers, refreshKey]); // Added refreshKey as dependency
 
-  const textStyle = isAlreadyScheduled ? { color: '#0066cc' } : {};
+  const textStyle = isAlreadyScheduled ? { color: '#28a745' } : {};
 
   if (loading) {
     return <span style={{ ...textStyle, fontSize: '0.85rem' }}>Loading teachers...</span>;
@@ -344,7 +344,7 @@ export default function TeacherDetails(props) {
     if (assignedTheoryCourses.length > 0 || assignedSessionalCourses.length > 0) {
       fetchSchedules();
     }
-  }, [assignedTheoryCourses, assignedSessionalCourses]);
+  }, [assignedTheoryCourses, assignedSessionalCourses, teacherId]);
 
   /**
    * Check for time conflicts with existing schedules
@@ -710,7 +710,7 @@ export default function TeacherDetails(props) {
                         },
                         'already-scheduled': {
                           style: {
-                            backgroundColor: 'rgba(40, 167, 69, 0.15)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
                             border: '2px solid #28a745',
                           },
                           icon: <i className="mdi mdi-calendar-check text-success"></i>,
@@ -832,7 +832,7 @@ export default function TeacherDetails(props) {
                                             {conflictIcon}
                                             <span
                                               className="ml-2 font-semibold"
-                                              style={{ color: isAlreadyScheduled ? '#0066cc' : '#dc3545' }}
+                                              style={{ color: isAlreadyScheduled ? '#28a745' : '#dc3545' }}
                                             >
                                               {isAlreadyScheduled ? 'Already Assigned' : 'Cannot Select Time Slot'}
                                             </span>
@@ -870,7 +870,7 @@ export default function TeacherDetails(props) {
                                   // Keep a simple title for non-conflict items
                                   title={!conflict ? `${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})` : ''}
                                 >
-                                  <strong style={isAlreadyScheduled ? { color: '#0066cc' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
+                                  <strong style={isAlreadyScheduled ? { color: '#28a745' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
                                   <br />
                                   {courseInfo.section && (
                                     <CourseTeachers
@@ -888,10 +888,10 @@ export default function TeacherDetails(props) {
                                       top: '3px',
                                       right: '6px',
                                       fontSize: '11px',
-                                      color: '#0066cc',
+                                      color: '#28a745',
                                       fontWeight: 'normal'
                                     }}>
-                                      <i className="mdi mdi-check-circle ml-1" style={{ fontSize: '14px', color: '#0066cc' }}></i>
+                                      <i className="mdi mdi-check-circle ml-1" style={{ fontSize: '14px', color: '#28a745' }}></i>
                                     </div>
                                   )}
                                 </div>
@@ -923,27 +923,11 @@ export default function TeacherDetails(props) {
 
     // Check if we already have this data cached
     if (courseTeachersCache[cacheKey]) {
-      console.log(`DEBUG: Using cached teachers for ${cacheKey}:`, courseTeachersCache[cacheKey]);
       return courseTeachersCache[cacheKey];
     }
 
     try {
-      console.log(`DEBUG: Fetching teachers for ${courseId}-${section} from API...`);
       const teachers = await getSessionalTeachers(courseId, section);
-
-      console.log(`DEBUG: API returned teachers for ${courseId}-${section}:`, teachers);
-
-      if (teachers && teachers.length > 0) {
-        teachers.forEach((teacher, index) => {
-          console.log(`DEBUG: Teacher ${index + 1} from API:`, {
-            initial: teacher.initial,
-            name: teacher.name,
-            full_time_status: teacher.full_time_status,
-            full_time_status_type: typeof teacher.full_time_status,
-            allProperties: teacher
-          });
-        });
-      }
 
       // Update the cache with the fetched data
       setCourseTeachersCache(prevCache => ({
@@ -1276,27 +1260,7 @@ export default function TeacherDetails(props) {
   const hasPermanentTeachers = (courseId, section) => {
     const cacheKey = `${courseId}-${section}`;
     const teachers = courseTeachersCache[cacheKey] || [];
-
-    // Debug logging
-    console.log(`DEBUG: Checking permanent teachers for ${courseId}-${section}:`);
-    console.log(`Teachers cache:`, teachers);
-
-    if (teachers.length > 0) {
-      teachers.forEach((teacher, index) => {
-        console.log(`Teacher ${index + 1}:`, {
-          initial: teacher.initial,
-          name: teacher.name,
-          full_time_status: teacher.full_time_status,
-          full_time_status_type: typeof teacher.full_time_status
-        });
-      });
-    } else {
-      console.log('No teachers found in cache for this course');
-    }
-
     const hasPermanent = teachers.some(teacher => teacher.full_time_status === true);
-    console.log(`Has permanent teachers: ${hasPermanent}`);
-
     return hasPermanent;
   };
 
@@ -1309,9 +1273,9 @@ export default function TeacherDetails(props) {
   const getCourseColorStyles = (courseId, section) => {
     const hasPermanent = hasPermanentTeachers(courseId, section);
     return {
-      backgroundColor: hasPermanent ? '#d4edda' : '#f8d7da', // green for permanent, red for non-permanent
-      borderColor: hasPermanent ? '#28a745' : '#dc3545',
-      color: hasPermanent ? '#155724' : '#721c24'
+      backgroundColor: hasPermanent ? '#1714dd2f' : '#f8d7da',
+      borderColor: hasPermanent ? '#1714ddff' : '#dc3545',
+      color: hasPermanent ? '#1714ddff' : '#721c24'
     };
   };
 
@@ -1664,7 +1628,7 @@ export default function TeacherDetails(props) {
                           boxShadow: '0 6px 15px rgba(0,0,0,0.075)'
                         }}>
                           <div className="table-responsive">
-                            <table className="assignment-schedule-table">
+                            <table className="table assignment-schedule-table">
                               <thead>
                                 <tr>
                                   <th style={{
@@ -1894,7 +1858,7 @@ export default function TeacherDetails(props) {
               <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "#dc3545" }}>Unassign Course</Modal.Title>
             </div>
           </Modal.Header>
-          <Modal.Body className="px-4">
+          <Modal.Body className="px-4 bg-white">
             <p style={{ fontSize: "16px", color: "#495057" }}>
               Are you sure you want to unassign the assignment: <strong>{selectedAssignment.course_id}</strong>?
             </p>
@@ -1902,7 +1866,7 @@ export default function TeacherDetails(props) {
               This action cannot be undone. Assignment related to this course will be removed.
             </p>
           </Modal.Body>
-          <Modal.Footer style={{ borderTop: "1px solid rgba(220, 53, 69, 0.2)", padding: "16px" }}>
+          <Modal.Footer style={{ backgroundColor: "#ffffff", borderTop: "1px solid rgba(220, 53, 69, 0.2)", padding: "16px" }}>
             <Button
               style={{
                 background: "rgba(154, 77, 226, 0.15)",
