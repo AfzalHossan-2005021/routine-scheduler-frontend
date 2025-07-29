@@ -219,6 +219,7 @@ export default function ShowSessionalDistribution() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [loadingTeachers, setLoadingTeachers] = useState(false);
   const [courseToRemove, setCourseToRemove] = useState(null);
+  const [courseColors, setCourseColors] = useState({}); // Cache for course color styles
 
   // Modal Style
   const modalStyle = {
@@ -287,6 +288,56 @@ export default function ShowSessionalDistribution() {
     fetchSessionalSchedules();
   }, []);
 
+  // Fetch and cache color styles for all courses when sessional schedules change
+  useEffect(() => {
+    const fetchCourseColors = async () => {
+      const uniqueCourses = new Set();
+      
+      // Get unique course-section combinations
+      sessionalSchedules.forEach(schedule => {
+        if (schedule.course_id && schedule.section) {
+          uniqueCourses.add(`${schedule.course_id}-${schedule.section}`);
+        }
+      });
+
+      const colorPromises = Array.from(uniqueCourses).map(async (courseKey) => {
+        const [courseId, section] = courseKey.split('-');
+        try {
+          const colorStyles = await getCourseColorStyles(courseId, section);
+          return { courseKey, colorStyles };
+        } catch (error) {
+          console.error(`Error fetching colors for ${courseKey}:`, error);
+          // Return default red styling on error
+          return {
+            courseKey,
+            colorStyles: {
+              backgroundColor: '#f8d7da',
+              borderColor: '#dc3545',
+              color: '#721c24'
+            }
+          };
+        }
+      });
+
+      try {
+        const colorResults = await Promise.all(colorPromises);
+        const newColorCache = {};
+        
+        colorResults.forEach(({ courseKey, colorStyles }) => {
+          newColorCache[courseKey] = colorStyles;
+        });
+
+        setCourseColors(newColorCache);
+      } catch (error) {
+        console.error("Error fetching course colors:", error);
+      }
+    };
+
+    if (sessionalSchedules.length > 0) {
+      fetchCourseColors();
+    }
+  }, [sessionalSchedules]);
+
   /**
    * Get scheduled courses for a specific day and time slot
    * @param {string} day - The day to check
@@ -298,6 +349,39 @@ export default function ShowSessionalDistribution() {
     return sessionalSchedules.filter(schedule =>
       schedule.day === day && schedule.time === time
     );
+  };
+
+  /**
+   * Check if a course has permanent teachers assigned
+   * @param {string} courseId - The course ID
+   * @param {string} section - The section
+   * @returns {boolean} - True if the course has permanent teachers
+   */
+  const hasPermanentTeachers = async (courseId, section) => {
+    try {
+      const assignedTeachers = await getSessionalTeachers(courseId, section);
+      // Check if any teacher has full_time_status === true (permanent teacher)
+      const hasPermanent = assignedTeachers.some(teacher => teacher.full_time_status === true);
+      return hasPermanent;
+    } catch (error) {
+      console.error(`Error checking permanent teachers for ${courseId} (${section}):`, error);
+      return false;
+    }
+  };
+
+  /**
+   * Get the course color based on permanent teacher status
+   * @param {string} courseId - The course ID
+   * @param {string} section - The section
+   * @returns {Promise<object>} - Color styles for the course
+   */
+  const getCourseColorStyles = async (courseId, section) => {
+    const hasPermanent = await hasPermanentTeachers(courseId, section);
+    return {
+      backgroundColor: hasPermanent ? '#1714dd2f' : '#f8d7da',
+      borderColor: hasPermanent ? '#1714ddff' : '#dc3545',
+      color: hasPermanent ? '#1714ddff' : '#721c24'
+    };
   };
 
   const handleCourseClick = (course) => {
@@ -680,15 +764,33 @@ export default function ShowSessionalDistribution() {
                                   }}
                                 />
                               </div>
-                              {scheduledCourses.map((schedule, index) => (
+                              {scheduledCourses.map((schedule, index) => {
+                                const courseKey = `${schedule.course_id}-${schedule.section}`;
+                                const colorStyles = courseColors[courseKey] || {
+                                  backgroundColor: '#f8d7da',
+                                  borderColor: '#dc3545',
+                                  color: '#721c24'
+                                };
+                                
+                                // Determine if this course has permanent teachers based on color
+                                const hasPermTeachers = colorStyles.backgroundColor === '#1714dd2f';
+                                const tooltipMessage = hasPermTeachers 
+                                  ? `${schedule.course_id} - Section ${schedule.section}` 
+                                  : "No Full time Teacher Assigned";
+                                
+                                return (
                                 <div
                                   key={index}
                                   style={{
                                     ...scheduleTableStyle.courseItem,
                                     ...scheduleTableStyle.alreadyScheduledCourseItem,
                                     cursor: 'pointer',
-                                    position: 'relative'
+                                    position: 'relative',
+                                    backgroundColor: colorStyles.backgroundColor,
+                                    borderColor: colorStyles.borderColor,
+                                    color: colorStyles.color
                                   }}
+                                  title={tooltipMessage}
                                 //onClick={() => handleCourseClick(schedule)}
                                 >
                                   <div style={scheduleTableStyle.courseTitle}>
@@ -746,7 +848,8 @@ export default function ShowSessionalDistribution() {
                                   </div>
 
                                 </div>
-                              ))}
+                                );
+                              })}
                             </td>
                           );
                         })}
