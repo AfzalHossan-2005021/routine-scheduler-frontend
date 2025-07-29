@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import {getTheoryTeacherAssignment} from '../api/theory-assign';
+import {getCourses} from '../api/db-crud';
 import { toast } from 'react-hot-toast';
 
 export default function TheoryDistribution() {
