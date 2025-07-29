@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 
 export default function TeachersList() {
   const [teachers, setTeachers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [sessionalAssignments, setSessionalAssignments] = useState({});
   const [showModal, setShowModal] = useState(false);
   const [selectedTeacherInitial, setSelectedTeacherInitial] = useState(null);
@@ -16,8 +15,6 @@ export default function TeachersList() {
   // Function to fetch teachers and assignments data
   const fetchTeachersAndAssignments = async () => {
     try {
-      setLoading(true);
-
       // Fetch and process teachers
       const data = await getTeachers();
       const activeTeachers = data
@@ -34,8 +31,6 @@ export default function TeachersList() {
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load teachers or assignments");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -99,312 +94,235 @@ export default function TeachersList() {
 
   return (
     <div>
-      <div className="page-header">
+      {/* Modern Page Header */}
+      <div className="page-header" style={{
+        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+        borderRadius: "16px",
+        padding: "1.5rem",
+        marginBottom: "2rem",
+        boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+        color: "white"
+      }}>
         <h3 className="page-title" style={{
-          color: "rgb(174, 117, 228)",
+          fontSize: "1.8rem",
           fontWeight: "700",
+          marginBottom: "0.5rem",
           display: "flex",
           alignItems: "center",
-          gap: "10px"
+          gap: "12px",
+          color: "white"
         }}>
-          <i className="mdi mdi-account-multiple me-2"></i>
-          Teachers List
+          <div style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "rgba(255, 255, 255, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
+          }}>
+            <i className="mdi mdi-account-multiple" style={{ fontSize: "24px", color: "white" }}></i>
+          </div>
+          Active Teachers
         </h3>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item">
-              <a href="!#" onClick={(event) => event.preventDefault()}>
-                Dashboard
-              </a>
-            </li>
-            <li className="breadcrumb-item active" aria-current="page">
-              Teachers
-            </li>
-          </ol>
-        </nav>
       </div>
-      <div className="row">
-        <div className="col-12 grid-margin">
+      <div className="row mb-4">
+        <div className="col-12">
           <div className="card" style={{
-            borderRadius: "12px",
-            boxShadow: "0 6px 16px rgba(0,0,0,0.1)",
+            borderRadius: "16px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
             border: "none",
             transition: "all 0.3s ease",
-            overflow: "hidden"
+            background: "white"
           }}>
-            <div className="card-header" style={{
-              background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-              height: "75px",
-              display: "flex",
-              alignItems: "center",
-              position: "relative",
-              padding: "0 30px",
-              boxShadow: "0 4px 20px rgba(154, 77, 226, 0.2)"
-            }}>
-              <div style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "12px",
-                backgroundColor: "rgba(255, 255, 255, 0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                marginRight: "15px",
-                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                zIndex: 1
-              }}>
-                <i className="mdi mdi-account-multiple" style={{ fontSize: "24px", color: "white" }}></i>
+            <div className="card-body" style={{ padding: "2rem" }}>
+              <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h4 className="card-title" style={{
+                  color: "rgb(174, 117, 228)",
+                  marginBottom: 0,
+                  fontWeight: "700",
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "1.5rem",
+                  letterSpacing: "0.3px"
+                }}>
+                  <i className="mdi mdi-account-multiple" style={{ fontSize: "24px", marginRight: "8px" }}></i>
+                  Teachers List
+                </h4>
               </div>
-              <span style={{
-                fontSize: "19px",
-                fontWeight: "700",
-                letterSpacing: "0.5px",
-                zIndex: 1,
-                color: "white",
-                textShadow: "0 1px 2px rgba(0, 0, 0, 0.1)"
-              }}>Active Teachers</span>
-            </div>
-            <div className="card-body" style={{
-              padding: "30px",
-              position: "relative",
-              backgroundColor: "rgba(255, 255, 255, 0.9)"
-            }}>
-              {loading ? (
-                <div className="d-flex justify-content-center" style={{ padding: "50px 0" }}>
-                  <div className="d-flex flex-column align-items-center">
-                    <div className="spinner-border" style={{
-                      color: "rgb(174, 117, 228)",
-                      width: "3rem",
-                      height: "3rem"
-                    }} role="status">
-                      <span className="sr-only">Loading...</span>
-                    </div>
-                    <div style={{ marginTop: "15px", color: "#666", fontWeight: "500" }}>
-                      Loading teacher data...
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table" style={{
-                    borderCollapse: "separate",
-                    borderSpacing: "0 8px",
-                    width: "100%",
-                    margin: "0 auto",
-                  }}>
-                    <thead>
-                      <tr>
-                        <th style={{
-                          background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                          color: "white",
-                          padding: "12px 16px",
-                          fontWeight: "600",
-                          borderTopLeftRadius: "8px",
-                          borderBottomLeftRadius: "8px",
-                          borderRight: "1px solid rgba(255, 255, 255, 0.1)"
-                        }}> Seniority Rank </th>
-                        <th style={{
-                          background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                          color: "white",
-                          padding: "12px 16px",
-                          fontWeight: "600",
-                          borderRight: "1px solid rgba(255, 255, 255, 0.1)"
-                        }}> Initial </th>
-                        <th style={{
-                          background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                          color: "white",
-                          padding: "12px 16px",
-                          fontWeight: "600",
-                          borderRight: "1px solid rgba(255, 255, 255, 0.1)"
-                        }}> Name </th>
-                        <th style={{
-                          background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                          color: "white",
-                          padding: "12px 16px",
-                          fontWeight: "600",
-                          borderRight: "1px solid rgba(255, 255, 255, 0.1)"
-                        }}> Designation </th>
-                        <th style={{
-                          background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                          color: "white",
-                          padding: "12px 16px",
-                          fontWeight: "600",
-                          borderRight: "1px solid rgba(255, 255, 255, 0.1)"
-                        }}>Status</th>
-                        <th style={{
-                          background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                          color: "white",
-                          padding: "12px 16px",
-                          fontWeight: "600",
-                          borderTopRightRadius: "8px",
-                          borderBottomRightRadius: "8px"
-                        }}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teachers.map((teacher, index) => (
-                        <tr key={teacher.initial} style={{
-                          backgroundColor: index % 2 === 0 ? "#f8f9fa" : "white",
-                          boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
-                          transition: "transform 0.2s ease, box-shadow 0.2s ease",
-                        }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = "rgba(194, 137, 248, 0.05)";
-                            e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.05)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = index % 2 === 0 ? "#f8f9fa" : "white";
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
-                          }}>
-                          <td style={{
-                            padding: "12px 16px",
-                            fontWeight: "500",
-                            borderBottom: "none",
-                            verticalAlign: "middle",
-                          }}>
-                            <div style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "50%",
-                              background: "linear-gradient(135deg, rgba(194, 137, 248, 0.1) 0%, rgba(174, 117, 228, 0.1) 100%)",
-                              border: "1px solid rgba(174, 117, 228, 0.2)",
-                              color: "rgb(174, 117, 228)",
-                              fontWeight: "600",
-                              margin: "0 auto"
-                            }}>
-                              {teacher.seniority_rank}
-                            </div>
-                          </td>
-                          <td style={{
-                            padding: "12px 16px",
+              <div className="table-responsive">
+                <table className="table" style={{ margin: 0 }}>
+                  <thead>
+                    <tr style={{
+                      backgroundColor: "rgba(174, 117, 228, 0.08)",
+                      borderBottom: "2px solid rgba(174, 117, 228, 0.1)"
+                    }}>
+                      <th style={{ width: "180px", padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <i className="mdi mdi-sort" style={{ fontSize: "20px", cursor: "pointer", margin: 0 }}></i> Seniority Rank
+                      </th>
+                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <i className='mdi mdi-account' style={{ fontSize: "20px", cursor: "pointer", margin: 0 }}></i> Initial
+                      </th>
+                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <i className='mdi mdi-account-box' style={{ fontSize: "20px", cursor: "pointer", margin: 0 }}></i> Name
+                      </th>
+                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <i className='mdi mdi-briefcase' style={{ fontSize: "20px", cursor: "pointer", margin: 0 }}></i> Designation
+                      </th>
+                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <i className='mdi mdi-check-circle' style={{ fontSize: "20px", cursor: "pointer", margin: 0 }}></i> Status
+                      </th>
+                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
+                        <i className='mdi mdi-eye' style={{ fontSize: "20px", cursor: "pointer", margin: 0 }}></i> Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {teachers.map((teacher) => (
+                      <tr key={teacher.initial} style={{ transition: "all 0.2s", cursor: "pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(194, 137, 248, 0.08)"}
+                        onMouseLeave={e => e.currentTarget.style.background = ""}
+                      >
+                        <td style={{
+                          padding: "12px 22px",
+                          fontWeight: "500",
+                          borderBottom: "none",
+                          verticalAlign: "middle",
+                        }}>
+                          <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "50%",
+                            background: "linear-gradient(135deg, rgba(194, 137, 248, 0.1) 0%, rgba(174, 117, 228, 0.1) 100%)",
+                            border: "1px solid rgba(174, 117, 228, 0.2)",
+                            color: "rgb(174, 117, 228)",
                             fontWeight: "600",
-                            borderBottom: "none",
-                            color: "rgb(106, 27, 154)",
-                            verticalAlign: "middle",
-                          }}> {teacher.initial} </td>
-                          <td style={{
-                            padding: "12px 16px",
-                            fontWeight: "500",
-                            borderBottom: "none",
-                            verticalAlign: "middle",
-                          }}> {teacher.name} </td>
-                          <td style={{
-                            padding: "12px 16px",
-                            fontWeight: "500",
-                            borderBottom: "none",
-                            verticalAlign: "middle",
-                          }}> {teacher.designation} </td>
-                          <td style={{
-                            padding: "12px 16px",
-                            borderBottom: "none",
-                            verticalAlign: "middle",
+                            margin: "0 auto"
                           }}>
-                            {sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0 ? (
-                              <span
-                                style={{
-                                  backgroundColor: "rgba(40, 167, 69, 0.1)",
-                                  color: "#28a745",
-                                  padding: "6px 12px",
-                                  borderRadius: "6px",
-                                  fontWeight: "500",
-                                  display: "inline-flex",
-                                  alignItems: "center"
-                                }}
-                              >
-                                <i className="mdi mdi-check-circle me-1"></i>
-                                Assigned
-                                <span className="ms-1 badge" style={{
-                                  backgroundColor: "rgba(40, 167, 69, 0.2)",
-                                  color: "#28a745",
-                                  fontSize: "10px",
-                                  padding: "2px 6px"
-                                }}>
-                                  {sessionalAssignments[teacher.initial].length}
-                                </span>
-                              </span>
-                            ) : (
-                              <span style={{
-                                backgroundColor: "rgba(220, 53, 69, 0.1)",
-                                color: "#dc3545",
+                            {teacher.seniority_rank}
+                          </div>
+                        </td>
+                        <td style={{
+                          padding: "12px 22px",
+                          fontWeight: "600",
+                          borderBottom: "none",
+                          color: "rgb(106, 27, 154)",
+                          verticalAlign: "middle",
+                        }}> {teacher.initial} </td>
+                        <td style={{
+                          padding: "12px 22px",
+                          fontWeight: "500",
+                          borderBottom: "none",
+                          verticalAlign: "middle",
+                        }}> {teacher.name} </td>
+                        <td style={{
+                          padding: "12px 22px",
+                          fontWeight: "500",
+                          borderBottom: "none",
+                          verticalAlign: "middle",
+                        }}> {teacher.designation} </td>
+                        <td style={{
+                          padding: "12px 22px",
+                          borderBottom: "none",
+                          verticalAlign: "middle",
+                        }}>
+                          {sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0 ? (
+                            <span
+                              style={{
+                                backgroundColor: "rgba(40, 167, 69, 0.1)",
+                                color: "#28a745",
                                 padding: "6px 12px",
                                 borderRadius: "6px",
                                 fontWeight: "500",
                                 display: "inline-flex",
-                                alignItems: "center"
-                              }}>
-                                <i className="mdi mdi-close-circle me-1"></i>
-                                Not Assigned
-                              </span>
-                            )}
-                          </td>
-                          <td style={{
-                            padding: "12px 16px",
-                            borderBottom: "none",
-                            verticalAlign: "middle",
-                            textAlign: "center"
-                          }}>
-                            <button
-                              ref={el => buttonRefs.current[teacher.initial] = el}
-                              onClick={() => {
-                                setSelectedTeacherInitial(teacher.initial);
-                                setShowModal(true);
-                              }}
-                              onMouseDown={e => e.preventDefault()}
-                              style={{
-                                background: sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0
-                                  ? "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)"
-                                  : "linear-gradient(135deg, rgb(33, 150, 243) 0%, rgb(13, 71, 161) 100%)",
-                                border: "none",
-                                padding: "8px 16px",
-                                borderRadius: "8px",
-                                color: "white",
-                                fontWeight: "500",
-                                boxShadow: sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0
-                                  ? "0 4px 12px rgba(174, 117, 228, 0.3)"
-                                  : "0 4px 12px rgba(33, 150, 243, 0.3)",
-                                transition: "all 0.2s ease",
-                                cursor: "pointer",
-                                display: "inline-flex",
                                 alignItems: "center",
                                 gap: "6px"
                               }}
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.boxShadow = sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0
-                                  ? "0 6px 15px rgba(174, 117, 228, 0.4)"
-                                  : "0 6px 15px rgba(33, 150, 243, 0.4)";
-                                e.currentTarget.style.transform = "translateY(-2px)";
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.boxShadow = sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0
-                                  ? "0 4px 12px rgba(174, 117, 228, 0.3)"
-                                  : "0 4px 12px rgba(33, 150, 243, 0.3)";
-                                e.currentTarget.style.transform = "translateY(0)";
-                              }}
                             >
-                              {sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0 ? (
-                                <>
-                                  <i className="mdi mdi-account-details"></i>
-                                  View Details
-                                </>
-                              ) : (
-                                <>
-                                  <i className="mdi mdi-plus-circle"></i>
-                                  Assign
-                                </>
-                              )}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                              <i className="mdi mdi-check-circle me-1"></i>
+                              Assigned
+                              <span className="ms-1 badge" style={{
+                                backgroundColor: "rgba(40, 167, 69, 0.2)",
+                                color: "#28a745",
+                                fontSize: "10px",
+                                padding: "2px 6px"
+                              }}>
+                                {sessionalAssignments[teacher.initial].length}
+                              </span>
+                            </span>
+                          ) : (
+                            <span style={{
+                              backgroundColor: "rgba(220, 53, 69, 0.1)",
+                              color: "#dc3545",
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              fontWeight: "500",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px"
+                            }}>
+                              <i className="mdi mdi-close-circle me-1"></i>
+                              Not Assigned
+                            </span>
+                          )}
+                        </td>
+                        <td style={{
+                          padding: "12px 22px",
+                          borderBottom: "none",
+                          verticalAlign: "middle"
+                        }}>
+                          <button
+                            ref={el => buttonRefs.current[teacher.initial] = el}
+                            onClick={() => {
+                              setSelectedTeacherInitial(teacher.initial);
+                              setShowModal(true);
+                            }}
+                            type="button"
+                            style={{
+                              background: "rgba(154, 77, 226, 0.15)",
+                              color: "rgb(154, 77, 226)",
+                              border: "1px solid rgba(154, 77, 226, 0.5)",
+                              borderRadius: "6px",
+                              padding: "7px 14px",
+                              transition: "all 0.3s ease",
+                              fontWeight: "500",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              marginRight: "8px"
+                            }}
+                            className="btn"
+                            onMouseOver={e => {
+                              e.currentTarget.style.background = "rgb(154, 77, 226)";
+                              e.currentTarget.style.color = "white";
+                            }}
+                            onMouseOut={e => {
+                              e.currentTarget.style.background = "rgba(154, 77, 226, 0.15)";
+                              e.currentTarget.style.color = "rgb(154, 77, 226)";
+                            }}
+                          >
+                            {sessionalAssignments[teacher.initial] && sessionalAssignments[teacher.initial].length > 0 ? (
+                              <>
+                                <i className="mdi mdi-account-details"></i>
+                                View Details
+                              </>
+                            ) : (
+                              <>
+                                <i className="mdi mdi-plus-circle"></i>
+                                Assign
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -472,17 +390,31 @@ export default function TeachersList() {
           <button
             onClick={() => setShowModal(false)}
             style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "12px",
-              backgroundColor: "rgba(255, 255, 255, 0.15)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-              zIndex: 1
-            }}>
-            <i className="mdi mdi-close" style={{ fontSize: "24px", color: "white" }}></i>
+              background: 'rgba(255,255,255,0.15)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgb(154, 77, 226)';
+              e.currentTarget.style.color = 'white';
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+              e.currentTarget.style.color = 'white';
+            }}
+          >
+            <i className="mdi mdi-close"></i>
           </button>
         </Modal.Header>
         <Modal.Body style={{

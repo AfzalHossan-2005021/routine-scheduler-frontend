@@ -72,3 +72,18 @@ export const addTheoryTeacherAssignment = (course_id, section, initial) =>
 
 export const deleteTheoryTeacherAssignment = (course_id, section, initial) =>
   axios.delete(api_url(`/assign/theory-teacher/delete/${course_id}/${section}/${initial}`)).then((res) => res.data);
+
+// Credit calculation API functions
+export const getTeacherTotalCredit = (initial) =>
+  axios.get(api_url(`/assign/credit/teacher/${initial}`)).then((res) => res.data);
+
+export const getAllTeachersCredit = () =>
+  axios.get(api_url("/assign/credit/all")).then((res) => res.data);
+
+// Theory distribution API function
+export const getTheoryDistribution = () =>
+  axios.get(api_url("/assign/theory-distribution")).then((res) => res.data);
+
+// Sessional distribution API function
+export const getSessionalDistribution = () =>
+  axios.get(api_url("/assign/sessional-distribution")).then((res) => res.data);

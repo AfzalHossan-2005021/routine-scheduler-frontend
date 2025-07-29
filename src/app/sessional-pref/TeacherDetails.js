@@ -27,65 +27,118 @@ const scheduleTableStyle = {
     boxShadow: '0 3px 12px rgba(0,0,0,0.1)',
     borderRadius: '8px',
     overflow: 'hidden',
+    borderCollapse: 'separate',
+    borderSpacing: 0,
+    border: '1px solid rgb(194, 137, 248)'
   },
   headerCell: {
-    width: '80px',
+    width: '200px',
     textAlign: 'center',
     fontWeight: '600',
     padding: '12px 8px',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
     color: 'white',
     border: 'none',
     fontSize: '0.9rem',
   },
   dayCell: {
     fontWeight: '600',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
     color: 'white',
-    width: '40px',
+    width: '80px',
     border: 'none',
-    padding: '8px',
-    fontSize: '0.85rem',
+    padding: '12px 8px',
+    fontSize: '0.9rem',
     verticalAlign: 'middle',
-    maxWidth: '40px',
   },
   courseCell: {
-    height: '80px',
-    border: '1px solid #dee2e6',
-    padding: '4px',
+    height: '100px',
+    border: '1px solid rgb(194, 137, 248)',
+    padding: '8px',
     fontSize: '0.85rem',
-    verticalAlign: 'middle',
-    overflow: 'hidden',
-    maxWidth: '80px',
-  },
-  alreadyScheduledCourseItem: {
-    backgroundColor: 'rgba(0, 123, 255, 0.25)',
-    border: '1px solid #007bff',
-    fontWeight: 'bold',
-  },
-  scheduledCell: {
-    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-    border: '2px solid #28a745',
-  },
-  selectableCell: {
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  selectedCell: {
-    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-    border: '2px solid #007bff',
+    verticalAlign: 'top',
+    backgroundColor: 'white',
+    width: '200px',
+    minWidth: '200px',
   },
   courseItem: {
-    padding: '4px 6px',
-    margin: '2px 0',
+    padding: '10px',
+    margin: '4px 0',
+    borderRadius: '8px',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    position: 'relative',
+    backgroundColor: 'rgba(194, 137, 248, 0.2)',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+    border: '1px solid rgb(194, 137, 248)',
+  },
+  addButton: {
+    position: 'absolute',
+    right: '8px',
+    top: '8px',
+    padding: '4px 8px',
+    backgroundColor: '#28a745',
+    color: 'white',
+    border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
-    transition: 'background-color 0.2s',
+    fontSize: '0.8rem',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: '#218838'
+    }
   },
-  selectedCourseItem: {
-    backgroundColor: 'rgba(0, 123, 255, 0.2)',
-    border: '1px solid #007bff',
-    fontWeight: 'bold',
+  alreadyScheduledCourseItem: {
+    background: 'rgba(40, 167, 69, 0.15)',
+    border: '1px solid #28a745',
+    color: '#28a745',
+  },
+  courseTitle: {
+    fontWeight: '600',
+    fontSize: '0.9rem',
+    marginBottom: '4px',
+    width: '100%',
+    textAlign: 'center',
+  },
+  sectionBadge: {
+    backgroundColor: 'rgba(229, 200, 255, 1)',
+    padding: '4px 8px',
+    fontSize: '0.8rem',
+    fontWeight: '600',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '4px',
+    minWidth: '100px',
+  },
+  teacherBadge: {
+    backgroundColor: 'rgba(0, 150, 136, 0.18)',
+    color: '#00838f',
+    padding: '4px 8px',
+    fontSize: '0.8rem',
+    fontWeight: '600',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '4px',
+    width: '100%',
+  },
+  noTeacher: {
+    backgroundColor: 'rgba(220, 53, 69, 0.18)',
+    color: '#dc3545',
+    padding: '4px 8px',
+    fontSize: '0.8rem',
+    fontWeight: '600',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: '4px',
+    width: '100%',
   },
 };
 
@@ -126,7 +179,7 @@ function CourseTeachers({ courseId, section, fetchTeachers, isAlreadyScheduled, 
     };
   }, [courseId, section, fetchTeachers, refreshKey]); // Added refreshKey as dependency
 
-  const textStyle = isAlreadyScheduled ? { color: '#0066cc' } : {};
+  const textStyle = isAlreadyScheduled ? { color: '#28a745' } : {};
 
   if (loading) {
     return <span style={{ ...textStyle, fontSize: '0.85rem' }}>Loading teachers...</span>;
@@ -291,7 +344,7 @@ export default function TeacherDetails(props) {
     if (assignedTheoryCourses.length > 0 || assignedSessionalCourses.length > 0) {
       fetchSchedules();
     }
-  }, [assignedTheoryCourses, assignedSessionalCourses]);
+  }, [assignedTheoryCourses, assignedSessionalCourses, teacherId]);
 
   /**
    * Check for time conflicts with existing schedules
@@ -305,7 +358,7 @@ export default function TeacherDetails(props) {
       schedule.day === day &&
       (schedule.time === time ||
         schedule.time === (time % 12) + 1 ||
-        schedule.time === ((time + 1) % 12 ) + 1)
+        schedule.time === ((time + 1) % 12) + 1)
     );
 
     // Check already assigned sessional courses for conflicts - two methods:
@@ -657,7 +710,7 @@ export default function TeacherDetails(props) {
                         },
                         'already-scheduled': {
                           style: {
-                            backgroundColor: 'rgba(40, 167, 69, 0.15)',
+                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
                             border: '2px solid #28a745',
                           },
                           icon: <i className="mdi mdi-calendar-check text-success"></i>,
@@ -779,7 +832,7 @@ export default function TeacherDetails(props) {
                                             {conflictIcon}
                                             <span
                                               className="ml-2 font-semibold"
-                                              style={{ color: isAlreadyScheduled ? '#0066cc' : '#dc3545' }}
+                                              style={{ color: isAlreadyScheduled ? '#28a745' : '#dc3545' }}
                                             >
                                               {isAlreadyScheduled ? 'Already Assigned' : 'Cannot Select Time Slot'}
                                             </span>
@@ -817,7 +870,7 @@ export default function TeacherDetails(props) {
                                   // Keep a simple title for non-conflict items
                                   title={!conflict ? `${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})` : ''}
                                 >
-                                  <strong style={isAlreadyScheduled ? { color: '#0066cc' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
+                                  <strong style={isAlreadyScheduled ? { color: '#28a745' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
                                   <br />
                                   {courseInfo.section && (
                                     <CourseTeachers
@@ -835,10 +888,10 @@ export default function TeacherDetails(props) {
                                       top: '3px',
                                       right: '6px',
                                       fontSize: '11px',
-                                      color: '#0066cc',
+                                      color: '#28a745',
                                       fontWeight: 'normal'
                                     }}>
-                                      <i className="mdi mdi-check-circle ml-1" style={{ fontSize: '14px', color: '#0066cc' }}></i>
+                                      <i className="mdi mdi-check-circle ml-1" style={{ fontSize: '14px', color: '#28a745' }}></i>
                                     </div>
                                   )}
                                 </div>
@@ -870,27 +923,11 @@ export default function TeacherDetails(props) {
 
     // Check if we already have this data cached
     if (courseTeachersCache[cacheKey]) {
-      console.log(`DEBUG: Using cached teachers for ${cacheKey}:`, courseTeachersCache[cacheKey]);
       return courseTeachersCache[cacheKey];
     }
 
     try {
-      console.log(`DEBUG: Fetching teachers for ${courseId}-${section} from API...`);
       const teachers = await getSessionalTeachers(courseId, section);
-      
-      console.log(`DEBUG: API returned teachers for ${courseId}-${section}:`, teachers);
-      
-      if (teachers && teachers.length > 0) {
-        teachers.forEach((teacher, index) => {
-          console.log(`DEBUG: Teacher ${index + 1} from API:`, {
-            initial: teacher.initial,
-            name: teacher.name,
-            full_time_status: teacher.full_time_status,
-            full_time_status_type: typeof teacher.full_time_status,
-            allProperties: teacher
-          });
-        });
-      }
 
       // Update the cache with the fetched data
       setCourseTeachersCache(prevCache => ({
@@ -1099,14 +1136,14 @@ export default function TeacherDetails(props) {
 
         // Update the course teachers cache to include the current teacher for successfully assigned courses
         const updatedCache = { ...courseTeachersCache };
-        
+
         selectedSessionalSchedules.forEach(schedule => {
           const cacheKey = `${schedule.course_id}-${schedule.section}`;
           const existingTeachers = updatedCache[cacheKey] || [];
-          
+
           // Check if the current teacher is already in the list
           const teacherExists = existingTeachers.some(teacher => teacher.initial === teacherId);
-          
+
           if (!teacherExists) {
             // Add the current teacher to the list
             updatedCache[cacheKey] = [
@@ -1118,7 +1155,7 @@ export default function TeacherDetails(props) {
             ];
           }
         });
-        
+
         setCourseTeachersCache(updatedCache);
 
         // Trigger a refresh of CourseTeachers components
@@ -1157,7 +1194,7 @@ export default function TeacherDetails(props) {
     try {
       // Show loading state
       const loadingToast = toast.loading(`Unassigning from ${courseInfo.course_id}...`);
-      
+
       // Prepare unassignment data (this might need to be adjusted based on your backend API)
       const unassignmentData = {
         initial: teacherId,
@@ -1169,7 +1206,7 @@ export default function TeacherDetails(props) {
       try {
         // Call the API to remove assignment
         const result = await deleteTeacherSessionalAssignment(unassignmentData);
-        
+
         // Dismiss loading toast
         toast.dismiss(loadingToast);
 
@@ -1178,7 +1215,7 @@ export default function TeacherDetails(props) {
           toast.success(`Successfully unassigned from ${courseInfo.course_id} (Section ${courseInfo.section})`);
 
           // Update the assigned sessional courses state
-          const updatedCourses = assignedSessionalCourses.filter(course => 
+          const updatedCourses = assignedSessionalCourses.filter(course =>
             !(course.course_id === courseInfo.course_id && course.section === courseInfo.section)
           );
           setAssignedSessionalCourses(updatedCourses);
@@ -1201,7 +1238,7 @@ export default function TeacherDetails(props) {
       } catch (error) {
         toast.dismiss(loadingToast);
         console.error("Error unassigning course:", error);
-        
+
         if (error.response?.data?.message) {
           toast.error(`Error: ${error.response.data.message}`);
         } else {
@@ -1223,27 +1260,7 @@ export default function TeacherDetails(props) {
   const hasPermanentTeachers = (courseId, section) => {
     const cacheKey = `${courseId}-${section}`;
     const teachers = courseTeachersCache[cacheKey] || [];
-    
-    // Debug logging
-    console.log(`DEBUG: Checking permanent teachers for ${courseId}-${section}:`);
-    console.log(`Teachers cache:`, teachers);
-    
-    if (teachers.length > 0) {
-      teachers.forEach((teacher, index) => {
-        console.log(`Teacher ${index + 1}:`, {
-          initial: teacher.initial,
-          name: teacher.name,
-          full_time_status: teacher.full_time_status,
-          full_time_status_type: typeof teacher.full_time_status
-        });
-      });
-    } else {
-      console.log('No teachers found in cache for this course');
-    }
-    
     const hasPermanent = teachers.some(teacher => teacher.full_time_status === true);
-    console.log(`Has permanent teachers: ${hasPermanent}`);
-    
     return hasPermanent;
   };
 
@@ -1256,9 +1273,9 @@ export default function TeacherDetails(props) {
   const getCourseColorStyles = (courseId, section) => {
     const hasPermanent = hasPermanentTeachers(courseId, section);
     return {
-      backgroundColor: hasPermanent ? '#d4edda' : '#f8d7da', // green for permanent, red for non-permanent
-      borderColor: hasPermanent ? '#28a745' : '#dc3545',
-      color: hasPermanent ? '#155724' : '#721c24'
+      backgroundColor: hasPermanent ? '#1714dd2f' : '#f8d7da',
+      borderColor: hasPermanent ? '#1714ddff' : '#dc3545',
+      color: hasPermanent ? '#1714ddff' : '#721c24'
     };
   };
 
@@ -1273,69 +1290,68 @@ export default function TeacherDetails(props) {
     );
   }
 
-  // Badge style for status indicators
-  const badgeStyle = (isSuccess) => ({
-    fontSize: '14px',
-    padding: '6px 10px',
-    verticalAlign: 'middle'
-  });
-
-  // Render badge based on assignment status
-  const renderAssignmentBadge = () => {
-    if (assignedSessionalCourses.length > 0) {
-      return (
-        <span className="ml-3 badge badge-success" style={badgeStyle(true)}>
-          <i className="mdi mdi-check-circle-outline mr-1"></i> Assigned
-        </span>
-      );
-    } else {
-      return (
-        <span className="ml-3 badge badge-warning" style={badgeStyle(false)}>
-          <i className="mdi mdi-alert-circle-outline mr-1"></i> Not Assigned
-        </span>
-      );
-    }
-  };
-
   return (
     <div>
-      <div className="page-header mb-6">
-        <div className="row align-items-center">
-          <div className="col">
-            <h3 className="page-title">
-              <span className="text-primary">
-                <i className="mdi mdi-account-tie mr-2"></i> {teacher?.name || teacherId}
-              </span>
-              {renderAssignmentBadge()}
-            </h3>
+      <div className="page-header" style={{
+        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+        borderRadius: "16px",
+        padding: "1.5rem",
+        marginBottom: "2rem",
+        boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+        color: "white"
+      }}>
+        <h3 className="page-title" style={{
+          fontSize: "1.8rem",
+          fontWeight: "700",
+          marginBottom: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          color: "white"
+        }}>
+          <div style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "rgba(255, 255, 255, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
+          }}>
+            <i className="mdi mdi-account-tie"></i>
           </div>
-        </div>
+          {teacher?.name || teacherId}
+        </h3>
       </div>
-
       {teacher && (
-        <div className="row">
-          {/* Current Assignments Table */}
-          <div className="col-12 grid-margin">
-            <div className="card">
-              {/* Add some padding to the card body on left and right*/}
-              <div className="card-body" style={{ padding: '0px 30px' }}>
-                {/* Current Assignments Schedule Table */}
-                <div className="mt-4">
-                  <div className="card mb-4">
-                    <div className="card-header" style={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      borderRadius: '8px 8px 0 0',
-                      padding: '1rem 1.5rem'
+        <div>
+          <div className="row mb-4">
+            <div className="col-12">
+              <div className="card" style={{
+                borderRadius: "16px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+                border: "none",
+                transition: "all 0.3s ease",
+                background: "white"
+              }}>
+                <div className="card-body" style={{ padding: "2rem" }}>
+                  <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h4 className="card-title" style={{
+                      color: "rgb(174, 117, 228)",
+                      marginBottom: 0,
+                      fontWeight: "700",
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: "1.5rem",
+                      letterSpacing: "0.3px"
                     }}>
-                      <h6 className="card-title mb-0" style={{ color: 'white', fontWeight: '600' }}>
-                        <i className="mdi mdi-clipboard-text mr-2"></i>Current Schedule Assignments
-                      </h6>
-                    </div>
-                    <div className="card-body" style={{ padding: '1.5rem' }}>
-                      {(assignedTheoryCourses.length > 0 || assignedSessionalCourses.length > 0) ? (
-                        <div>
-                          <style jsx="true">{`
+                      <i className="mdi mdi-clipboard-text mr-2"></i>Current Schedule Assignments
+                    </h4>
+                  </div>
+                  {(assignedTheoryCourses.length > 0 || assignedSessionalCourses.length > 0) ? (
+                    <div>
+                      <style jsx="true">{`
                             .assignment-schedule-table {
                               border-collapse: separate;
                               border-spacing: 0;
@@ -1346,9 +1362,10 @@ export default function TeacherDetails(props) {
                               overflow: hidden;
                               width: 100%;
                               margin: 0 auto;
+                              border: 1px solid rgb(194, 137, 248);
                             }
                             .assignment-schedule-table thead th {
-                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              background: linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%);
                               color: white;
                               font-weight: 600;
                               padding: 12px 8px;
@@ -1357,7 +1374,7 @@ export default function TeacherDetails(props) {
                               font-size: 0.9rem;
                             }
                             .assignment-schedule-table tbody th {
-                              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                              background: linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%);
                               color: white;
                               font-weight: 600;
                               padding: 8px;
@@ -1368,7 +1385,7 @@ export default function TeacherDetails(props) {
                               font-size: 0.85rem;
                             }
                             .assignment-schedule-table td {
-                              border: 1px solid #dee2e6;
+                              border: 1px solid rgb(194, 137, 248);
                               height: 55px;
                               width: 120px;
                               min-width: 120px;
@@ -1438,378 +1455,371 @@ export default function TeacherDetails(props) {
                               font-size: 0.75rem;
                             }
                           `}</style>
+                      <div className="table-responsive">
+                        <table className="table assignment-schedule-table">
+                          <thead>
+                            <tr>
+                              <th>Day / Time</th>
+                              {times.map((time) => (
+                                <th key={time}>{time}:00{time === 12 ? ' PM' : time > 12 ? ' PM' : ' AM'}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {days.map((day) => {
+                              // Track merged cells to skip rendering
+                              const merged = Array(times.length).fill(false);
+
+                              return (
+                                <tr key={day}>
+                                  <th>{day}</th>
+                                  {times.map((time, timeIndex) => {
+                                    // Skip if this cell is already merged
+                                    if (merged[timeIndex]) return null;
+
+                                    // Check for theory assignment
+                                    const theoryAssignment = theorySchedule.find(schedule =>
+                                      schedule.day === day && schedule.time === time
+                                    );
+
+                                    // Check for sessional assignment - check both direct assignment and through schedule
+                                    let sessionalAssignment = assignedSessionalCourses.find(course =>
+                                      course.day === day && course.time === time
+                                    );
+
+                                    // If not found directly, check through sessionalSchedule
+                                    if (!sessionalAssignment) {
+                                      const scheduleEntry = sessionalSchedule.find(schedule =>
+                                        schedule.day === day && schedule.time === time
+                                      );
+
+                                      if (scheduleEntry) {
+                                        // Find if this schedule entry matches any assigned course
+                                        sessionalAssignment = assignedSessionalCourses.find(course =>
+                                          course.course_id === scheduleEntry.course_id &&
+                                          course.section === scheduleEntry.section
+                                        );
+                                      }
+                                    }
+
+                                    // If sessional assignment, merge 3 cells
+                                    if (sessionalAssignment) {
+                                      // Mark next 2 cells as merged
+                                      if (timeIndex + 1 < times.length) merged[timeIndex + 1] = true;
+                                      if (timeIndex + 2 < times.length) merged[timeIndex + 2] = true;
+
+                                      return (
+                                        <td
+                                          key={`${day}-${time}`}
+                                          colSpan={3}
+                                          style={{ width: '360px', minWidth: '360px', maxWidth: '360px' }}
+                                        >
+                                          <div className="sessional-assignment">
+                                            <button
+                                              onClick={() => setSelectedAssignment(sessionalAssignment)}
+                                              className="assignment-unassign-btn"
+                                              title="Unassign from this course"
+                                            >
+                                              <i className="mdi mdi-close"></i>
+                                            </button>
+                                            <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                                              {sessionalAssignment.course_id}
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                              Section {sessionalAssignment.section}
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                              <i className="mdi mdi-flask"></i> Lab
+                                            </div>
+                                          </div>
+                                        </td>
+                                      );
+                                    }
+
+                                    // If theory assignment, single cell
+                                    if (theoryAssignment) {
+                                      return (
+                                        <td key={`${day}-${time}`}>
+                                          <div className="theory-assignment">
+                                            <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
+                                              {theoryAssignment.course_id}
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                              Section {theoryAssignment.section || 'All'}
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
+                                              <i className="mdi mdi-book-open-variant"></i> Theory
+                                            </div>
+                                          </div>
+                                        </td>
+                                      );
+                                    }
+
+                                    // Empty slot
+                                    return (
+                                      <td key={`${day}-${time}`}>
+                                        <div className="empty-slot"></div>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="mb-3">
+                        <i className="mdi mdi-clipboard-text-outline" style={{ fontSize: '3rem', color: '#6c757d', opacity: 0.5 }}></i>
+                      </div>
+                      <h6 className="text-muted mb-2">No Current Assignments</h6>
+                      <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
+                        This teacher has no theory or sessional course assignments yet.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="row mb-4">
+            <div className="col-12">
+              <div className="card" style={{
+                borderRadius: "16px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+                border: "none",
+                transition: "all 0.3s ease",
+                background: "white"
+              }}>
+                <div className="card-body" style={{ padding: "2rem" }}>
+                  <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <h4 className="card-title" style={{
+                      color: "rgb(174, 117, 228)",
+                      marginBottom: 0,
+                      fontWeight: "700",
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: "1.5rem",
+                      letterSpacing: "0.3px"
+                    }}><i className="mdi mdi-table-large mr-2"></i>Sessional Choice Table
+                    </h4>
+                  </div>
+                  {loadingSchedules ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border text-info" role="status">
+                        <span className="sr-only">Loading...</span>
+                      </div>
+                      <p className="mt-2 text-muted">Loading available schedules...</p>
+                    </div>
+                  ) : departmentalSessionalSchedules.length > 0 ? (
+                    <div>
+                      <SessionalScheduleTable
+                        schedules={departmentalSessionalSchedules}
+                        selectedSchedules={selectedSessionalSchedules}
+                        onSelectSchedule={handleSessionalScheduleSelect}
+                      />
+                      {selectedSessionalSchedules.length > 0 && (
+                        <div className="mt-4 card shadow-lg" style={{
+                          borderRadius: '10px',
+                          overflow: 'hidden',
+                          border: 'none',
+                          boxShadow: '0 6px 15px rgba(0,0,0,0.075)'
+                        }}>
                           <div className="table-responsive">
                             <table className="table assignment-schedule-table">
                               <thead>
                                 <tr>
-                                  <th>Day / Time</th>
-                                  {times.map((time) => (
-                                    <th key={time}>{time}:00{time === 12 ? ' PM' : time > 12 ? ' PM' : ' AM'}</th>
-                                  ))}
+                                  <th style={{
+                                    background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    borderBottom: 'none',
+                                    padding: '12px 16px'
+                                  }}>Course</th>
+                                  <th style={{
+                                    background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    borderBottom: 'none',
+                                    padding: '12px 16px'
+                                  }}>Section</th>
+                                  <th style={{
+                                    background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    borderBottom: 'none',
+                                    padding: '12px 16px'
+                                  }}>Day</th>
+                                  <th style={{
+                                    background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    borderBottom: 'none',
+                                    padding: '12px 16px'
+                                  }}>Time</th>
+                                  <th style={{
+                                    background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    borderBottom: 'none',
+                                    padding: '12px 16px'
+                                  }}>Action</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {days.map((day) => {
-                                  // Track merged cells to skip rendering
-                                  const merged = Array(times.length).fill(false);
-                                  
-                                  return (
-                                    <tr key={day}>
-                                      <th>{day}</th>
-                                      {times.map((time, timeIndex) => {
-                                        // Skip if this cell is already merged
-                                        if (merged[timeIndex]) return null;
-                                        
-                                        // Check for theory assignment
-                                        const theoryAssignment = theorySchedule.find(schedule =>
-                                          schedule.day === day && schedule.time === time
-                                        );
-                                        
-                                        // Check for sessional assignment - check both direct assignment and through schedule
-                                        let sessionalAssignment = assignedSessionalCourses.find(course =>
-                                          course.day === day && course.time === time
-                                        );
-                                        
-                                        // If not found directly, check through sessionalSchedule
-                                        if (!sessionalAssignment) {
-                                          const scheduleEntry = sessionalSchedule.find(schedule =>
-                                            schedule.day === day && schedule.time === time
-                                          );
-                                          
-                                          if (scheduleEntry) {
-                                            // Find if this schedule entry matches any assigned course
-                                            sessionalAssignment = assignedSessionalCourses.find(course =>
-                                              course.course_id === scheduleEntry.course_id &&
-                                              course.section === scheduleEntry.section
-                                            );
-                                          }
-                                        }
-                                        
-                                        // If sessional assignment, merge 3 cells
-                                        if (sessionalAssignment) {
-                                          // Mark next 2 cells as merged
-                                          if (timeIndex + 1 < times.length) merged[timeIndex + 1] = true;
-                                          if (timeIndex + 2 < times.length) merged[timeIndex + 2] = true;
-                                          
-                                          return (
-                                            <td 
-                                              key={`${day}-${time}`} 
-                                              colSpan={3}
-                                              style={{ width: '360px', minWidth: '360px', maxWidth: '360px' }}
-                                            >
-                                              <div className="sessional-assignment">
-                                                <button
-                                                  onClick={() => setSelectedAssignment(sessionalAssignment)}
-                                                  className="assignment-unassign-btn"
-                                                  title="Unassign from this course"
-                                                >
-                                                  <i className="mdi mdi-close"></i>
-                                                </button>
-                                                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
-                                                  {sessionalAssignment.course_id}
-                                                </div>
-                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                                  Section {sessionalAssignment.section}
-                                                </div>
-                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                                  <i className="mdi mdi-flask"></i> Lab
-                                                </div>
-                                              </div>
-                                            </td>
-                                          );
-                                        }
-                                        
-                                        // If theory assignment, single cell
-                                        if (theoryAssignment) {
-                                          return (
-                                            <td key={`${day}-${time}`}>
-                                              <div className="theory-assignment">
-                                                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>
-                                                  {theoryAssignment.course_id}
-                                                </div>
-                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                                  Section {theoryAssignment.section || 'All'}
-                                                </div>
-                                                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                                  <i className="mdi mdi-book-open-variant"></i> Theory
-                                                </div>
-                                              </div>
-                                            </td>
-                                          );
-                                        }
-                                        
-                                        // Empty slot
-                                        return (
-                                          <td key={`${day}-${time}`}>
-                                            <div className="empty-slot"></div>
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  );
-                                })}
+                                {selectedSessionalSchedules.map((schedule, index) => (
+                                  <tr
+                                    key={`${schedule.course_id}-${schedule.section}-${index}`}
+                                    style={{ transition: "all 0.2s", cursor: "pointer" }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(194, 137, 248, 0.08)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = ""}
+                                  >
+                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                      <div className="d-flex align-items-center">
+                                        <div className="course-index mr-3" style={{
+                                          width: '32px',
+                                          height: '32px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          fontSize: '14px',
+                                          fontWeight: '600',
+                                          borderRadius: '50%',
+                                          color: 'white',
+                                          background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)'
+                                        }}>
+                                          {index + 1}
+                                        </div>
+                                        <div>
+                                          <span className="font-weight-bold" style={{ color: '#344767', fontSize: '15px' }}>{schedule.course_id}</span>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                      <span className="badge" style={{
+                                        backgroundColor: 'rgba(111, 66, 193, 0.18)',
+                                        color: '#6f42c1',
+                                        padding: '8px 14px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        borderRadius: '6px',
+                                        boxShadow: '0 2px 4px rgba(111, 66, 193, 0.15)'
+                                      }}>
+                                        <i className="mdi mdi-account-group mr-1"></i>{schedule.section}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                      <span className="badge" style={{
+                                        backgroundColor: 'rgba(40, 167, 69, 0.18)',
+                                        color: '#28a745',
+                                        padding: '8px 14px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        borderRadius: '6px',
+                                        boxShadow: '0 2px 4px rgba(40, 167, 69, 0.15)'
+                                      }}>
+                                        <i className="mdi mdi-calendar-week mr-1"></i>{schedule.day}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                                      <span className="badge" style={{
+                                        backgroundColor: 'rgba(23, 162, 184, 0.18)',
+                                        color: '#17a2b8',
+                                        padding: '8px 14px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        borderRadius: '6px',
+                                        boxShadow: '0 2px 4px rgba(23, 162, 184, 0.15)'
+                                      }}>
+                                        <i className="mdi mdi-clock-time-four-outline mr-1"></i>{schedule.time}:00
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', verticalAlign: 'middle', alignItems: 'center' }}>
+                                      <button
+                                        type="button"
+                                        style={{
+                                          background: "rgba(220, 53, 69, 0.1)",
+                                          color: "#dc3545",
+                                          border: "1px solid rgba(220, 53, 69, 0.3)",
+                                          padding: "8px 14px",
+                                          fontSize: '13px',
+                                          fontWeight: "600",
+                                          borderRadius: "6px",
+                                          transition: "all 0.3s ease",
+                                          boxShadow: '0 2px 4px rgba(23, 162, 184, 0.15)'
+                                        }}
+                                        onClick={() => handleSessionalScheduleSelect(schedule)}
+                                        onMouseOver={e => {
+                                          e.currentTarget.style.background = "#dc3545";
+                                          e.currentTarget.style.color = "white";
+                                        }}
+                                        onMouseOut={e => {
+                                          e.currentTarget.style.background = "rgba(220, 53, 69, 0.1)";
+                                          e.currentTarget.style.color = "#dc3545";
+                                        }}
+                                      >
+                                        <i className="mdi mdi-close"></i>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4">
-                          <div className="mb-3">
-                            <i className="mdi mdi-clipboard-text-outline" style={{ fontSize: '3rem', color: '#6c757d', opacity: 0.5 }}></i>
-                          </div>
-                          <h6 className="text-muted mb-2">No Current Assignments</h6>
-                          <p className="text-muted mb-0" style={{ fontSize: '0.9rem' }}>
-                            This teacher has no theory or sessional course assignments yet.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                <div className="mt-4">
-                  <div className="card mb-4">
-                    <div className="card-header" style={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: 'white',
-                      borderRadius: '8px 8px 0 0',
-                      padding: '1rem 1.5rem'
-                    }}>
-                      <h6 className="card-title mb-0" style={{ color: 'white', fontWeight: '600' }}>
-                        <i className="mdi mdi-table-large mr-2"></i>Sessional Choice Table
-                      </h6>
-                    </div>
-                    <div className="card-body" style={{ padding: '1.5rem' }}>
-                      {loadingSchedules ? (
-                        <div className="text-center py-4">
-                          <div className="spinner-border text-info" role="status">
-                            <span className="sr-only">Loading...</span>
-                          </div>
-                          <p className="mt-2 text-muted">Loading available schedules...</p>
-                        </div>
-                      ) : departmentalSessionalSchedules.length > 0 ? (
-                        <div>
-                          <SessionalScheduleTable
-                            schedules={departmentalSessionalSchedules}
-                            selectedSchedules={selectedSessionalSchedules}
-                            onSelectSchedule={handleSessionalScheduleSelect}
-                          />
-                        {selectedSessionalSchedules.length > 0 && (
-                          <div className="mt-4 card shadow-lg" style={{
-                            borderRadius: '10px',
-                            overflow: 'hidden',
-                            border: 'none',
-                            boxShadow: '0 6px 15px rgba(0,0,0,0.075)'
-                          }}>
-                            <div className="card-header d-flex align-items-center justify-content-between py-3" style={{
-                              background: 'linear-gradient(135deg, #4776E6, #8E54E9)',
-                              borderBottom: 'none'
-                            }}>
-                              <div className="d-flex align-items-center">
-                                <i className="mdi mdi-clipboard-check-outline mr-2 text-white" style={{ fontSize: '22px' }}></i>
-                                <h5 className="mb-0 font-weight-bold text-white">Selected Courses</h5>
-                              </div>
-                              <span className="badge badge-light text-primary px-3 py-2" style={{
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                              }}>
-                                {selectedSessionalSchedules.length} {selectedSessionalSchedules.length === 1 ? 'Course' : 'Courses'}
-                              </span>
+                          <div className="card-footer py-3" style={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #edf2f9' }}>
+                            <div className="d-flex justify-content-between align-items-center">
+                              <small className="text-muted d-flex align-items-center">
+                                <i className="mdi mdi-information-outline mr-1" style={{ fontSize: '16px' }}></i>
+                                These courses will be assigned to this teacher
+                              </small>
+                              <small className="text-primary">
+                                <i className="mdi mdi-gesture-tap mr-1"></i>
+                                Click the <i className="mdi mdi-close mx-1 text-danger"></i> button to unselect a course
+                              </small>
                             </div>
-                            <div className="card-body p-0">
-                              <div className="table-responsive">
-                                <table className="table mb-0">
-                                  <thead>
-                                    <tr>
-                                      <th style={{
-                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                        fontWeight: '600',
-                                        borderBottom: 'none',
-                                        padding: '12px 16px'
-                                      }}>Course</th>
-                                      <th style={{
-                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                        fontWeight: '600',
-                                        borderBottom: 'none',
-                                        padding: '12px 16px'
-                                      }}>Section</th>
-                                      <th style={{
-                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                        fontWeight: '600',
-                                        borderBottom: 'none',
-                                        padding: '12px 16px'
-                                      }}>Day</th>
-                                      <th style={{
-                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                        fontWeight: '600',
-                                        borderBottom: 'none',
-                                        padding: '12px 16px'
-                                      }}>Time</th>
-                                      <th style={{
-                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                        color: 'white',
-                                        fontSize: '14px',
-                                        fontWeight: '600',
-                                        borderBottom: 'none',
-                                        padding: '12px 16px',
-                                        textAlign: 'center'
-                                      }}>Action</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {selectedSessionalSchedules.map((schedule, index) => (
-                                      <tr
-                                        key={`${schedule.course_id}-${schedule.section}-${index}`}
-                                        style={{
-                                          transition: 'all 0.2s ease',
-                                          backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fbfd',
-                                          borderLeft: '4px solid transparent'
-                                        }}
-                                        className="hover-row"
-                                      >
-                                        <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                                          <div className="d-flex align-items-center">
-                                            <div className="course-index mr-3" style={{
-                                              width: '32px',
-                                              height: '32px',
-                                              display: 'flex',
-                                              alignItems: 'center',
-                                              justifyContent: 'center',
-                                              fontSize: '14px',
-                                              fontWeight: '600',
-                                              borderRadius: '50%',
-                                              color: 'white',
-                                              background: 'linear-gradient(45deg, #5e72e4, #825ee4)'
-                                            }}>
-                                              {index + 1}
-                                            </div>
-                                            <div>
-                                              <span className="font-weight-bold" style={{ color: '#344767', fontSize: '15px' }}>{schedule.course_id}</span>
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                                          <span className="badge" style={{
-                                            backgroundColor: 'rgba(111, 66, 193, 0.18)',
-                                            color: '#6f42c1',
-                                            padding: '8px 14px',
-                                            fontSize: '13px',
-                                            fontWeight: '600',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 4px rgba(111, 66, 193, 0.15)'
-                                          }}>
-                                            <i className="mdi mdi-account-group mr-1"></i>{schedule.section}
-                                          </span>
-                                        </td>
-                                        <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                                          <span className="badge" style={{
-                                            backgroundColor: 'rgba(40, 167, 69, 0.18)',
-                                            color: '#28a745',
-                                            padding: '8px 14px',
-                                            fontSize: '13px',
-                                            fontWeight: '600',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 4px rgba(40, 167, 69, 0.15)'
-                                          }}>
-                                            <i className="mdi mdi-calendar-week mr-1"></i>{schedule.day}
-                                          </span>
-                                        </td>
-                                        <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                                          <span className="badge" style={{
-                                            backgroundColor: 'rgba(23, 162, 184, 0.18)',
-                                            color: '#17a2b8',
-                                            padding: '8px 14px',
-                                            fontSize: '13px',
-                                            fontWeight: '600',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 2px 4px rgba(23, 162, 184, 0.15)'
-                                          }}>
-                                            <i className="mdi mdi-clock-time-four-outline mr-1"></i>{schedule.time}:00
-                                          </span>
-                                        </td>
-                                        <td style={{ padding: '14px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
-                                          <button
-                                            className="btn btn-outline-danger btn-sm"
-                                            onClick={() => handleSessionalScheduleSelect(schedule)}
-                                            title="Remove selection"
-                                            style={{
-                                              width: '36px',
-                                              height: '36px',
-                                              padding: '0',
-                                              borderRadius: '50%',
-                                              boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
-                                              transition: 'all 0.2s ease'
-                                            }}
-                                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                                          >
-                                            <i className="mdi mdi-close"></i>
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                            <div className="card-footer py-3" style={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #edf2f9' }}>
-                              <div className="d-flex justify-content-between align-items-center">
-                                <small className="text-muted d-flex align-items-center">
-                                  <i className="mdi mdi-information-outline mr-1" style={{ fontSize: '16px' }}></i>
-                                  These courses will be assigned to this teacher
-                                </small>
-                                <small className="text-primary">
-                                  <i className="mdi mdi-gesture-tap mr-1"></i>
-                                  Click the <i className="mdi mdi-close mx-1 text-danger"></i> button to unselect a course
-                                </small>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        </div>
-                      ) : (
-                        <div className="alert alert-warning border-left border-warning" style={{ borderLeftWidth: '4px' }}>
-                          <div className="d-flex align-items-center">
-                            <i className="mdi mdi-alert-circle-outline mr-3" style={{ fontSize: '24px' }}></i>
-                            <span>No schedules found for sessional courses.</span>
                           </div>
                         </div>
                       )}
-                      <div className="d-flex justify-content-end mt-3">
-                        <button
-                          className="btn"
-                          onClick={handleSessionalCourseAssign}
-                          disabled={submittingSessional || selectedSessionalSchedules.length === 0}
-                          style={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            color: 'white',
-                            border: 'none',
-                            padding: '0.75rem 1.5rem',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            borderRadius: '6px',
-                            boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          {submittingSessional ?
-                            <><span className="spinner-border spinner-border-sm mr-2"></span>Assigning...</> :
-                            <><i className="mdi mdi-check-circle mr-2"></i>Assign {selectedSessionalSchedules.length} Sessional Course{selectedSessionalSchedules.length !== 1 ? 's' : ''}</>}
-                        </button>
+                    </div>
+                  ) : (
+                    <div className="alert alert-warning border-left border-warning" style={{ borderLeftWidth: '4px' }}>
+                      <div className="d-flex align-items-center">
+                        <i className="mdi mdi-alert-circle-outline mr-3" style={{ fontSize: '24px' }}></i>
+                        <span>No schedules found for sessional courses.</span>
                       </div>
                     </div>
+                  )}
+                  <div className="d-flex justify-content-end mt-3">
+                    <button
+                      className="btn"
+                      onClick={handleSessionalCourseAssign}
+                      disabled={submittingSessional || selectedSessionalSchedules.length === 0}
+                      style={{
+                        background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '0.75rem 1.5rem',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        borderRadius: '6px',
+                        boxShadow: '0 3px 6px rgba(0,0,0,0.1)',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {submittingSessional ?
+                        <><span className="spinner-border spinner-border-sm mr-2"></span>Assigning...</> :
+                        <><i className="mdi mdi-check-circle mr-2"></i>Assign {selectedSessionalSchedules.length} Sessional Course{selectedSessionalSchedules.length !== 1 ? 's' : ''}</>}
+                    </button>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
@@ -1848,7 +1858,7 @@ export default function TeacherDetails(props) {
               <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "#dc3545" }}>Unassign Course</Modal.Title>
             </div>
           </Modal.Header>
-          <Modal.Body className="px-4">
+          <Modal.Body className="px-4 bg-white">
             <p style={{ fontSize: "16px", color: "#495057" }}>
               Are you sure you want to unassign the assignment: <strong>{selectedAssignment.course_id}</strong>?
             </p>
@@ -1856,7 +1866,7 @@ export default function TeacherDetails(props) {
               This action cannot be undone. Assignment related to this course will be removed.
             </p>
           </Modal.Body>
-          <Modal.Footer style={{ borderTop: "1px solid rgba(220, 53, 69, 0.2)", padding: "16px" }}>
+          <Modal.Footer style={{ backgroundColor: "#ffffff", borderTop: "1px solid rgba(220, 53, 69, 0.2)", padding: "16px" }}>
             <Button
               style={{
                 background: "rgba(154, 77, 226, 0.15)",

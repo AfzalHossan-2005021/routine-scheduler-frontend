@@ -88,6 +88,49 @@ export default function TheoryPreference() {
     }
   };
 
+  const handleFinalize = () => {
+    const loadingToast = toast.loading("Finalizing assignments...");
+    finalize()
+      .then(() => {
+        return getStatus();
+      })
+      .then((res) => {
+        // Sort the teachers in the status by seniority rank
+        let modifiedRes = { ...res };
+        if (modifiedRes.values && modifiedRes.values.length > 0) {
+          modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
+        }
+        if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
+          modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
+        }
+
+        // Update backend status
+        return setTheoryAssignStatus(3)
+          .then(() => {
+            // Set complete status with all updates at once
+            setStatus({
+              values: [],
+              submitted: [],
+              ...modifiedRes,
+              status: 3
+            });
+
+            getAllTheoryTeacherAssignment().then((res) => {
+              setAllTheoryTeacherAssignment(res);
+            });
+
+            // Dismiss loading and show success
+            toast.dismiss(loadingToast);
+            toast.success("Assignments finalized successfully");
+          });
+      })
+      .catch(error => {
+        toast.dismiss(loadingToast);
+        toast.error("Failed to finalize assignments");
+        console.error("Error finalizing assignments:", error);
+      });
+  }
+
   return (
     <div>
       {/* Modern Page Header */}
@@ -834,6 +877,8 @@ export default function TheoryPreference() {
             setStatus({ ...status, status: 3 });
             if (parseInt(status.status) >= 3) {
               setShowAssignConfirm(true);
+            } else {
+              handleFinalize();
             }
           }}
         />
@@ -911,45 +956,7 @@ export default function TheoryPreference() {
             }}
             onClick={() => {
               setShowAssignConfirm(false);
-
-              // Show loading toast
-              const loadingToast = toast.loading("Finalizing assignments...");
-
-              finalize()
-                .then(() => {
-                  return getStatus();
-                })
-                .then((res) => {
-                  // Sort the teachers in the status by seniority rank
-                  let modifiedRes = { ...res };
-                  if (modifiedRes.values && modifiedRes.values.length > 0) {
-                    modifiedRes.values = [...modifiedRes.values].sort((a, b) => a.seniority_rank - b.seniority_rank);
-                  }
-                  if (modifiedRes.submitted && modifiedRes.submitted.length > 0) {
-                    modifiedRes.submitted = [...modifiedRes.submitted].sort((a, b) => a.seniority_rank - b.seniority_rank);
-                  }
-
-                  // Update backend status
-                  return setTheoryAssignStatus(3)
-                    .then(() => {
-                      // Set complete status with all updates at once
-                      setStatus({
-                        values: [],
-                        submitted: [],
-                        ...modifiedRes,
-                        status: 3
-                      });
-
-                      // Dismiss loading and show success
-                      toast.dismiss(loadingToast);
-                      toast.success("Assignments finalized successfully");
-                    });
-                })
-                .catch(error => {
-                  toast.dismiss(loadingToast);
-                  toast.error("Failed to finalize assignments");
-                  console.error("Error finalizing assignments:", error);
-                });
+              handleFinalize();
             }}
           >
             <Icon path={mdiCheckCircle} size={0.85} />

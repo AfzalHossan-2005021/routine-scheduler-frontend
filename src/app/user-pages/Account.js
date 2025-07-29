@@ -1,35 +1,13 @@
-import React, { useState } from 'react';
-
 export default function Account() {
   const storedName = localStorage.getItem('rememberedUsername');
-  const [user, setUser] = useState({
+  const user = {
     name: storedName,
     role: 'Administrator',
     department: 'Computer Science and Engineering',
-  });
+  };
 
   return (
     <div>
-      <div className="page-header">
-        <h3 className="page-title" style={{
-          color: "rgb(174, 117, 228)",
-          fontWeight: "700",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px"
-        }}>
-          <i className="mdi mdi-account me-2"></i>
-          Account
-        </h3>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item">
-              <a href="!#" onClick={e => e.preventDefault()}>Dashboard</a>
-            </li>
-            <li className="breadcrumb-item active" aria-current="page">Account</li>
-          </ol>
-        </nav>
-      </div>
       <div className="row">
         <div className="col-12 grid-margin">
           <div className="card" style={{
