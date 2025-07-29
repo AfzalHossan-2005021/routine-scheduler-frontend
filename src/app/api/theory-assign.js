@@ -4,6 +4,9 @@ import { api_url } from ".";
 export const getStatus = () =>
   axios.get(api_url("/assign/theory/status")).then((res) => res.data);
 
+export const setTheoryAssignStatus = (status) =>
+  axios.put(api_url("/assign/theory/status"), { status }).then((res) => res.data);
+
 export const initiate = () =>
   axios.get(api_url("/assign/theory/initiate")).then((res) => res.data);
 
@@ -46,6 +49,9 @@ export const setTeacherAssignment = (assignment) =>
 export const setTeacherSessionalAssignment = (assignment) =>
   axios.put(api_url("/assign/sessional/set"), assignment).then((res) => res.data);
 
+export const deleteTeacherSessionalAssignment = (unassignData) =>
+  axios.delete(api_url("/assign/sessional/delete"), {data: unassignData}).then((res) => res.data);
+
 export const resendTheoryPrefMail = (initial) =>
   axios.get(api_url(`/assign/theory/resend/${initial}`)).then((res) => res.data);
 
@@ -54,3 +60,30 @@ export const addTheoryPreference = (initial, response) =>
 
 export const saveReorderedTeacherPreference = (initial, response) =>
   axios.post(api_url("/assign/theory/save-preference"), {initial, response,}).then((res) => res.data);
+
+export const getAllTheoryTeacherAssignment = () =>
+  axios.get(api_url("/assign/theory-teacher/get/all")).then((res) => res.data);
+
+export const getTheoryTeacherAssignment = (course_id, section) =>
+  axios.get(api_url(`/assign/theory-teacher/get/${course_id}/${section}`)).then((res) => res.data);
+
+export const addTheoryTeacherAssignment = (course_id, section, initial) =>
+  axios.post(api_url("/assign/theory-teacher/add"), { course_id, section, initial }).then((res) => res.data);
+
+export const deleteTheoryTeacherAssignment = (course_id, section, initial) =>
+  axios.delete(api_url(`/assign/theory-teacher/delete/${course_id}/${section}/${initial}`)).then((res) => res.data);
+
+// Credit calculation API functions
+export const getTeacherTotalCredit = (initial) =>
+  axios.get(api_url(`/assign/credit/teacher/${initial}`)).then((res) => res.data);
+
+export const getAllTeachersCredit = () =>
+  axios.get(api_url("/assign/credit/all")).then((res) => res.data);
+
+// Theory distribution API function
+export const getTheoryDistribution = () =>
+  axios.get(api_url("/assign/theory-distribution")).then((res) => res.data);
+
+// Sessional distribution API function
+export const getSessionalDistribution = () =>
+  axios.get(api_url("/assign/sessional-distribution")).then((res) => res.data);

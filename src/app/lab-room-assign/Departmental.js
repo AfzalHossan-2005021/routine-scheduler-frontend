@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Badge } from "react-bootstrap";
 import { toast } from "react-hot-toast";
+import { mdiLockCheck, mdiRefresh, mdiAlertCircleOutline } from '@mdi/js';
+import Icon from '@mdi/react';
 
 import { getLabCourses, getLabRooms } from "../api/db-crud";
 import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
 import { getAllSchedule } from "../api/theory-schedule";
+import { useConfig } from "../shared/ConfigContext";
 
 export default function LabRoomAssign() {
+  const { days, possibleLabTimes } = useConfig();
   const [offeredCourse, setOfferedCourse] = useState([]);
   const [sessionalSchedule, setSessionalSchedule] = useState([]);
 
@@ -37,14 +41,10 @@ export default function LabRoomAssign() {
       // Additional validation - ensure we have an array
       const scheduleData = Array.isArray(res) ? res : [];
       // Filter out any entries that don't have required fields
-      const validSchedules = scheduleData.filter(item => 
+      const validSchedules = scheduleData.filter(item =>
         item && item.day && item.time && item.course_id && item.section
       );
       setSessionalSchedule(validSchedules);
-      
-      // Log data for debugging purposes
-      console.log("Original schedule data:", res);
-      console.log("Filtered schedule data:", validSchedules);
     });
 
     Promise.all([labs, courses]).then(() => {
@@ -134,16 +134,6 @@ export default function LabRoomAssign() {
     borderBottom: "none"
   };
 
-  const buttonStyle = {
-    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-    border: "none",
-    padding: "10px 24px",
-    borderRadius: "8px",
-    fontWeight: "600",
-    boxShadow: "0 4px 12px rgba(174, 117, 228, 0.3)",
-    transition: "all 0.3s ease"
-  };
-
   const levelTermAllocation = fixedRoomAllocation.reduce((map, room) => {
     room.courses.forEach((course) => {
       const { level_term } = course;
@@ -165,33 +155,15 @@ export default function LabRoomAssign() {
     });
 
   const generateRoomAssignments = () => {
-    // Create a schedule grid to track room bookings
-    // Format: roomBookings[day][time] = [{room: "roomName", course: courseObject}]
-    const days = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
-    const timeSlots = [8, 11, 2]
-    
-    // Log available schedule data for debugging
-    console.log("Sessional Schedule Data:", sessionalSchedule);
-    
-    // Check if there are any scheduling issues
-    // const schedulingIssues = sessionalSchedule.filter(schedule => 
-    //   !days.includes(schedule.day) || !timeSlots.includes(Number(schedule.time))
-    // );
-    
-    // if (schedulingIssues.length > 0) {
-    //   console.warn("Found scheduling issues:", schedulingIssues);
-    //   toast.error(`Found ${schedulingIssues.length} invalid schedule entries. Check console for details.`);
-    // }
-
     // Initialize the roomBookings structure with a safer approach
     const roomBookings = {};
     days.forEach(day => {
       roomBookings[day] = {};
-      timeSlots.forEach(time => {
+      possibleLabTimes.forEach(time => {
         roomBookings[day][time] = [];
       });
     });
-    
+
     // Add a safety method to access roomBookings without causing undefined errors
     const safeGetRoomBooking = (day, time) => {
       if (!roomBookings[day]) return [];
@@ -212,11 +184,11 @@ export default function LabRoomAssign() {
         console.warn("Found undefined or null schedule entry");
         return;
       }
-      
+
       const { day, time, course_id, section } = schedule;
-      
+
       // Skip if day or time is missing or not valid
-      if (!day || !time || !days.includes(day) || !timeSlots.includes(Number(time))) {
+      if (!day || !time || !days.includes(day) || !possibleLabTimes.includes(Number(time))) {
         console.warn(`Invalid day or time in schedule: ${day} - ${time}`);
         return;
       }
@@ -294,7 +266,7 @@ export default function LabRoomAssign() {
     scheduledCourses.forEach(course => {
       const { course_id, section, day, time } = course;
       const courseKey = `${course_id}_${section}`;
-      
+
       // Use our safe getter to avoid undefined errors
       // Check which rooms are available at this day and time
       const bookedRoomsAtThisTime = safeGetRoomBooking(day, time).map(booking => booking.room);
@@ -328,7 +300,7 @@ export default function LabRoomAssign() {
         // Make sure the day and time slots exist in roomBookings before pushing
         if (!roomBookings[day]) roomBookings[day] = {};
         if (!roomBookings[day][time]) roomBookings[day][time] = [];
-        
+
         roomBookings[day][time].push({
           room: assignedRoom,
           course: course
@@ -411,85 +383,80 @@ export default function LabRoomAssign() {
     }
   };
 
+  // Define a shared style object for modal action buttons (copied from Teachers.js)
+  const modalButtonStyle = {
+    borderRadius: "6px",
+    padding: "7px 14px",
+    fontWeight: "500",
+    background: "rgba(154, 77, 226, 0.15)",
+    border: "1px solid rgba(154, 77, 226, 0.5)",
+    color: "rgb(154, 77, 226)",
+    transition: "all 0.3s ease",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "0.9rem"
+  };
+
   return (
     <div>
-      <div className="page-header">
+      {/* Modern Page Header */}
+      <div className="page-header" style={{
+        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+        borderRadius: "16px",
+        padding: "1.5rem",
+        marginBottom: "2rem",
+        boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+        color: "white"
+      }}>
         <h3 className="page-title" style={{
-          color: "rgb(174, 117, 228)",
+          fontSize: "1.8rem",
           fontWeight: "700",
+          marginBottom: "0.5rem",
           display: "flex",
           alignItems: "center",
-          gap: "10px"
+          gap: "12px",
+          color: "white"
         }}>
-          <i className="mdi mdi-domain me-2"></i>
-          Lab Room Assignment
+          <div style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            backgroundColor: "rgba(255, 255, 255, 0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
+          }}>
+            <Icon path={mdiLockCheck} size={1} color="white" />
+          </div>
+          Departmental Lab Room Assignment
         </h3>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb">
-            <li className="breadcrumb-item active" aria-current="page">
-              Room Assign
-            </li>
-          </ol>
-        </nav>
       </div>
       {!alreadySaved && showAssignmentCard && (
         <div className="row mb-4">
           <div className="col-12">
             <div className="card" style={{
-              ...cardStyle,
-              boxShadow: "0 10px 30px rgba(194, 137, 248, 0.12), 0 0 0 1px rgba(194, 137, 248, 0.1)",
-              transform: "translateY(0)",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+              border: "none",
               transition: "all 0.3s ease",
-              border: "1px solid rgba(194, 137, 248, 0.1)"
+              background: "white"
             }}>
-              <div className="card-header position-relative overflow-hidden" style={{
-                ...cardHeaderStyle,
-                background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-                height: "75px",
-                display: "flex",
-                alignItems: "center",
-                position: "relative",
-                padding: "0 30px",
-                boxShadow: "0 4px 20px rgba(154, 77, 226, 0.2)",
-              }}>
-                <div style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"100\" height=\"100\" viewBox=\"0 0 100 100\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M11 100H89V0H11V100ZM0 0V100H100V0H0Z\" fill=\"white\" fill-opacity=\"0.05\"/%3E%3C/svg%3E'), url('data:image/svg+xml,%3Csvg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Ccircle cx=\"10\" cy=\"10\" r=\"2\" fill=\"white\" fill-opacity=\"0.08\"/%3E%3C/svg%3E')",
-                  backgroundSize: "80px 80px, 20px 20px",
-                  opacity: 0.15
-                }}></div>
-                <div style={{
-                  width: "42px",
-                  height: "42px",
-                  borderRadius: "12px",
-                  backgroundColor: "rgba(255, 255, 255, 0.15)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: "15px",
-                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                  zIndex: 1
-                }}>
-                  <i className="mdi mdi-domain" style={{ fontSize: "24px", color: "white" }}></i>
+              <div className="card-body" style={{ padding: "2rem" }}>
+                <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h4 className="card-title" style={{
+                    color: "rgb(174, 117, 228)",
+                    marginBottom: 0,
+                    fontWeight: "700",
+                    display: "flex",
+                    alignItems: "center",
+                    fontSize: "1.5rem",
+                    letterSpacing: "0.3px"
+                  }}>
+                    <i className="mdi mdi-domain mr-2"></i>Lab Room Assignment
+                  </h4>
                 </div>
-                <span style={{
-                  fontSize: "19px",
-                  fontWeight: "700",
-                  letterSpacing: "0.5px",
-                  zIndex: 1,
-                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.1)"
-                }}>Lab Room Assignment</span>
-              </div>
-              <div className="card-body" style={{
-                ...cardBodyStyle,
-                padding: "30px",
-                position: "relative",
-                backgroundColor: "rgba(255, 255, 255, 0.9)"
-              }}>
                 {sessionalSchedule.length === 0 ? (
                   <div className="alert mb-5" role="alert" style={{
                     backgroundColor: "rgba(255, 193, 7, 0.1)",
@@ -523,7 +490,7 @@ export default function LabRoomAssign() {
                       boxShadow: "0 4px 12px rgba(255, 193, 7, 0.3)",
                       zIndex: 1
                     }}>
-                      <i className="mdi mdi-alert-circle-outline" style={{ color: "white", fontSize: "24px" }}></i>
+                      <Icon path={mdiAlertCircleOutline} size={1} color="white" />
                     </div>
                     <div style={{ zIndex: 1 }}>
                       <h5 style={{ margin: "0 0 5px 0", color: "#664d03", fontWeight: "600" }}>Schedule Not Found</h5>
@@ -544,15 +511,6 @@ export default function LabRoomAssign() {
                     overflow: "hidden"
                   }}>
                     <div style={{
-                      position: "absolute",
-                      top: 0,
-                      right: 0,
-                      width: "150px",
-                      height: "150px",
-                      background: "radial-gradient(circle at top right, rgba(13, 202, 240, 0.1), transparent 70%)",
-                      zIndex: 0
-                    }}></div>
-                    <div style={{
                       minWidth: "45px",
                       height: "45px",
                       borderRadius: "12px",
@@ -563,7 +521,7 @@ export default function LabRoomAssign() {
                       boxShadow: "0 4px 12px rgba(13, 202, 240, 0.3)",
                       zIndex: 1
                     }}>
-                      <i className="mdi mdi-information-outline" style={{ color: "white", fontSize: "24px" }}></i>
+                      <Icon path={mdiAlertCircleOutline} size={1} color="white" />
                     </div>
                     <div style={{ zIndex: 1 }}>
                       <h5 style={{ margin: "0 0 5px 0", color: "#055160", fontWeight: "600" }}>Automatic Assignment</h5>
@@ -803,7 +761,7 @@ export default function LabRoomAssign() {
                           ref={selectedCourseRef}
                         >
                           {uniqueNamedCourses.map((course, index) => (
-                            <option key={course.course_id || index} className="p-2" value={course.course_id}>
+                            <option key={`${course.course_id}-${index}`} className="p-2" value={course.course_id}>
                               {course.course_id} - {course.name}
                             </option>
                           ))}
@@ -822,76 +780,31 @@ export default function LabRoomAssign() {
                         padding: "20px 0"
                       }}>
                         <Button
-                          variant="outline-success"
-                          className="px-4 py-3"
-                          style={{
-                            fontWeight: "700",
-                            borderRadius: "12px",
-                            borderColor: "rgb(194, 137, 248)",
-                            color: "rgb(174, 117, 228)",
-                            boxShadow: "0 8px 15px rgba(194, 137, 248, 0.15)",
-                            transition: "all 0.3s ease",
-                            backgroundColor: "rgba(194, 137, 248, 0.05)"
+                          style={modalButtonStyle}
+                          className="d-flex align-items-center justify-content-center"
+                          onMouseEnter={e => {
+                            e.target.style.background = "rgb(154, 77, 226)";
+                            e.target.style.color = "white";
+                            e.target.style.borderColor = "rgb(154, 77, 226)";
                           }}
-                          onClick={(e) => {
-                            const selectedCourseOptions = Array.from(
-                              selectedCourseRef.current.selectedOptions
-                            )
-                              .map((option) => option.value)
-                              .map((course_id) =>
-                                uniqueNamedCourses.find(
-                                  (course) => course.course_id === course_id
-                                )
-                              );
-
-                            const selectedRoomOptions = Array.from(
-                              selectedRoomRef.current.selectedOptions
-                            )
-                              .map((option) => option.value)
-                              .map((room_id) =>
-                                rooms.find((room) => room.room === room_id)
-                              );
-
-                            selectedCourseOptions.forEach((course) => {
-                              setUniqueNamedCourses(
-                                uniqueNamedCourses.filter(
-                                  (c) => c.course_id !== course.course_id
-                                )
-                              );
-
-                              setCourseRoom([
-                                ...courseRoom,
-                                {
-                                  course_id: course.course_id,
-                                  rooms: selectedRoomOptions.map(
-                                    (room) => room.room
-                                  ),
-                                },
-                              ]);
-                            });
+                          onMouseLeave={e => {
+                            e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                            e.target.style.color = "rgb(154, 77, 226)";
+                            e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                          }}
+                          onClick={() => {
+                            setCourseRoom((prev) => [
+                              ...prev,
+                              {
+                                course_id: selectedCourseRef.current.value,
+                                rooms: Array.from(selectedRoomRef.current.selectedOptions).map((o) => o.value),
+                              },
+                            ]);
                           }}
                         >
-                          <i className="mdi mdi-lock me-2"></i>
+                          <Icon path={mdiLockCheck} size={0.9} style={{ marginRight: 6 }} />
                           MUST USE
                         </Button>
-                        <div style={{
-                          marginTop: "15px",
-                          width: "100%",
-                          height: "1px",
-                          backgroundColor: "rgba(194, 137, 248, 0.15)",
-                          position: "relative"
-                        }}>
-                          <div style={{
-                            position: "absolute",
-                            left: "50%",
-                            top: "50%",
-                            transform: "translate(-50%, -50%)",
-                            backgroundColor: "white",
-                            padding: "0 10px",
-                            fontSize: "12px",
-                            color: "rgba(194, 137, 248, 0.6)"
-                          }}>OR</div>
-                        </div>
                       </div>
                     </div>
 
@@ -969,55 +882,28 @@ export default function LabRoomAssign() {
                 <hr className="my-5" style={{ opacity: "0.1", borderColor: "rgb(194, 137, 248)", margin: "35px 0" }} />
                 <div className="d-flex justify-content-center">
                   <Button
-                    style={{
-                      ...buttonStyle,
-                      fontSize: "1.15rem",
-                      padding: "18px 42px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "15px",
-                      boxShadow: "0 10px 25px rgba(194, 137, 248, 0.35)",
-                      border: "none",
-                      position: "relative",
-                      overflow: "hidden",
-                      borderRadius: "15px",
-                      background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-                      fontWeight: "700",
-                      letterSpacing: "0.5px"
+                    style={modalButtonStyle}
+                    className="d-flex align-items-center justify-content-center"
+                    onMouseEnter={e => {
+                      e.target.style.background = "rgb(154, 77, 226)";
+                      e.target.style.color = "white";
+                      e.target.style.borderColor = "rgb(154, 77, 226)";
+                    }}
+                    onMouseLeave={e => {
+                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                      e.target.style.color = "rgb(154, 77, 226)";
+                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
                     }}
                     onClick={() => {
                       generateRoomAssignments();
                       setShowAssignmentCard(false);
                     }}
-                    size="lg"
-                    className="btn-animate"
                   >
-                    <div style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundImage: "linear-gradient(45deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 70%)",
-                      backgroundSize: "200% 100%",
-                      animation: "shimmerEffect 2s infinite",
-                      opacity: 0.5
-                    }}></div>
-                    <i className="mdi mdi-refresh-circle" style={{ fontSize: "22px" }}></i>
-                    Auto-Assign Lab Rooms
+                    <Icon path={mdiRefresh} size={1.1} style={{ marginRight: 8 }} />
+                    Assign Lab Rooms
                   </Button>
                 </div>
-                <style>{`
-                  @keyframes shimmerEffect {
-                    0% { background-position: 200% 0; }
-                    100% { background-position: -200% 0; }
-                  }
-                  .btn-animate:hover {
-                    transform: translateY(-3px);
-                    box-shadow: 0 12px 25px rgba(194, 137, 248, 0.35) !important;
-                  }
-                `}</style>
+
               </div>
             </div>
           </div>
@@ -1146,20 +1032,19 @@ export default function LabRoomAssign() {
                 </ul>
               </div>
               <div className="card-body" style={{ ...cardBodyStyle, padding: "24px" }}>
-                <div className="tab-content">
-                  {/* Statistics Tab */}
-                  {!viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment && (
-                    <div className="tab-pane fade show active">
-                      <div className="table-responsive">
-                        <table className="table" style={{...tableStyle, transition: 'all 0.3s ease'}}>
-                          <thead>
-                            <tr>
-                              <th style={tableHeaderStyle}> Lab Room </th>
-                              <th style={tableHeaderStyle}> Number of courses </th>
-                            </tr>
-                          </thead>
-                          <style>
-                            {`
+                {/* Statistics Tab */}
+                {!viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment && (
+                  <div className="tab-pane fade show active">
+                    <div className="table-responsive">
+                      <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
+                        <thead>
+                          <tr>
+                            <th style={tableHeaderStyle}> Lab Room </th>
+                            <th style={tableHeaderStyle}> Number of courses </th>
+                          </tr>
+                        </thead>
+                        <style>
+                          {`
                               .stats-row {
                                 transition: all 0.2s ease;
                               }
@@ -1167,213 +1052,213 @@ export default function LabRoomAssign() {
                                 background-color: rgba(194, 137, 248, 0.05) !important;
                               }
                             `}
-                          </style>
-                          <tbody>
-                            {fixedRoomAllocation.map((room, index) => (
-                              <tr key={index} className="stats-row">
-                                <td style={{ 
-                                  padding: "16px", 
-                                  verticalAlign: "middle",
-                                  textAlign: "center"
-                                }}>
-                                  <div className="d-flex flex-column align-items-center">
-                                    <div style={{
-                                      width: "45px",
-                                      height: "45px",
-                                      borderRadius: "12px",
-                                      background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
-                                      marginBottom: "10px"
-                                    }}>
-                                      <i className="mdi mdi-door" style={{ fontSize: "20px", color: "white" }}></i>
-                                    </div>
-                                    <span style={{ fontSize: "1.05rem", fontWeight: "600", color: "#333" }}>{room.room}</span>
-                                  </div>
-                                </td>
-                                <td style={{ 
-                                  padding: "16px",
-                                  verticalAlign: "middle",
-                                  textAlign: "center"
-                                }}>
+                        </style>
+                        <tbody>
+                          {fixedRoomAllocation.map((room, index) => (
+                            <tr key={index} className="stats-row">
+                              <td style={{
+                                padding: "16px",
+                                verticalAlign: "middle",
+                                textAlign: "center"
+                              }}>
+                                <div className="d-flex flex-column align-items-center">
                                   <div style={{
-                                    width: "60px",
-                                    height: "60px", 
-                                    backgroundColor: room.count > 0 ? "rgba(40, 167, 69, 0.1)" : "rgba(108, 117, 125, 0.1)",
-                                    color: room.count > 0 ? "#28a745" : "#6c757d",
-                                    borderRadius: "50%",
-                                    border: `2px solid ${room.count > 0 ? "rgba(40, 167, 69, 0.5)" : "rgba(108, 117, 125, 0.5)"}`,
+                                    width: "45px",
+                                    height: "45px",
+                                    borderRadius: "12px",
+                                    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
-                                    margin: "0 auto",
-                                    fontSize: "1.25rem",
-                                    fontWeight: "600",
-                                    boxShadow: room.count > 0 ? "0 4px 8px rgba(40, 167, 69, 0.15)" : "0 4px 8px rgba(108, 117, 125, 0.15)"
+                                    boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
+                                    marginBottom: "10px"
                                   }}>
-                                    {room.count}
+                                    <i className="mdi mdi-door" style={{ fontSize: "20px", color: "white" }}></i>
                                   </div>
+                                  <span style={{ fontSize: "1.05rem", fontWeight: "600", color: "#333" }}>{room.room}</span>
+                                </div>
+                              </td>
+                              <td style={{
+                                padding: "16px",
+                                verticalAlign: "middle",
+                                textAlign: "center"
+                              }}>
+                                <div style={{
+                                  width: "60px",
+                                  height: "60px",
+                                  backgroundColor: room.count > 0 ? "rgba(40, 167, 69, 0.1)" : "rgba(108, 117, 125, 0.1)",
+                                  color: room.count > 0 ? "#28a745" : "#6c757d",
+                                  borderRadius: "50%",
+                                  border: `2px solid ${room.count > 0 ? "rgba(40, 167, 69, 0.5)" : "rgba(108, 117, 125, 0.5)"}`,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  margin: "0 auto",
+                                  fontSize: "1.25rem",
+                                  fontWeight: "600",
+                                  boxShadow: room.count > 0 ? "0 4px 8px rgba(40, 167, 69, 0.15)" : "0 4px 8px rgba(108, 117, 125, 0.15)"
+                                }}>
+                                  {room.count}
+                                </div>
+                                <div style={{
+                                  marginTop: "8px",
+                                  fontSize: "0.85rem",
+                                  color: "#666",
+                                  fontWeight: "500"
+                                }}>
+                                  {room.count === 1 ? 'course' : 'courses'}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Room Assignment Tab */}
+                {!viewLevelTermAssignment && viewRoomAssignment && !viewCourseAssignment && (
+                  <div className="tab-pane fade show active">
+                    <div className="table-responsive">
+                      <table className="table" style={tableStyle}>
+                        <thead>
+                          <tr>
+                            <th style={tableHeaderStyle}> Lab Room </th>
+                            <th style={tableHeaderStyle}> Assigned Courses </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {fixedRoomAllocation.map((room, index) => (
+                            <tr key={index}>
+                              <td style={{
+                                padding: "16px",
+                                fontWeight: "600",
+                                verticalAlign: "middle",
+                                borderRight: "1px solid rgba(194, 137, 248, 0.1)",
+                                textAlign: "center"
+                              }}>
+                                <div className="d-flex flex-column align-items-center">
                                   <div style={{
-                                    marginTop: "8px",
-                                    fontSize: "0.85rem",
-                                    color: "#666",
+                                    width: "45px",
+                                    height: "45px",
+                                    borderRadius: "12px",
+                                    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
+                                    marginBottom: "10px",
+                                    transition: "transform 0.2s ease"
+                                  }}>
+                                    <i className="mdi mdi-door" style={{ fontSize: "20px", color: "white" }}></i>
+                                  </div>
+                                  <span style={{ fontSize: "1.05rem", fontWeight: "600", color: "#333", marginBottom: "4px" }}>{room.room}</span>
+                                  <div style={{
+                                    backgroundColor: "rgba(194, 137, 248, 0.08)",
+                                    padding: "3px 10px",
+                                    borderRadius: "12px",
+                                    fontSize: "0.8rem",
+                                    color: "rgb(106, 27, 154)",
                                     fontWeight: "500"
                                   }}>
-                                    {room.count === 1 ? 'course' : 'courses'}
+                                    {room.count} {room.count === 1 ? 'course' : 'courses'}
+                                  </div>
+                                </div>
+                              </td>
+                              {room.courses.length === 0 ? (
+                                <td style={{ padding: "20px", textAlign: "center", verticalAlign: "middle" }}>
+                                  <div style={{
+                                    padding: "20px",
+                                    backgroundColor: "rgba(194, 137, 248, 0.05)",
+                                    borderRadius: "12px",
+                                    color: "#888",
+                                    border: "1px dashed rgba(194, 137, 248, 0.3)",
+                                    fontStyle: "italic"
+                                  }}>
+                                    <i className="mdi mdi-information-outline me-2" style={{ color: "rgb(174, 117, 228)" }}></i>
+                                    No courses assigned
                                   </div>
                                 </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Room Assignment Tab */}
-                  {!viewLevelTermAssignment && viewRoomAssignment && !viewCourseAssignment && (
-                    <div className="tab-pane fade show active">
-                      <div className="table-responsive">
-                        <table className="table" style={tableStyle}>
-                          <thead>
-                            <tr>
-                              <th style={tableHeaderStyle}> Lab Room </th>
-                              <th style={tableHeaderStyle}> Assigned Courses </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {fixedRoomAllocation.map((room, index) => (
-                              <tr key={index}>
-                                <td style={{
-                                  padding: "16px",
-                                  fontWeight: "600",
-                                  verticalAlign: "middle",
-                                  borderRight: "1px solid rgba(194, 137, 248, 0.1)",
-                                  textAlign: "center"
-                                }}>
-                                  <div className="d-flex flex-column align-items-center">
-                                    <div style={{
-                                      width: "45px",
-                                      height: "45px",
-                                      borderRadius: "12px",
-                                      background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
-                                      marginBottom: "10px",
-                                      transition: "transform 0.2s ease"
-                                    }}>
-                                      <i className="mdi mdi-door" style={{ fontSize: "20px", color: "white" }}></i>
-                                    </div>
-                                    <span style={{ fontSize: "1.05rem", fontWeight: "600", color: "#333", marginBottom: "4px" }}>{room.room}</span>
-                                    <div style={{
-                                      backgroundColor: "rgba(194, 137, 248, 0.08)",
-                                      padding: "3px 10px",
-                                      borderRadius: "12px",
-                                      fontSize: "0.8rem",
-                                      color: "rgb(106, 27, 154)",
-                                      fontWeight: "500"
-                                    }}>
-                                      {room.count} {room.count === 1 ? 'course' : 'courses'}
-                                    </div>
-                                  </div>
-                                </td>
-                                {room.courses.length === 0 ? (
-                                  <td style={{ padding: "20px", textAlign: "center", verticalAlign: "middle" }}>
-                                    <div style={{
-                                      padding: "20px",
-                                      backgroundColor: "rgba(194, 137, 248, 0.05)",
-                                      borderRadius: "12px",
-                                      color: "#888",
-                                      border: "1px dashed rgba(194, 137, 248, 0.3)",
-                                      fontStyle: "italic"
-                                    }}>
-                                      <i className="mdi mdi-information-outline me-2" style={{ color: "rgb(174, 117, 228)" }}></i>
-                                      No courses assigned
-                                    </div>
-                                  </td>
-                                ) : (
-                                  <td style={{ padding: "16px", textAlign: "center", verticalAlign: "middle" }}>
-                                    <div className="d-flex flex-column align-items-center gap-3">
-                                      {room.courses.map((course, index) => (
-                                        <div
-                                          key={index}
-                                          className="course-item"
-                                          style={{
-                                            padding: "12px 16px",
-                                            borderRadius: "10px",
-                                            backgroundColor: "rgba(194, 137, 248, 0.05)",
-                                            border: "1px solid rgba(194, 137, 248, 0.12)",
-                                            width: "100%",
-                                            maxWidth: "400px",
-                                            boxShadow: "0 3px 8px rgba(0,0,0,0.03)",
-                                            transition: "transform 0.2s ease, box-shadow 0.2s ease"
-                                          }}
-                                          onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = "translateY(-2px)";
-                                            e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.06)";
-                                          }}
-                                          onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = "translateY(0)";
-                                            e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.03)";
-                                          }}
-                                        >
-                                          <div className="d-flex align-items-center justify-content-center gap-2 flex-wrap">
-                                            <Badge style={{
-                                              background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                              padding: "5px 10px",
-                                              borderRadius: "6px",
-                                              fontSize: "0.85rem",
-                                              fontWeight: "600",
-                                              boxShadow: "0 2px 4px rgba(174, 117, 228, 0.2)"
-                                            }}>
-                                              {course.course_id}
-                                            </Badge>
-                                            <span style={{ fontWeight: "500" }}>
-                                              {course.name}
-                                            </span>
-                                            <Badge bg="secondary" style={{
-                                              backgroundColor: "#f0f0f0",
-                                              color: "#444",
-                                              padding: "3px 8px",
-                                              borderRadius: "4px",
-                                              fontSize: "0.75rem"
-                                            }}>
-                                              Section {course.section}
-                                            </Badge>
-                                          </div>
+                              ) : (
+                                <td style={{ padding: "16px", textAlign: "center", verticalAlign: "middle" }}>
+                                  <div className="d-flex flex-column align-items-center gap-3">
+                                    {room.courses.map((course, index) => (
+                                      <div
+                                        key={index}
+                                        className="course-item"
+                                        style={{
+                                          padding: "12px 16px",
+                                          borderRadius: "10px",
+                                          backgroundColor: "rgba(194, 137, 248, 0.05)",
+                                          border: "1px solid rgba(194, 137, 248, 0.12)",
+                                          width: "100%",
+                                          maxWidth: "400px",
+                                          boxShadow: "0 3px 8px rgba(0,0,0,0.03)",
+                                          transition: "transform 0.2s ease, box-shadow 0.2s ease"
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          e.currentTarget.style.transform = "translateY(-2px)";
+                                          e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.06)";
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.currentTarget.style.transform = "translateY(0)";
+                                          e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.03)";
+                                        }}
+                                      >
+                                        <div className="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                                          <Badge style={{
+                                            background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+                                            padding: "5px 10px",
+                                            borderRadius: "6px",
+                                            fontSize: "0.85rem",
+                                            fontWeight: "600",
+                                            boxShadow: "0 2px 4px rgba(174, 117, 228, 0.2)"
+                                          }}>
+                                            {course.course_id}
+                                          </Badge>
+                                          <span style={{ fontWeight: "500" }}>
+                                            {course.name}
+                                          </span>
+                                          <Badge bg="secondary" style={{
+                                            backgroundColor: "#f0f0f0",
+                                            color: "#444",
+                                            padding: "3px 8px",
+                                            borderRadius: "4px",
+                                            fontSize: "0.75rem"
+                                          }}>
+                                            Section {course.section}
+                                          </Badge>
                                         </div>
-                                      ))}
-                                    </div>
-                                  </td>
-                                )}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Course Assignment Tab */}
-                  {!viewLevelTermAssignment && viewCourseAssignment && !viewRoomAssignment && (
-                    <div className="tab-pane fade show active">
-                      <div className="table-responsive">
-                        <table className="table" style={{...tableStyle, transition: 'all 0.3s ease'}}>
-                          <thead>
-                            <tr>
-                              <th style={tableHeaderStyle}> Course ID </th>
-                              <th style={tableHeaderStyle}> Course Name </th>
-                              <th style={tableHeaderStyle}> Level-Term </th>
-                              <th style={tableHeaderStyle}> Section </th>
-                              <th style={tableHeaderStyle}> Assigned Room </th>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                              )}
                             </tr>
-                          </thead>
-                          <style>
-                            {`
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Course Assignment Tab */}
+                {!viewLevelTermAssignment && viewCourseAssignment && !viewRoomAssignment && (
+                  <div className="tab-pane fade show active">
+                    <div className="table-responsive">
+                      <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
+                        <thead>
+                          <tr>
+                            <th style={tableHeaderStyle}> Course ID </th>
+                            <th style={tableHeaderStyle}> Course Name </th>
+                            <th style={tableHeaderStyle}> Level-Term </th>
+                            <th style={tableHeaderStyle}> Section </th>
+                            <th style={tableHeaderStyle}> Assigned Room </th>
+                          </tr>
+                        </thead>
+                        <style>
+                          {`
                               .table tbody tr {
                                 transition: all 0.2s ease;
                               }
@@ -1385,67 +1270,67 @@ export default function LabRoomAssign() {
                                 box-shadow: 0 0 0 0.25rem rgba(194, 137, 248, 0.25) !important;
                               }
                             `}
-                          </style>
-                          <tbody>
-                            {offeredCourse.map((course, index) => {
-                              // Find the current room assignment for this course
-                              const currentRoom = fixedRoomAllocation.find(room =>
-                                room.courses.some(c =>
-                                  c.course_id === course.course_id && c.section === course.section
-                                )
-                              );
-                              return (
-                                <tr key={index}>
-                                  <td>{course.course_id}</td>
-                                  <td>{course.name}</td>
-                                  <td>{course.level_term}</td>
-                                  <td>{course.section}</td>
-                                  <td>
-                                    <select
-                                      className="form-select form-select-sm"
-                                      value={currentRoom ? currentRoom.room : ''}
-                                      onChange={(e) => updateCourseRoomAssignment(course, e.target.value)}
-                                      style={{
-                                        borderRadius: '8px',
-                                        borderColor: 'rgba(194, 137, 248, 0.5)',
-                                        background: currentRoom ? 'rgba(194, 137, 248, 0.1)' : '#fff',
-                                        color: currentRoom ? '#6b38a6' : '#6c757d',
-                                        padding: '0.4rem 0.75rem',
-                                        fontSize: '0.9rem',
-                                        boxShadow: currentRoom ? '0 0 0 0.2rem rgba(194, 137, 248, 0.15)' : 'none',
-                                        transition: 'all 0.2s ease'
-                                      }}
-                                    >
-                                      <option value="">Select a room</option>
-                                      {rooms.map((room) => (
-                                        <option key={room.room} value={room.room}>
-                                          {room.room}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                        </style>
+                        <tbody>
+                          {offeredCourse.map((course, index) => {
+                            // Find the current room assignment for this course
+                            const currentRoom = fixedRoomAllocation.find(room =>
+                              room.courses.some(c =>
+                                c.course_id === course.course_id && c.section === course.section
+                              )
+                            );
+                            return (
+                              <tr key={index}>
+                                <td>{course.course_id}</td>
+                                <td>{course.name}</td>
+                                <td>{course.level_term}</td>
+                                <td>{course.section}</td>
+                                <td>
+                                  <select
+                                    className="form-select form-select-sm"
+                                    value={currentRoom ? currentRoom.room : ''}
+                                    onChange={(e) => updateCourseRoomAssignment(course, e.target.value)}
+                                    style={{
+                                      borderRadius: '8px',
+                                      borderColor: 'rgba(194, 137, 248, 0.5)',
+                                      background: currentRoom ? 'rgba(194, 137, 248, 0.1)' : '#fff',
+                                      color: currentRoom ? '#6b38a6' : '#6c757d',
+                                      padding: '0.4rem 0.75rem',
+                                      fontSize: '0.9rem',
+                                      boxShadow: currentRoom ? '0 0 0 0.2rem rgba(194, 137, 248, 0.15)' : 'none',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  >
+                                    <option value="">Select a room</option>
+                                    {rooms.map((room) => (
+                                      <option key={room.room} value={room.room}>
+                                        {room.room}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Level-Term Assignment Tab */}
-                  {viewLevelTermAssignment && (
-                    <div className="tab-pane fade show active">
-                      <div className="table-responsive">
-                        <table className="table" style={{...tableStyle, transition: 'all 0.3s ease'}}>
-                          <thead>
-                            <tr>
-                              <th style={tableHeaderStyle}> Level-Term </th>
-                              <th style={tableHeaderStyle}> Used Labs </th>
-                            </tr>
-                          </thead>
-                          <style>
-                            {`
+                {/* Level-Term Assignment Tab */}
+                {viewLevelTermAssignment && (
+                  <div className="tab-pane fade show active">
+                    <div className="table-responsive">
+                      <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
+                        <thead>
+                          <tr>
+                            <th style={tableHeaderStyle}> Level-Term </th>
+                            <th style={tableHeaderStyle}> Used Labs </th>
+                          </tr>
+                        </thead>
+                        <style>
+                          {`
                               .level-term-row {
                                 transition: all 0.2s ease;
                               }
@@ -1470,163 +1355,144 @@ export default function LabRoomAssign() {
                                 box-shadow: 0 2px 5px rgba(0,0,0,0.05);
                               }
                             `}
-                          </style>
-                          <tbody>
-                            {levelTermAllocationArray.map((lt, index) => (
-                              <tr key={index} className="level-term-row">
-                                <td style={{ 
-                                  verticalAlign: "middle", 
-                                  textAlign: "center", 
-                                  fontWeight: "600", 
-                                  fontSize: "1.05rem",
-                                  color: "#333" 
+                        </style>
+                        <tbody>
+                          {levelTermAllocationArray.map((lt, index) => (
+                            <tr key={index} className="level-term-row">
+                              <td style={{
+                                verticalAlign: "middle",
+                                textAlign: "center",
+                                fontWeight: "600",
+                                fontSize: "1.05rem",
+                                color: "#333"
+                              }}>
+                                <div className="d-flex flex-column align-items-center">
+                                  <div style={{
+                                    width: "45px",
+                                    height: "45px",
+                                    borderRadius: "12px",
+                                    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
+                                    marginBottom: "10px"
+                                  }}>
+                                    <i className="mdi mdi-school" style={{ fontSize: "20px", color: "white" }}></i>
+                                  </div>
+                                  {lt.level_term}
+                                </div>
+                              </td>
+                              {lt.rooms.length === 0 ? (
+                                <td style={{
+                                  padding: "20px",
+                                  textAlign: "center",
+                                  verticalAlign: "middle"
                                 }}>
-                                  <div className="d-flex flex-column align-items-center">
-                                    <div style={{
-                                      width: "45px",
-                                      height: "45px",
-                                      borderRadius: "12px",
-                                      background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
-                                      marginBottom: "10px"
-                                    }}>
-                                      <i className="mdi mdi-school" style={{ fontSize: "20px", color: "white" }}></i>
-                                    </div>
-                                    {lt.level_term}
+                                  <div style={{
+                                    padding: "20px",
+                                    backgroundColor: "rgba(194, 137, 248, 0.05)",
+                                    borderRadius: "12px",
+                                    color: "#888",
+                                    border: "1px dashed rgba(194, 137, 248, 0.3)",
+                                    fontStyle: "italic"
+                                  }}>
+                                    <i className="mdi mdi-information-outline me-2" style={{ color: "rgb(174, 117, 228)" }}></i>
+                                    No rooms assigned
                                   </div>
                                 </td>
-                                {lt.rooms.length === 0 ? (
-                                  <td style={{ 
-                                    padding: "20px", 
-                                    textAlign: "center", 
-                                    verticalAlign: "middle" 
-                                  }}>
-                                    <div style={{
-                                      padding: "20px",
-                                      backgroundColor: "rgba(194, 137, 248, 0.05)",
-                                      borderRadius: "12px",
-                                      color: "#888",
-                                      border: "1px dashed rgba(194, 137, 248, 0.3)",
-                                      fontStyle: "italic"
-                                    }}>
-                                      <i className="mdi mdi-information-outline me-2" style={{ color: "rgb(174, 117, 228)" }}></i>
-                                      No rooms assigned
-                                    </div>
-                                  </td>
-                                ) : (
-                                  <td style={{ 
-                                    padding: "16px", 
-                                    textAlign: "center",
-                                    verticalAlign: "middle" 
-                                  }}>
-                                    <div className="d-flex flex-wrap justify-content-center">
-                                      {lt.rooms.map((room, index) => (
-                                        <span key={index} className="badge-room">
-                                          <i className="mdi mdi-door me-2"></i>
-                                          {room}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </td>
-                                )}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                              ) : (
+                                <td style={{
+                                  padding: "16px",
+                                  textAlign: "center",
+                                  verticalAlign: "middle"
+                                }}>
+                                  <div className="d-flex flex-wrap justify-content-center">
+                                    {lt.rooms.map((room, index) => (
+                                      <span key={index} className="badge-room">
+                                        <i className="mdi mdi-door me-2"></i>
+                                        {room}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                </div>
-
-                {/* Footer with buttons */}
-                {!alreadySaved && (
-                  <div className="d-flex justify-content-end mt-5 pt-4" style={{
-                    borderTop: "1px solid rgba(194, 137, 248, 0.2)",
-                    gap: "20px"
-                  }}>
-                    <Button
-                      variant="outline-secondary"
-                      size="md"
-                      className="py-2 px-4"
-                      onClick={() => {
-                        // Initialize all states
-                        setSavedConstraints(false);
-                        setViewRoomAssignment(false);
-                        setViewCourseAssignment(false);
-                        setFixedRoomAllocation([]);
-                        setShowAssignmentCard(true); // Show the assignment card again
-                      }}
-                      style={{
-                        borderRadius: "10px",
-                        fontWeight: "600",
-                        width: "200px",
-                        borderColor: "rgba(194, 137, 248, 0.5)",
-                        color: "rgb(174, 117, 228)",
-                        transition: "all 0.2s ease",
-                        boxShadow: "0 2px 6px rgba(0, 0, 0, 0.05)"
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(194, 137, 248, 0.05)";
-                        e.currentTarget.style.borderColor = "rgba(194, 137, 248, 0.8)";
-                        e.currentTarget.style.boxShadow = "0 4px 8px rgba(194, 137, 248, 0.15)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = "";
-                        e.currentTarget.style.borderColor = "rgba(194, 137, 248, 0.5)";
-                        e.currentTarget.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.05)";
-                      }}
-                    >
-                      <i className="mdi mdi-refresh me-2"></i>
-                      Clear Assignments
-                    </Button>
-                    <Button
-                      variant="success"
-                      size="md"
-                      className="py-2 px-4"
-                      onClick={() => {
-                        let data = [];
-                        fixedRoomAllocation.forEach((room) => {
-                          room.courses.forEach((course) => {
-                            data.push({
-                              course_id: course.course_id,
-                              batch: course.batch,
-                              section: course.section,
-                              room: room.room,
-                            });
-                          });
-                        });
-                        setRoomAssign(data).then((res) => {
-                          toast.success("Lab Room Assignment Saved Successfully");
-                          setAlreadySaved(true);
-                        });
-                      }}
-                      style={{
-                        borderRadius: "10px",
-                        fontWeight: "600",
-                        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                        border: "none",
-                        boxShadow: "0 4px 12px rgba(174, 117, 228, 0.3)",
-                        width: "200px",
-                        transition: "all 0.2s ease"
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.boxShadow = "0 6px 15px rgba(174, 117, 228, 0.4)";
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(174, 117, 228, 0.3)";
-                        e.currentTarget.style.transform = "translateY(0)";
-                      }}
-                    >
-                      <i className="mdi mdi-content-save me-2"></i>
-                      Save Assignment
-                    </Button>
                   </div>
                 )}
               </div>
+
+              {/* Footer with buttons */}
+              {!alreadySaved && (
+                <div className="d-flex justify-content-end p-4" style={{
+                  borderTop: "1px solid rgba(194, 137, 248, 0.2)",
+                  gap: "20px"
+                }}>
+                  <Button
+                    onClick={() => {
+                      // Initialize all states
+                      setSavedConstraints(false);
+                      setViewRoomAssignment(false);
+                      setViewCourseAssignment(false);
+                      setFixedRoomAllocation([]);
+                      setShowAssignmentCard(true); // Show the assignment card again
+                    }}
+                    style={modalButtonStyle}
+                    className="d-flex align-items-center justify-content-center"
+                    onMouseEnter={e => {
+                      e.target.style.background = "rgb(154, 77, 226)";
+                      e.target.style.color = "white";
+                      e.target.style.borderColor = "rgb(154, 77, 226)";
+                    }}
+                    onMouseLeave={e => {
+                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                      e.target.style.color = "rgb(154, 77, 226)";
+                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                    }}
+                  >
+                    <i className="mdi mdi-refresh me-2"></i>
+                    Clear Assignments
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      let data = [];
+                      fixedRoomAllocation.forEach((room) => {
+                        room.courses.forEach((course) => {
+                          data.push({
+                            course_id: course.course_id,
+                            batch: course.batch,
+                            section: course.section,
+                            room: room.room,
+                          });
+                        });
+                      });
+                      setRoomAssign(data).then((res) => {
+                        toast.success("Lab Room Assignment Saved Successfully");
+                        setAlreadySaved(true);
+                      });
+                    }}
+                    style={modalButtonStyle}
+                    className="d-flex align-items-center justify-content-center"
+                    onMouseEnter={e => {
+                      e.target.style.background = "rgb(154, 77, 226)";
+                      e.target.style.color = "white";
+                      e.target.style.borderColor = "rgb(154, 77, 226)";
+                    }}
+                    onMouseLeave={e => {
+                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
+                      e.target.style.color = "rgb(154, 77, 226)";
+                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                    }}
+                  >
+                    <i className="mdi mdi-content-save me-2"></i>
+                    Save Assignment
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

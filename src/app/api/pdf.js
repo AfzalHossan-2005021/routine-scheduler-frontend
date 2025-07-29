@@ -32,3 +32,21 @@ export const regenerateRoom = (room) =>
 
 export const sendMail = (initial) => 
     axios.get(api_url(`/pdf/sendMail/${initial}`)).then((res) => res.data);
+
+export const regenerateAllLevelTerms = () =>
+    axios.get(api_url(`/pdf/generateAllLevelTerms`)).then((res) => res.data);
+
+export const regenerateAllTeachers = () =>
+    axios.get(api_url(`/pdf/generateAllTeachers`)).then((res) => res.data);
+
+export const regenerateAllRooms = () =>
+    axios.get(api_url(`/pdf/generateAllRooms`)).then((res) => res.data);
+
+export const getPdfForAllLevelTerms = () =>
+    axios.get(api_url(`/pdf/showAllLevelTerms`), { responseType: 'blob' }).then((res) => res.data);
+
+export const getPdfForAllTeachers = () =>
+    axios.get(api_url(`/pdf/showAllTeachers`), { responseType: 'blob' }).then((res) => res.data);
+
+export const getPdfForAllRooms = () =>
+    axios.get(api_url(`/pdf/showAllRooms`), { responseType: 'blob' }).then((res) => res.data);

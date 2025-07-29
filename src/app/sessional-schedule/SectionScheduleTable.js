@@ -1,34 +1,84 @@
 import React, { useMemo, useCallback } from "react";
 import { Form } from "react-bootstrap";
-import { days, times } from "../shared/ScheduleSelctionTable";
+import { useConfig } from '../shared/ConfigContext';
 import { MultiSet } from "mnemonist";
 
 /**
- * Custom component for displaying a table with divided cells for subsections
- * This component handles the display of sessional schedules with upper and lower sections
+ * Custom component for displaying a table with divided cells for multiple subsections
+ * This component handles the display of sessional schedules with any number of subsections
  */
 const SectionScheduleTable = React.memo(function SectionScheduleTable({
   filled = [],
-  selectedUpper = [],
-  selectedLower = [],
-  onChangeUpper = () => {},
-  onChangeLower = () => {},
+  subsections = [], // Array of subsection objects: { key, name, selected, onChange }
   labTimes = [],
-  upperSectionName,
-  lowerSectionName,
   allSessionalCourses = [],
-  upperSectionKey,
-  lowerSectionKey,
   labSchedulesBySection = {}
 }) {
+  // Memoized values for configuration settings
+  const { days, times, possibleLabTimes } = useConfig();
+
+  // Extended blocked slots calculation from theory slots
+  const extendedBlockedSlots = useMemo(() => {
+    if (!Array.isArray(filled.mainSection)) return [];
+    
+    // Create a map of all blocked slots by day
+    const blockedSlotsByDay = {};
+    
+    // First, identify all theory classes
+    filled.mainSection.forEach(course => {
+      const { day, time } = course;
+      
+      // Convert time to number if it's not already
+      const timeNum = parseInt(time);
+      
+      // Initialize the day if not already present
+      if (!blockedSlotsByDay[day]) {
+        blockedSlotsByDay[day] = new Set();
+      }
+      
+      // Add the original slot to the blocked set
+      blockedSlotsByDay[day].add(timeNum);
+    });
+    
+    // Build final list of blocked slots
+    const blockedSlots = [];
+    
+    // For each day with theory classes
+    Object.entries(blockedSlotsByDay).forEach(([day, timeSet]) => {
+      // For each hour of the day
+      for (let h of possibleLabTimes) {        
+        // If this slot should be blocked, add it to our results
+        if (timeSet.has(h) || timeSet.has((h % 12) + 1) || timeSet.has(((h + 1) % 12) + 1)) {
+          blockedSlots.push(`${day} ${h}`);
+        }
+      }
+    });
+    
+    return blockedSlots;
+  }, [filled]);
+  
   // Convert arrays to MultiSets for efficient lookup
-  const filledSet = useMemo(() => MultiSet.from(filled), [filled]);
-  const selectedUpperSet = useMemo(() => MultiSet.from(selectedUpper), [selectedUpper]);
-  const selectedLowerSet = useMemo(() => MultiSet.from(selectedLower), [selectedLower]);
+  const extendedBlockedSet = useMemo(() => MultiSet.from(extendedBlockedSlots), [extendedBlockedSlots]);
+  
+  // Create a map of selected sets for each subsection
+  const selectedSets = useMemo(() => {
+    const sets = {};
+    subsections.forEach(subsection => {
+      sets[subsection.key] = MultiSet.from(subsection.selected || []);
+    });
+    return sets;
+  }, [subsections]);
+  
   const labTimesSet = useMemo(() => 
     MultiSet.from(labTimes.length ? labTimes : days.map((day) => `${day} 2`)),
-    [labTimes]
+    [labTimes, days]
   );
+  
+  // Check if a slot is blocked (filled by any theory course or within 2 slots of a theory course)
+  const isSlotBlocked = useCallback((day, time) => {
+    const key = `${day} ${time}`;
+    return extendedBlockedSet.has(key);
+  }, [extendedBlockedSet]);
   
   // Prepare filtered courses - memoized to prevent unnecessary filtering
   const filteredCourses = useMemo(() => {
@@ -44,40 +94,26 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
     return slot ? slot.course_id : null;
   }, [labSchedulesBySection]);
   
-  // Helper functions for specific sections that use the generic function
-  const upperSectionCourse = useCallback((slotKey) => 
-    getSectionCourse(upperSectionKey, slotKey), 
-    [getSectionCourse, upperSectionKey]
-  );
-  
-  const lowerSectionCourse = useCallback((slotKey) => 
-    getSectionCourse(lowerSectionKey, slotKey), 
-    [getSectionCourse, lowerSectionKey]
-  );
+  // Helper function to get section course for any subsection
+  const getSubsectionCourse = useCallback((subsectionKey, slotKey) => {
+    return getSectionCourse(subsectionKey, slotKey);
+  }, [getSectionCourse]);
   
   // Cell style calculation - memoized to prevent recalculation
-  const getUpperCellStyle = useCallback((day, time) => {
+  const getCellStyle = useCallback((subsectionKey, day, time) => {
     const key = `${day} ${time}`;
-    if (selectedUpperSet.has(key)) return "selected-upper";
-    if (filledSet.has(key)) return "filled-upper";
+    if (extendedBlockedSet.has(key)) return "filled-section blocked-cell";
+    if (selectedSets[subsectionKey] && selectedSets[subsectionKey].has(key)) return "selected-section";
     return "";
-  }, [selectedUpperSet, filledSet]);
-
-  const getLowerCellStyle = useCallback((day, time) => {
-    const key = `${day} ${time}`;
-    if (selectedLowerSet.has(key)) return "selected-lower";
-    if (filledSet.has(key)) return "filled-lower";
-    return "";
-  }, [selectedLowerSet, filledSet]);
+  }, [selectedSets, extendedBlockedSet]);
   
-  // Event handlers
-  const handleUpperCourseChange = useCallback((day, time, courseId) => {
-    onChangeUpper(day, time, courseId);
-  }, [onChangeUpper]);
-  
-  const handleLowerCourseChange = useCallback((day, time, courseId) => {
-    onChangeLower(day, time, courseId);
-  }, [onChangeLower]);
+  // Event handler for course changes
+  const handleCourseChange = useCallback((subsectionKey, day, time, courseId) => {
+    const subsection = subsections.find(s => s.key === subsectionKey);
+    if (subsection && subsection.onChange) {
+      subsection.onChange(day, time, courseId);
+    }
+  }, [subsections]);
 
   // Memoized table style for consistent rendering with improved appearance
   const tableStyle = useMemo(() => ({
@@ -95,13 +131,11 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
 
   return (
     <div>
-      {/* CSS Styles */}
       <style jsx="true">{`
         .cell-container {
           display: flex;
           flex-direction: column;
-          height: 90px; /* Increased height for more space */
-          width: 100%;
+          width: auto;
           overflow: hidden;
           padding: 0;
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -109,11 +143,17 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           border-radius: 6px;
           box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
         }
+
         td:hover .cell-container {
           transform: scale(1.03);
           box-shadow: inset 0 0 0 1px rgba(194, 137, 248, 0.3);
         }
-        /* Select form styles */
+        
+        /* Ensure cell container in blocked cells doesn't transform */
+        td:has(.blocked-cell):hover .cell-container {
+          transform: none !important;
+          box-shadow: none !important;
+        }
         .form-control {
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
           position: relative;
@@ -188,13 +228,30 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           position: relative;
           z-index: 1;
           border: 1px solid rgba(222, 226, 230, 0.8);
+          min-width: 120px;
+          max-width: 200px;
+          width: auto;
+          vertical-align: top;
+          padding: 4px;
         }
+        
         .routine-table td:hover {
           background-color: #f0e9ff !important;
           transform: translateY(-3px) scale(1.02);
           box-shadow: 0 8px 16px rgba(154, 77, 226, 0.2);
           z-index: 3;
           border-color: rgba(194, 137, 248, 0.4);
+        }
+        .routine-table td:has(.blocked-cell):hover,
+        .routine-table td:has(.blocked-cell):focus,
+        .routine-table td:has(.blocked-cell):active {
+          background-color: #f8f9fa !important;
+          transform: none !important;
+          box-shadow: none !important;
+          z-index: 1;
+          border-color: rgba(222, 226, 230, 0.8) !important;
+          transition: none !important;
+          animation: none !important;
         }
         .routine-table td:before {
           content: "";
@@ -215,8 +272,8 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           opacity: 1;
           transform: scale(1);
         }
-        .upper-cell, .lower-cell {
-          height: 50%;
+        .section-cell {
+          flex: 1;
           position: relative;
           font-size: 0.85rem;
           border: none;
@@ -224,6 +281,14 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           padding: 0.3rem 0.5rem;
           text-align: center;
           transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-bottom: 1px solid #dee2e6;
+        }
+        
+        .section-cell:last-child {
+          border-bottom: none;
         }
         .dropdown-cell {
           appearance: none;
@@ -231,7 +296,7 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           -moz-appearance: none;
           background-position: right 0.5rem center;
           background-size: 0.75em;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23c289f8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-image: none;
           background-repeat: no-repeat;
           color: #333;
           text-align-last: center;
@@ -248,8 +313,8 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           outline: 0;
           box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.25), 0 4px 8px rgba(194, 137, 248, 0.15);
           color: rgb(94, 37, 126);
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235E257E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-          background-color: #fcfaff;
+          background-image: none;
+          background-color: rgba(246, 235, 255, 1);
           transform: translateY(-1px);
           letter-spacing: 0.01em;
         }
@@ -266,68 +331,30 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           transform: scale(1, 1) translate(-50%);
           transform-origin: 50% 50%;
           pointer-events: none;
-        }
-        
+        }        
         .dropdown-cell:focus:after {
           animation: ripple 1.2s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-        }
-        
+        }        
         .dropdown-cell:hover:after {
           animation: micro-ripple 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-        
-        @keyframes ripple {
-          0% {
-            transform: scale(0, 0);
-            opacity: 0.5;
-          }
-          20% {
-            transform: scale(25, 25);
-            opacity: 0.3;
-          }
-          100% {
-            opacity: 0;
-            transform: scale(40, 40);
-          }
-        }
-        
-        @keyframes micro-ripple {
-          0% {
-            transform: scale(0, 0);
-            opacity: 0.4;
-          }
-          40% {
-            transform: scale(10, 10);
-            opacity: 0.2;
-          }
-          100% {
-            opacity: 0;
-            transform: scale(15, 15);
-          }
         }
         .dropdown-cell option {
           font-size: 0.9rem;
           padding: 8px;
         }
-        .dropdown-cell option:first-child {
-          color: transparent;
-          height: 0;
-          padding: 0;
-          margin: 0;
-          display: none;
-        }
-        .upper-cell {
-          border-bottom: 1px solid #dee2e6;
+        .section-cell:first-child {
           border-top-left-radius: 4px;
           border-top-right-radius: 4px;
         }
-        .lower-cell {
+        .section-cell:last-child {
           border-bottom-left-radius: 4px;
           border-bottom-right-radius: 4px;
         }
         .section-labels {
           display: flex;
-          justify-content: space-between;
+          flex-wrap: wrap;
+          justify-content: flex-start;
+          gap: 10px;
           margin-bottom: 15px;
         }
         .section-label {
@@ -338,9 +365,9 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
           color: white;
           box-shadow: 0 4px 8px rgba(154, 77, 226, 0.3);
           letter-spacing: 0.5px;
-          position: relative;
-          overflow: hidden;
-          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
         .section-label:hover {
           transform: translateY(-2px);
@@ -361,16 +388,16 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
         .section-label:hover:after {
           transform: translateX(100%);
         }
-        .selected-upper, .selected-lower {
+        .selected-section {
           font-weight: bold;
           border-color: rgb(194, 137, 248) !important;
-          background-color: rgba(233, 245, 255, 0.8);
+          background-color: rgba(194, 137, 248, 0.3);
           box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.3);
           animation: selected-pulse 2s infinite ease-in-out;
           position: relative;
           z-index: 2;
         }
-        .selected-upper:hover, .selected-lower:hover {
+        .selected-section:hover {
           transform: translateY(-4px) scale(1.04);
           box-shadow: 0 10px 20px rgba(154, 77, 226, 0.25);
           z-index: 4;
@@ -386,17 +413,84 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
             box-shadow: 0 0 0 2px rgba(194, 137, 248, 0.3);
           }
         }
-        .filled-upper, .filled-lower {
+        .filled-section {
           color: #495057;
           font-style: italic;
           background-color: #f7f5fa;
           position: relative;
           transition: all 0.3s ease;
         }
-        .filled-upper:hover, .filled-lower:hover {
+        .filled-section:hover {
           color: #333;
           background-color: #f0ebf7;
           box-shadow: 0 4px 12px rgba(154, 77, 226, 0.12);
+        }
+        .blocked-cell {
+          background-color: #ffe0e0 !important;
+          color: #6c757d !important;
+          cursor: not-allowed !important;
+          opacity: 0.8;
+          pointer-events: none;
+          border: 1px solid rgba(220, 53, 69, 0.3) !important;
+          box-shadow: inset 0 0 4px rgba(220, 53, 69, 0.2) !important;
+          position: relative;
+          overflow: hidden;
+          transform: none !important;
+          transition: none !important;
+          animation: none !important;
+        }
+        
+        /* Completely disable all hover effects on blocked cells */
+        .blocked-cell:hover, 
+        .blocked-cell:focus, 
+        .blocked-cell:active,
+        td:hover .blocked-cell,
+        td:focus .blocked-cell,
+        td:active .blocked-cell {
+          transform: none !important;
+          box-shadow: inset 0 0 4px rgba(220, 53, 69, 0.2) !important;
+          animation: none !important;
+          background-color: #ffe0e0 !important;
+          border-color: rgba(220, 53, 69, 0.3) !important;
+          color: #6c757d !important;
+          opacity: 0.8 !important;
+          transition: none !important;
+        }
+        .blocked-cell::before {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 5px,
+            rgba(220, 53, 69, 0.05) 5px,
+            rgba(220, 53, 69, 0.05) 10px
+          );
+          pointer-events: none;
+          z-index: 1;
+        }
+        .blocked-cell {
+          position: relative;
+        }
+        .blocked-cell-content {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          font-size: 0.7rem;
+          color: #dc3545;
+          text-shadow: 0px 0px 2px rgba(255, 255, 255, 0.8);
+          font-weight: bold;
+          white-space: nowrap;
+          z-index: 2;
+          background-color: rgba(255, 255, 255, 0.8);
+          padding: 2px 6px;
+          border-radius: 4px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+          pointer-events: none;
         }
         .filled-upper:after, .filled-lower:after {
           content: "";
@@ -474,84 +568,101 @@ const SectionScheduleTable = React.memo(function SectionScheduleTable({
         .lab-time-cell:hover {
           background-color: rgba(233, 245, 255, 0.6) !important;
         }
+        .table-scroll-x {
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          position: relative;
+        }
+        .table-scroll-x::-webkit-scrollbar {
+          height: 8px;
+        }
+        .table-scroll-x::-webkit-scrollbar-thumb {
+          background: rgba(194, 137, 248, 0.18);
+          border-radius: 4px;
+        }
       `}</style>
-
-      {/* Table Layout */}
-      <table className="table routine-table" style={tableStyle}>
-        <thead>
-          <tr>
-            <th scope="col" className="col-2">Day \ Time</th>
-            {times.map((time) => (
-              <th key={time} scope="col">{time}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {days.map((day) => (
-            <tr key={day}>
-              <th key={`${day}-header`} scope="row" className="col-2">{day}</th>
-              {times
-                .filter((time) =>
-                  !labTimesSet.has(`${day} ${(time - 1 + 12) % 12}`) &&
-                  !labTimesSet.has(`${day} ${(time - 2 + 12) % 12}`)
-                )
-                .map((time) => {
-                  const isLabTime = labTimesSet.has(`${day} ${time}`);
-                  const cellClassName = isLabTime ? "lab-time-cell" : "";
-                  const slotKey = `${day} ${time}`;
-                  
-                  return (
-                    <td 
-                      key={`${day}-${time}`} 
-                      colSpan={isLabTime ? 3 : 1}
-                      className={cellClassName}
-                      style={{
-                        padding: "0",
-                        position: "relative",
-                        textAlign: "center"
-                      }}
-                    >
-                      <div className="cell-container">
-                        <Form.Select
-                          className={`upper-cell dropdown-cell ${getUpperCellStyle(day, time)}`}
-                          value={upperSectionCourse(slotKey) || ""}
-                          onChange={(e) => handleUpperCourseChange(day, time, e.target.value)}
-                          title={`${upperSectionName} - ${day} ${time}`}
-                        >
-                          <option value=""></option>
-                          {filteredCourses.map(course => (
-                            <option 
-                              key={`upper-${day}-${time}-${course.course_id}`}
-                              value={course.course_id}
-                            >
-                              {course.course_id} - {course.name || 'Unknown'}
-                            </option>
-                          ))}
-                        </Form.Select>
-                        <Form.Select
-                          className={`lower-cell dropdown-cell ${getLowerCellStyle(day, time)}`}
-                          value={lowerSectionCourse(slotKey) || ""}
-                          onChange={(e) => handleLowerCourseChange(day, time, e.target.value)}
-                          title={`${lowerSectionName} - ${day} ${time}`}
-                        >
-                          <option value=""></option>
-                          {filteredCourses.map(course => (
-                            <option 
-                              key={`lower-${day}-${time}-${course.course_id}`}
-                              value={course.course_id}
-                            >
-                              {course.course_id} - {course.name || 'Unknown'} 
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </div>
-                    </td>
-                  );
-                })}
+      <div className="table-scroll-x">
+        <table className="table routine-table" style={tableStyle}>
+          <thead>
+            <tr>
+              <th scope="col" className="col-2">Day \ Time</th>
+              {times.map((time) => (
+                <th key={time} scope="col">{time}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {days.map((day) => (
+              <tr key={day}>
+                <th key={`${day}-header`} scope="row" className="col-2">{day}</th>
+                {times
+                  .filter((time) =>
+                    !labTimesSet.has(`${day} ${(time - 1 + 12) % 12}`) &&
+                    !labTimesSet.has(`${day} ${(time - 2 + 12) % 12}`)
+                  )
+                  .map((time) => {
+                    const isLabTime = labTimesSet.has(`${day} ${time}`);
+                    const cellClassName = isLabTime ? "lab-time-cell" : "";
+                    const slotKey = `${day} ${time}`;
+                    
+                    return (
+                      <td 
+                        key={`${day}-${time}`} 
+                        colSpan={isLabTime ? 3 : 1}
+                        className={cellClassName}
+                        style={{
+                          padding: "0",
+                          position: "relative",
+                          textAlign: "center"
+                        }}
+                      >
+                        <div className="cell-container" style={{ 
+                          height: `${subsections.length * 50}px`,
+                          maxHeight: `${subsections.length * 60}px`
+                        }}>
+                          {isSlotBlocked(day, time) && (
+                            <div className="blocked-cell-content">
+                              ⚠️ {`Slot filled by theory class`}
+                            </div>
+                          )}
+                          
+                          {subsections.map((subsection, index) => (
+                            <Form.Select
+                              key={`${subsection.key}-${day}-${time}`}
+                              className={`section-cell dropdown-cell section-${index} ${getCellStyle(subsection.key, day, time)}`}
+                              value={getSubsectionCourse(subsection.key, slotKey) || ''}
+                              onChange={(e) => handleCourseChange(subsection.key, day, time, e.target.value)}
+                              title={isSlotBlocked(day, time) 
+                                ? `Slot filled by theory class` 
+                                : `${subsection.name} - ${day} ${time}`}
+                              style={{ 
+                                color: (getSubsectionCourse(subsection.key, slotKey) || "") === "" || isSlotBlocked(day, time) ? 'transparent' : undefined,
+                                flex: 1,
+                                Height: `${50 * subsections.length}px`
+                              }}
+                              disabled={isSlotBlocked(day, time)}
+                            >
+                              <option value="">{isSlotBlocked(day, time) ? "" : "None"}</option>
+                              {filteredCourses.map(course => (
+                                <option 
+                                  key={`${subsection.key}-${day}-${time}-${course.course_id}`}
+                                  value={course.course_id}
+                                >
+                                  {course.course_id} - {course.name || 'Unknown'}
+                                </option>
+                              ))}
+                            </Form.Select>
+                          ))}
+                        </div>
+                      </td>
+                    );
+                  })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 });
