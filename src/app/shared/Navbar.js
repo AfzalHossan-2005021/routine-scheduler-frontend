@@ -155,6 +155,10 @@ function Navbar() {
                   <i className="mdi mdi-account mr-2 text-primary"></i>
                   Account
                 </Dropdown.Item>
+                <Dropdown.Item as={Link} to="/auth/change-password">
+                  <i className="mdi mdi-lock-reset mr-2 text-primary"></i>
+                  Change Password
+                </Dropdown.Item>
                 <Dropdown.Item
                   href="!#"
                   onClick={(evt) => {
