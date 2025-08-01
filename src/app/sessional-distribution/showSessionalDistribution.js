@@ -529,17 +529,42 @@ export default function ShowSessionalDistribution() {
       try {
         const courses = await getLabCourses();
 
-        // Filter out courses that are already assigned in any time slot
-        const filteredCourses = courses.filter(course => {
-          // Check if this course exists in any schedule
-          const isAssigned = sessionalSchedules.some(schedule =>
-            schedule.course_id === course.course_id &&
-            schedule.section === course.section
-          );
-          return !isAssigned; // Keep only unassigned courses
+        // Process courses to handle class_per_week = 0.75
+        const processedCourses = [];
+        
+        courses.forEach(course => {
+          if (course.class_per_week === 0.75) {
+            // For 0.75 class_per_week, create combined sections like A1/A2, B1/B2, etc.
+            const sectionBase = course.section.charAt(0); // Get 'A', 'B', 'C', etc.
+            const combinedSection = `${sectionBase}1/${sectionBase}2`;
+            
+            // Check if this combined section course is already assigned
+            const isAssigned = sessionalSchedules.some(schedule =>
+              schedule.course_id === course.course_id &&
+              schedule.section === combinedSection
+            );
+            
+            if (!isAssigned) {
+              processedCourses.push({
+                ...course,
+                section: combinedSection,
+                originalSection: course.section // Keep original for reference
+              });
+            }
+          } else {
+            // For regular courses, check if already assigned
+            const isAssigned = sessionalSchedules.some(schedule =>
+              schedule.course_id === course.course_id &&
+              schedule.section === course.section
+            );
+            
+            if (!isAssigned) {
+              processedCourses.push(course);
+            }
+          }
         });
 
-        setLabCourses(filteredCourses);
+        setLabCourses(processedCourses);
       } catch (error) {
         console.error('Error fetching lab courses:', error);
       }
@@ -557,12 +582,20 @@ export default function ShowSessionalDistribution() {
         return;
       }
 
+      // Determine the section to use for scheduling
+      let sectionToUse = course.section;
+      
+      // If this is a 0.75 class_per_week course with combined section, use the original section for backend
+      if (course.class_per_week === 0.75 && course.originalSection) {
+        sectionToUse = course.originalSection;
+      }
+
       // First check if this section already has a course in this time slot
       const existingCourseInSlot = sessionalSchedules.find(schedule =>
         schedule.day === day &&
         schedule.time === time &&
         schedule.batch === course.batch &&
-        schedule.section === course.section &&
+        schedule.section === sectionToUse &&
         schedule.department === course.department
       );
 
@@ -573,8 +606,8 @@ export default function ShowSessionalDistribution() {
 
       // Check for teacher schedule conflicts
       try {
-        const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
-        const contradictions = await teacherContradiction(course.batch, course.section, course.course_id);
+        const teacherConflicts = await getSessionalTeachers(course.course_id, sectionToUse);
+        const contradictions = await teacherContradiction(course.batch, sectionToUse, course.course_id);
 
         // Check if any assigned teacher has a schedule conflict
         for (const contradiction of contradictions) {
@@ -605,8 +638,8 @@ export default function ShowSessionalDistribution() {
         time: time
       };
 
-      // This will insert a new record in the database
-      await setSessionalSchedules(course.batch, course.section, course.department, schedule);
+      // This will insert a new record in the database using the appropriate section
+      await setSessionalSchedules(course.batch, sectionToUse, course.department, schedule);
 
       // Refresh the sessional schedules
       const data = await getDepartmentalSessionalSchedule();
