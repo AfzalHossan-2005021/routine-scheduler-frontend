@@ -77,16 +77,17 @@
   border: none;
   transition: all 0.3s ease;
   background: white;
+  max-height: 750px;
+  overflow: auto;
 }
 
-.card-body {
-  padding: 2rem;
+.card-view {
+  padding: 1.5rem;
 }
 
 .card-control-container {
-  border-bottom: 3px solid rgb(154, 77, 226);
+  border-bottom: 2px solid rgb(154, 77, 226);
   padding-bottom: 16px;
-  margin-bottom: 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -137,15 +138,27 @@
   border-color: rgb(154, 77, 226);
 }
 
-.card-table {
-  background-color: white;
-  margin-bottom: 24px;
+.card-table-container {background-color: white;
   border-bottom: 1px solid #f0f0f0;
+  max-height: 600px;
+  overflow: auto;
+  position: relative;
+}
+
+.card-table {
+  width: 100%;
+}
+
+.card-table-header {
+  position: sticky;
+  z-index: 2;
 }
 
 .card-table-header tr {
   background-color: #f3eaff;
-  border-bottom: 2px solid rgba(174, 117, 228, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .card-table-header th {
@@ -153,6 +166,9 @@
   font-weight: 800;
   font-size: 1.2rem;
   color: rgb(154, 77, 226);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .card-table-header th i {
@@ -161,20 +177,38 @@
   vertical-align: middle;
 }
 
+.card-table-body{
+  border: none;
+  background-color: white;
+}
 .card-table-body tr {
   border-bottom: 1px solid #f0f0f0;
-  transition: background-color 0.3s ease, transform 0.22s cubic-bezier(0.4,0,0.2,1);
+  transition: background-color 0.1s ease;
 }
 .card-table-body tr:hover {
   background-color: #faf7ff;
-  transform: scale(1.025);
 }
 
 .card-table-body td {
   padding: 16px 32px;
   color: #333;
-  font-weight: 600;
+  font-weight: 400;
   font-size: 0.95rem;
+}
+
+.card-table-body td.sticky-col {
+  position: sticky;
+  left: 0;
+  background: #f3eaff;
+  z-index: 1;
+}
+
+.card-table-header th.sticky-col {
+  position: sticky;
+  background: #f3eaff;
+  left: 0;
+  top: 0;
+  z-index: 3;
 }
 
 .card-table-body td .status {
@@ -185,7 +219,6 @@
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
-  position: relative;
   width: 100px;
   justify-content: center;
   transition: all 0.3s ease;
@@ -213,11 +246,29 @@
   align-items: center;
   gap: 6px;
 }
-
 .card-table-body td button.delete:hover {
   background: #dc3545;
   color: white;
   border-color: #dc3545;
+  scale: 1.05;
+}
+.card-table-body td button.edit {
+  background: rgba(154, 77, 226, 0.15);
+  color: rgb(154, 77, 226);
+  border: 1px solid rgba(154, 77, 226, 0.5);
+  border-radius: 6px;
+  padding: 7px 14px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+}
+.card-table-body td button.edit:hover {
+  background: rgb(154, 77, 226);
+  color: white;
+  border-color: rgb(154, 77, 226);
   scale: 1.05;
 }
 
@@ -319,6 +370,7 @@
   justify-content: center;
   transition: all 0.3s ease;
   border: 2px solid rgb(174, 117, 228);
+  margin: 4px 0px;
 }
 .custom-checkbox.checked {
   background: linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%);
@@ -326,21 +378,72 @@
 .custom-checkbox.unchecked {
   background: transparent;
 }
+.custom-checkbox-label {
+  color: rgb(154, 77, 226);
+  font-weight: 500;
+  margin: 4px 8px;
+}
 
+.form-label {
+  font-weight: 600;
+  color: rgb(154, 77, 226);
+  margin-bottom: 8px;
+}
 .form-select {
-  min-width: 130px;
   width: 100%;
   border-radius: 12px;
   border: 1.5px solid rgba(194, 137, 248, 0.3);
   box-shadow: 0 2px 5px rgba(194, 137, 248, 0.05);
+  background-color: white;
   padding: 8px 12px;
   font-size: 15px;
   transition: all 0.3s ease;
-  background: white;
 }
 .form-select:focus {
   border-color: rgb(154, 77, 226);
-  background-color: rgba(154, 77, 226, 0.1);
+}
+.form-select:hover {
+  border-color: rgb(154, 77, 226);
+}
+.form-input {
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid rgba(194, 137, 248, 0.3);
+  box-shadow: 0 2px 5px rgba(194, 137, 248, 0.05);
+  background-color: white;
+  padding: 8px 12px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+.form-input:focus {
+  border-color: rgb(154, 77, 226);
+}
+.form-input:hover {
+  border-color: rgb(154, 77, 226);
+}
+.form-control {
+  width: 100%;
+  border-radius: 12px;
+  border: 1.5px solid rgba(194, 137, 248, 0.3);
+  box-shadow: 0 2px 5px rgba(194, 137, 248, 0.05);
+  background-color: white;
+  padding: 8px 12px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+}
+.form-control:focus {
+  border-color: rgb(154, 77, 226);
+}
+.form-control:hover {
+  border-color: rgb(154, 77, 226);
+}
+.form-control.error {
+  border-color: rgb(220, 53, 69);
+  background-color: rgba(220, 53, 69, 0.1);
+}
+.form-control.error:focus {
+  border-color: rgb(220, 53, 69);
+  background-color: rgba(220, 53, 69, 0.1);
 }
 
 .loading-banner-container {
@@ -367,4 +470,23 @@
   color: rgb(154, 77, 226);
   width: 24px;
   height: 24px;
+}
+
+.suggestion-list {
+  position: relative;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  margin-top: 2px;
+  background: #fff;
+  z-index: 10;
+  width: 77%;
+}
+.suggestion-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #9a4de2;
+  transition: background 0.2s ease;
+}
+.suggestion-item:hover {
+  background: rgba(154, 77, 226, 0.1);
 }
