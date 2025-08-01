@@ -529,17 +529,58 @@ export default function ShowSessionalDistribution() {
       try {
         const courses = await getLabCourses();
 
-        // Filter out courses that are already assigned in any time slot
-        const filteredCourses = courses.filter(course => {
-          // Check if this course exists in any schedule
-          const isAssigned = sessionalSchedules.some(schedule =>
-            schedule.course_id === course.course_id &&
-            schedule.section === course.section
-          );
-          return !isAssigned; // Keep only unassigned courses
+        // Process courses to handle class_per_week = 0.75
+        const processedCourses = [];
+        const addedHalfCourses = new Set(); // Track which section groups have been added
+        
+        courses.forEach(course => {
+          if (course.class_per_week === 0.75) {
+            // Debug: Log the course section to understand the format
+            console.log('Processing 0.75 course:', course.course_id, 'section:', course.section);
+            
+            // For 0.75 class_per_week, create separate entries for each section group
+            const sectionBase = course.section.charAt(0); // Get 'A', 'B', 'C', etc.
+            const combinedSection = `${sectionBase}1/${sectionBase}2`;
+            const courseGroupKey = `${course.course_id}-${sectionBase}`;
+            
+            console.log('Section base:', sectionBase, 'Combined section:', combinedSection, 'Group key:', courseGroupKey);
+            
+            // Only add if we haven't already added this course-section group combination
+            if (!addedHalfCourses.has(courseGroupKey)) {
+              console.log('Adding new course group:', courseGroupKey);
+              // Check if either section in this group is already assigned
+              const isAssigned = sessionalSchedules.some(schedule =>
+                schedule.course_id === course.course_id &&
+                (schedule.section === `${sectionBase}1` || schedule.section === `${sectionBase}2`)
+              );
+              
+              if (!isAssigned) {
+                // Create a new course object with combined section display
+                processedCourses.push({
+                  ...course,
+                  section: combinedSection,
+                  originalSections: [`${sectionBase}1`, `${sectionBase}2`], // Store both sections for backend operations
+                  isHalfCourse: true // Flag to identify 0.75 courses
+                });
+                addedHalfCourses.add(courseGroupKey); // Mark this combination as added
+              }
+            } else {
+              console.log('Skipping duplicate course group:', courseGroupKey);
+            }
+          } else {
+            // For regular courses, check if already assigned
+            const isAssigned = sessionalSchedules.some(schedule =>
+              schedule.course_id === course.course_id &&
+              schedule.section === course.section
+            );
+            
+            if (!isAssigned) {
+              processedCourses.push(course);
+            }
+          }
         });
 
-        setLabCourses(filteredCourses);
+        setLabCourses(processedCourses);
       } catch (error) {
         console.error('Error fetching lab courses:', error);
       }
@@ -557,56 +598,114 @@ export default function ShowSessionalDistribution() {
         return;
       }
 
-      // First check if this section already has a course in this time slot
-      const existingCourseInSlot = sessionalSchedules.find(schedule =>
-        schedule.day === day &&
-        schedule.time === time &&
-        schedule.batch === course.batch &&
-        schedule.section === course.section &&
-        schedule.department === course.department
-      );
-
-      if (existingCourseInSlot) {
-        toast.error(`Section ${course.section} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
-        return;
-      }
-
-      // Check for teacher schedule conflicts
-      try {
-        const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
-        const contradictions = await teacherContradiction(course.batch, course.section, course.course_id);
-
-        // Check if any assigned teacher has a schedule conflict
-        for (const contradiction of contradictions) {
-          const conflictingSchedules = contradiction.schedule.filter(
-            schedule => schedule.day === day && schedule.time === time
+      // Check if this is a 0.75 class_per_week course with combined sections
+      if (course.isHalfCourse && course.originalSections) {
+        // For 0.75 class_per_week courses, add to database for both sections
+        for (const section of course.originalSections) {
+          // Check if this individual section already has a course in this time slot
+          const existingCourseInSlot = sessionalSchedules.find(schedule =>
+            schedule.day === day &&
+            schedule.time === time &&
+            schedule.batch === course.batch &&
+            schedule.section === section &&
+            schedule.department === course.department
           );
-          if (conflictingSchedules.length > 0) {
-            toast(`Warning: Teacher ${contradiction.initial} is already assigned to ${conflictingSchedules[0].course_id}(${conflictingSchedules[0].section}) at this time slot.`, {
-              icon: '⚠️',
-              duration: 5000,
-              style: {
-                background: '#FFF3CD',
-                color: '#856404',
-                border: '1px solid #FFEEBA'
-              }
-            });
-            // Not returning here, allowing the assignment to proceed
+
+          if (existingCourseInSlot) {
+            toast.error(`Section ${section} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
+            return;
           }
+
+          // Check for teacher schedule conflicts for this individual section
+          try {
+            const teacherConflicts = await getSessionalTeachers(course.course_id, section);
+            const contradictions = await teacherContradiction(course.batch, section, course.course_id);
+
+            // Check if any assigned teacher has a schedule conflict
+            for (const contradiction of contradictions) {
+              const conflictingSchedules = contradiction.schedule.filter(
+                schedule => schedule.day === day && schedule.time === time
+              );
+              if (conflictingSchedules.length > 0) {
+                toast(`Warning: Teacher ${contradiction.initial} is already assigned to ${conflictingSchedules[0].course_id}(${conflictingSchedules[0].section}) at this time slot.`, {
+                  icon: '⚠️',
+                  duration: 5000,
+                  style: {
+                    background: '#FFF3CD',
+                    color: '#856404',
+                    border: '1px solid #FFEEBA'
+                  }
+                });
+                // Not returning here, allowing the assignment to proceed
+              }
+            }
+          } catch (error) {
+            console.error('Error checking teacher conflicts:', error);
+          }
+
+          // Create the schedule for this individual section
+          const schedule = {
+            course_id: course.course_id,
+            day: day,
+            time: time
+          };
+
+          // Insert record in the database for this section
+          await setSessionalSchedules(course.batch, section, course.department, schedule);
         }
-      } catch (error) {
-        console.error('Error checking teacher conflicts:', error);
+      } else {
+        // Regular course handling
+        // First check if this section already has a course in this time slot
+        const existingCourseInSlot = sessionalSchedules.find(schedule =>
+          schedule.day === day &&
+          schedule.time === time &&
+          schedule.batch === course.batch &&
+          schedule.section === course.section &&
+          schedule.department === course.department
+        );
+
+        if (existingCourseInSlot) {
+          toast.error(`Section ${course.section} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
+          return;
+        }
+
+        // Check for teacher schedule conflicts
+        try {
+          const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
+          const contradictions = await teacherContradiction(course.batch, course.section, course.course_id);
+
+          // Check if any assigned teacher has a schedule conflict
+          for (const contradiction of contradictions) {
+            const conflictingSchedules = contradiction.schedule.filter(
+              schedule => schedule.day === day && schedule.time === time
+            );
+            if (conflictingSchedules.length > 0) {
+              toast(`Warning: Teacher ${contradiction.initial} is already assigned to ${conflictingSchedules[0].course_id}(${conflictingSchedules[0].section}) at this time slot.`, {
+                icon: '⚠️',
+                duration: 5000,
+                style: {
+                  background: '#FFF3CD',
+                  color: '#856404',
+                  border: '1px solid #FFEEBA'
+                }
+              });
+              // Not returning here, allowing the assignment to proceed
+            }
+          }
+        } catch (error) {
+          console.error('Error checking teacher conflicts:', error);
+        }
+
+        // Create the schedule for the new course
+        const schedule = {
+          course_id: course.course_id,
+          day: day,
+          time: time
+        };
+
+        // This will insert a new record in the database
+        await setSessionalSchedules(course.batch, course.section, course.department, schedule);
       }
-
-      // Create the schedule for the new course
-      const schedule = {
-        course_id: course.course_id,
-        day: day,
-        time: time
-      };
-
-      // This will insert a new record in the database
-      await setSessionalSchedules(course.batch, course.section, course.department, schedule);
 
       // Refresh the sessional schedules
       const data = await getDepartmentalSessionalSchedule();
