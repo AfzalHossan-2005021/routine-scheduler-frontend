@@ -6,8 +6,8 @@ import { useContext } from "react";
 import { UserContext } from "./App";
 
 const Login = lazy(() => import("./user-pages/Login"));
-const Register = lazy(() => import("./user-pages/Register"));
 const ForgetPassword = lazy(() => import("./user-pages/ForgetPassword"));
+const ChangePassword = lazy(() => import("./user-pages/ChangePassword"));
 const Account = lazy(() => import("./user-pages/Account"));
 
 const Dashboard = lazy(() => import("./dashboard/Dashboard"));
@@ -68,13 +68,13 @@ export default function AppRoutes() {
             <Route path="/theory-schedule" component={TheorySchedule} />
             <Route path="/sessional-distribution" component={SessionalDistribution} />
             <Route path="/load-distribution" component={LoadDistribution} />
+            <Route path="/auth/change-password" component={ChangePassword} />
             <Route path="/account" component={Account} />
             <Redirect to="/dashboard" />
           </Switch>
         ) : (
           <Switch>
             <Route path="/auth/login" component={Login} />
-            <Route path="/auth/register" component={Register} />
             <Route path="/auth/forgot-password" component={ForgetPassword} />
             <Redirect to="/auth/login" />
           </Switch>
