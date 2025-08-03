@@ -8,6 +8,7 @@ import {
   deleteCourse,
   editCourse,
   getCourses,
+  getSections,
 } from "../api/db-crud";
 import {
   getDepartments,
@@ -52,6 +53,7 @@ export default function Courses() {
   const [allHostedDepartments, setAllHostedDepartments] = useState([]);
   const [allDepartmentNames, setAllDepartmentNames] = useState([]);
   const [allLevelTermNames, setAllLevelTermNames] = useState([]);
+  const [allSections, setAllSections] = useState([]);
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [addNewCourse, setAddNewCourse] = useState(false);
@@ -138,6 +140,12 @@ export default function Courses() {
     getAllLevelTermsName().then((res) => {
       setAllLevelTermNames(res);
     });
+    // Fetch all sections for course-section assignment
+    getSections().then((res) => {
+      setAllSections(res || []);
+    }).catch(error => {
+      console.error('Error fetching sections:', error);
+    });
   }, []);
 
   return (
@@ -201,6 +209,7 @@ export default function Courses() {
                         to: "",
                         teacher_credit: 0,
                         level_term: "",
+                        assignedSections: [],
                       });
                     }}
                   >
@@ -486,6 +495,50 @@ export default function Courses() {
                     </FormGroup>
                   </Col>
                 </Row>
+                {/* Show section assignment for both Theory and Sessional courses */}
+                <Row>
+                  <Col className="px-2 py-1">
+                    <FormGroup>
+                      <Form.Label className="form-label">
+                        Assign to Sections {selectedCourse.type === 0 ? "(Theory)" : "(Sessional)"}
+                      </Form.Label>
+                        <Form.Select
+                          multiple
+                          className="form-select"
+                          value={selectedCourse.assignedSections || []}
+                          onChange={(e) => {
+                            const selectedValues = Array.from(e.target.selectedOptions, option => option.value);
+                            setSelectedCourse({
+                              ...selectedCourse,
+                              assignedSections: selectedValues,
+                            });
+                          }}
+                          style={{ minHeight: '100px' }}
+                        >
+                          {allSections && allSections.length > 0 ? (
+                            allSections
+                              .filter(section => 
+                                section.level_term === selectedCourse.level_term && 
+                                section.department === selectedCourse.to
+                              )
+                              .map((section, i) => (
+                                <option 
+                                  key={i} 
+                                  value={`${section.batch}-${section.section}`}
+                                >
+                                  Batch: {section.batch}, Section: {section.section}
+                                </option>
+                              ))
+                          ) : (
+                            <option disabled>No sections available</option>
+                          )}
+                        </Form.Select>
+                        <Form.Text className="text-muted">
+                          Hold Ctrl (Cmd on Mac) to select multiple sections
+                        </Form.Text>
+                      </FormGroup>
+                    </Col>
+                  </Row>
               </Form>
             </div>
             <div className="modal-divider"></div>
@@ -503,6 +556,7 @@ export default function Courses() {
                 const result = validateCourse(selectedCourse);
                 if (result === null) {
                   if (addNewCourse) {
+                    console.log('DEBUG Frontend: Adding course data:', selectedCourse);
                     addCourse(selectedCourse)
                       .then((res) => {
                         if (
