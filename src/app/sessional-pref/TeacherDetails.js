@@ -17,6 +17,21 @@ import { getDepartmentalSessionalSchedule } from '../api/sessional-schedule';
 // UI components and utilities
 import toast from 'react-hot-toast';
 
+/**
+ * Helper function to format section display for 0.75 credit courses
+ * @param {string} section - The section (A, B, C, etc.)
+ * @param {number} classPerWeek - The class per week value (1 for 0.75 credit, 2 for 1.5 credit)
+ * @returns {string} - Formatted section display
+ */
+function formatSectionDisplay(section, classPerWeek) {
+  // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
+  if (classPerWeek === 0.75) {
+    return `${section}1/${section}2`;
+  }
+  // For other courses, show the section as is
+  return section;
+}
+
 // Add some custom styles for the schedule table
 const scheduleTableStyle = {
   table: {
@@ -668,11 +683,11 @@ export default function TeacherDetails(props) {
                                   ? scheduleTableStyle.selectedCourseItem
                                   : {})
                               }}
-                              title={`${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})`}
+                              title={`${courseInfo.course_id} - Section ${formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)} (Batch ${courseInfo.batch})`}
                             >
                               <strong>{courseInfo.course_id}</strong>
                               <br />
-                              {courseInfo.section && <span>Section: {courseInfo.section}</span>}
+                              {courseInfo.section && <span>Section: {formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)}</span>}
                               {courseInfo.batch && <span> | Batch: {courseInfo.batch}</span>}
                             </div>
                           </td>
@@ -868,9 +883,9 @@ export default function TeacherDetails(props) {
                                     position: 'relative'
                                   }}
                                   // Keep a simple title for non-conflict items
-                                  title={!conflict ? `${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})` : ''}
+                                  title={!conflict ? `${courseInfo.course_id} - Section ${formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)} (Batch ${courseInfo.batch})` : ''}
                                 >
-                                  <strong style={isAlreadyScheduled ? { color: '#28a745' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
+                                  <strong style={isAlreadyScheduled ? { color: '#28a745' } : {}}>{courseInfo.course_id} ({formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)})</strong>
                                   <br />
                                   {courseInfo.section && (
                                     <CourseTeachers
@@ -974,7 +989,7 @@ export default function TeacherDetails(props) {
     if (isExactCourseSelected) {
       setSelectedSessionalSchedules(prev => prev.filter(s => !isExactMatch(s)));
 
-      toast.success(`Removed ${schedule.course_id} (Section ${schedule.section}) from selection`, {
+      toast.success(`Removed ${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)}) from selection`, {
         icon: '❌',
         duration: 2000
       });
@@ -1032,7 +1047,7 @@ export default function TeacherDetails(props) {
     setSelectedSessionalSchedules(prev => [...prev, schedule]);
 
     // Show a success notification
-    toast.success(`Selected ${schedule.course_id} (Section ${schedule.section}) for ${schedule.day} at ${schedule.time}:00`, {
+    toast.success(`Selected ${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)}) for ${schedule.day} at ${schedule.time}:00`, {
       icon: '✅',
       duration: 2000
     });
@@ -1080,7 +1095,7 @@ export default function TeacherDetails(props) {
               console.warn(`Empty response received for ${schedule.course_id} assignment`);
             }
           } catch (error) {
-            console.error(`Error assigning ${schedule.course_id} (Section ${schedule.section}):`, error);
+            console.error(`Error assigning ${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)}):`, error);
 
             // Extract and log detailed error information
             if (error.response) {
@@ -1097,12 +1112,12 @@ export default function TeacherDetails(props) {
             successCount++;
           } else {
             failCount++;
-            failedCourses.push(`${schedule.course_id} (Section ${schedule.section})`);
+            failedCourses.push(`${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)})`);
           }
         } catch (error) {
           console.error(`Error assigning course ${schedule.course_id}:`, error);
           failCount++;
-          failedCourses.push(`${schedule.course_id} (Section ${schedule.section})`);
+          failedCourses.push(`${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)})`);
         }
       }
 
@@ -1212,7 +1227,7 @@ export default function TeacherDetails(props) {
 
         if (result && result.success) {
           // Success - update local state
-          toast.success(`Successfully unassigned from ${courseInfo.course_id} (Section ${courseInfo.section})`);
+          toast.success(`Successfully unassigned from ${courseInfo.course_id} (Section ${formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)})`);
 
           // Update the assigned sessional courses state
           const updatedCourses = assignedSessionalCourses.filter(course =>
@@ -1526,7 +1541,7 @@ export default function TeacherDetails(props) {
                                               {sessionalAssignment.course_id}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                              Section {sessionalAssignment.section}
+                                              Section {formatSectionDisplay(sessionalAssignment.section, sessionalAssignment.class_per_week)}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
                                               <i className="mdi mdi-flask"></i> Lab
