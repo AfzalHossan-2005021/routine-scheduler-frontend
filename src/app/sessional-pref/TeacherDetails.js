@@ -9,7 +9,8 @@ import {
   getTeacherSessionalAssignment,
   setTeacherSessionalAssignment,
   deleteTeacherSessionalAssignment,
-  getSessionalTeachers
+  getSessionalTeachers,
+  getTeacherTotalCredit
 } from '../api/theory-assign';
 import { getCourseAllSchedule, getCourseSectionalSchedule } from '../api/theory-schedule';
 import { getDepartmentalSessionalSchedule } from '../api/sessional-schedule';
@@ -226,6 +227,8 @@ export default function TeacherDetails(props) {
   // Basic teacher information
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [totalCredits, setTotalCredits] = useState(0);
+  const [loadingCredits, setLoadingCredits] = useState(false);
 
   // Course and assignment data
   const [assignedTheoryCourses, setAssignedTheoryCourses] = useState([]);       // Assigned theory courses
@@ -345,6 +348,26 @@ export default function TeacherDetails(props) {
       fetchSchedules();
     }
   }, [assignedTheoryCourses, assignedSessionalCourses, teacherId]);
+
+  // Fetch total credits whenever teacher assignments change
+  useEffect(() => {
+    const fetchTotalCredits = async () => {
+      if (!teacherId) return;
+      
+      try {
+        setLoadingCredits(true);
+        const creditData = await getTeacherTotalCredit(teacherId);
+        setTotalCredits(creditData?.totalCredit || 0);
+      } catch (error) {
+        console.error("Error fetching teacher total credits:", error);
+        setTotalCredits(0); // Set to 0 on error
+      } finally {
+        setLoadingCredits(false);
+      }
+    };
+
+    fetchTotalCredits();
+  }, [teacherId, assignedTheoryCourses, assignedSessionalCourses]); // Refetch when assignments change
 
   /**
    * Check for time conflicts with existing schedules
@@ -1298,12 +1321,15 @@ export default function TeacherDetails(props) {
         padding: "1.5rem",
         marginBottom: "2rem",
         boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
-        color: "white"
+        color: "white",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center"
       }}>
         <h3 className="page-title" style={{
           fontSize: "1.8rem",
           fontWeight: "700",
-          marginBottom: "0.5rem",
+          marginBottom: "0",
           display: "flex",
           alignItems: "center",
           gap: "12px",
@@ -1323,6 +1349,64 @@ export default function TeacherDetails(props) {
           </div>
           {teacher?.name || teacherId}
         </h3>
+        
+        {/* Total Credits Display */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          backgroundColor: "rgba(255, 255, 255, 0.15)",
+          borderRadius: "12px",
+          padding: "12px 20px",
+          backdropFilter: "blur(10px)",
+          boxShadow: "0 4px 15px rgba(0, 0, 0, 0.1)"
+        }}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "8px",
+            backgroundColor: "rgba(255, 255, 255, 0.2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            <i className="mdi mdi-calculator" style={{ fontSize: "18px" }}></i>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+            <span style={{ 
+              fontSize: "0.85rem", 
+              opacity: 0.9, 
+              fontWeight: "500",
+              lineHeight: 1,
+              marginBottom: "2px"
+            }}>
+              Total Credits
+            </span>
+            {loadingCredits ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div 
+                  className="spinner-border spinner-border-sm" 
+                  style={{ 
+                    width: "14px", 
+                    height: "14px",
+                    borderWidth: "2px",
+                    color: "rgba(255, 255, 255, 0.8)"
+                  }}
+                ></div>
+                <span style={{ fontSize: "1.1rem", fontWeight: "600" }}>Loading...</span>
+              </div>
+            ) : (
+              <span style={{ 
+                fontSize: "1.4rem", 
+                fontWeight: "700",
+                lineHeight: 1,
+                color: totalCredits > 12 ? "#ffeb3b" : "white"
+              }}>
+                {totalCredits.toFixed(1)}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
       {teacher && (
         <div>
