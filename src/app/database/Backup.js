@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { Modal, Button } from 'react-bootstrap';
-import { getVersions, saveVersion, loadVersion, deleteVersion } from '../api/versions';
-import { mdiContentSave, mdiDatabaseCheck, mdiDatabaseCog } from '@mdi/js';
+import { getVersions, saveVersion, loadVersion, deleteVersion, downloadVersion, uploadVersion } from '../api/versions';
+import { mdiContentSave, mdiDatabaseCheck, mdiDatabaseCog, mdiDownload, mdiUpload } from '@mdi/js';
 import Icon from '@mdi/react';
 
 const Spinner = () => (
@@ -19,6 +19,10 @@ const Backup = () => {
     const [selectedFilename, setSelectedFilename] = useState(null);
     const [showDeleteWarning, setShowDeleteWarning] = useState(false);
     const [showLoadWarning, setShowLoadWarning] = useState(false);
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [uploadFile, setUploadFile] = useState(null);
+    const [uploadVersionName, setUploadVersionName] = useState('');
+    const fileInputRef = useRef(null);
 
     const fetchVersions = useCallback(async () => {
         setLoading(true);
@@ -76,6 +80,59 @@ const Backup = () => {
             fetchVersions();
         } catch (err) {
             toast.error('Failed to delete backup version.');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleDownload = async (filename) => {
+        setActionLoading(`download_${filename}`);
+        try {
+            const data = await downloadVersion(filename);
+            toast.success(data.message);
+        } catch (err) {
+            toast.error('Failed to download backup version.');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleFileSelect = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            if (!file.name.endsWith('.dump')) {
+                toast.error('Please select a .dump file.');
+                return;
+            }
+            setUploadFile(file);
+            setUploadVersionName(file.name.replace('.dump', ''));
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!uploadFile) {
+            toast.error('Please select a file to upload.');
+            return;
+        }
+
+        if (!uploadVersionName.trim()) {
+            toast.error('Please enter a version name.');
+            return;
+        }
+
+        setActionLoading('upload');
+        try {
+            const data = await uploadVersion(uploadFile, uploadVersionName.trim());
+            toast.success(data.message);
+            setUploadFile(null);
+            setUploadVersionName('');
+            setShowUploadModal(false);
+            fetchVersions();
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        } catch (err) {
+            toast.error('Failed to upload backup version.');
         } finally {
             setActionLoading(null);
         }
@@ -195,6 +252,38 @@ const Backup = () => {
                                         </button>
                                     </div>
                                 </form>
+
+                                <h5 className="card-title">Upload Backup File</h5>
+                                <div className="mb-3">
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={() => setShowUploadModal(true)}
+                                        disabled={!!actionLoading}
+                                        style={{
+                                            background: "rgba(108, 117, 125, 0.15)",
+                                            color: "rgb(108, 117, 125)",
+                                            border: "1px solid rgba(108, 117, 125, 0.5)",
+                                            borderRadius: "12px",
+                                            padding: "7px 14px",
+                                            transition: "all 0.3s ease",
+                                            fontWeight: "500",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "6px"
+                                        }}
+                                        onMouseOver={e => {
+                                            e.currentTarget.style.background = "rgb(108, 117, 125)";
+                                            e.currentTarget.style.color = "white";
+                                        }}
+                                        onMouseOut={e => {
+                                            e.currentTarget.style.background = "rgba(108, 117, 125, 0.15)";
+                                            e.currentTarget.style.color = "rgb(108, 117, 125)";
+                                        }}
+                                    >
+                                        <Icon path={mdiUpload} size={0.7} style={{ marginRight: "6px" }} />
+                                        Upload Backup File
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -252,6 +341,39 @@ const Backup = () => {
                                                 </div>
                                                 <div className="btn-group" role="group">
                                                     <button
+                                                        className="btn btn-info btn-sm"
+                                                        onClick={() => handleDownload(version.filename)}
+                                                        disabled={!!actionLoading}
+                                                        title={`Download ${version.filename}`}
+                                                        style={{
+                                                            borderRadius: "6px",
+                                                            fontWeight: "500",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: "4px",
+                                                            padding: "7px 14px",
+                                                            border: "1px solid rgba(23, 162, 184, 0.3)",
+                                                            color: "#17a2b8",
+                                                            transition: "all 0.3s ease",
+                                                            background: "rgba(23, 162, 184, 0.1)",
+                                                            fontSize: "0.9rem",
+                                                            marginRight: "8px"
+                                                        }}
+                                                        onMouseEnter={(e) => {
+                                                            e.target.style.background = "#17a2b8";
+                                                            e.target.style.color = "white";
+                                                            e.target.style.borderColor = "#17a2b8";
+                                                        }}
+                                                        onMouseLeave={(e) => {
+                                                            e.target.style.background = "rgba(23, 162, 184, 0.1)";
+                                                            e.target.style.color = "#17a2b8";
+                                                            e.target.style.borderColor = "rgba(23, 162, 184, 0.3)";
+                                                        }}
+                                                    >
+                                                        <Icon path={mdiDownload} size={0.6} />
+                                                        {actionLoading === `download_${version.filename}` ? <Spinner /> : 'Download'}
+                                                    </button>
+                                                    <button
                                                         className="btn btn-success btn-sm"
                                                         onClick={() => {
                                                             setSelectedFilename(version.filename);
@@ -271,6 +393,7 @@ const Backup = () => {
                                                             transition: "all 0.3s ease",
                                                             background: "rgba(40, 167, 69, 0.1)",
                                                             fontSize: "0.9rem",
+                                                            marginRight: "8px"
 
                                                         }}
                                                         onMouseEnter={(e) => {
@@ -527,6 +650,160 @@ const Backup = () => {
                         >
                             <i className="mdi mdi-delete-outline mr-1"></i>
                             Delete
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
+            )}
+
+            {/* Upload Modal */}
+            {showUploadModal && (
+                <Modal
+                    show={showUploadModal}
+                    onHide={() => {
+                        if (actionLoading !== 'upload') {
+                            setShowUploadModal(false);
+                            setUploadFile(null);
+                            setUploadVersionName('');
+                            if (fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                            }
+                        }
+                    }}
+                    size="md"
+                    centered
+                    contentClassName="border-0 shadow"
+                    backdrop="static"
+                >
+                    <Modal.Header
+                        style={{
+                            background: "linear-gradient(135deg, rgba(108, 117, 125, 0.05) 0%, rgba(108, 117, 125, 0.1) 100%)",
+                            borderBottom: "1px solid rgba(108, 117, 125, 0.2)",
+                            paddingTop: "16px",
+                            paddingBottom: "16px"
+                        }}
+                    >
+                        <div className="d-flex align-items-center">
+                            <div style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "8px",
+                                backgroundColor: "rgba(108, 117, 125, 0.15)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                marginRight: "10px"
+                            }}>
+                                <Icon path={mdiUpload} size={0.8} color="rgb(108, 117, 125)" />
+                            </div>
+                            <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "rgb(108, 117, 125)" }}>Upload Backup File</Modal.Title>
+                        </div>
+                    </Modal.Header>
+                    <Modal.Body className="px-4 py-4">
+                        <div className="mb-3">
+                            <label htmlFor="fileInput" className="form-label">Select Backup File (.dump)</label>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                className="form-control"
+                                id="fileInput"
+                                accept=".dump"
+                                onChange={handleFileSelect}
+                                disabled={actionLoading === 'upload'}
+                                style={{
+                                    borderRadius: "8px",
+                                    border: "1.5px solid rgba(108, 117, 125, 0.3)",
+                                    padding: "8px 12px",
+                                    transition: "all 0.3s ease"
+                                }}
+                            />
+                            {uploadFile && (
+                                <small className="text-muted">Selected: {uploadFile.name}</small>
+                            )}
+                        </div>
+                        <div className="mb-3">
+                            <label htmlFor="versionNameInput" className="form-label">Version Name</label>
+                            <input
+                                type="text"
+                                className="form-control"
+                                id="versionNameInput"
+                                placeholder="e.g., imported-backup-1"
+                                value={uploadVersionName}
+                                onChange={(e) => setUploadVersionName(e.target.value)}
+                                disabled={actionLoading === 'upload'}
+                                style={{
+                                    borderRadius: "8px",
+                                    border: "1.5px solid rgba(108, 117, 125, 0.3)",
+                                    padding: "8px 12px",
+                                    transition: "all 0.3s ease"
+                                }}
+                            />
+                            <small className="text-muted">This will be the name shown in your backup list.</small>
+                        </div>
+                    </Modal.Body>
+                    <Modal.Footer style={{ borderTop: "1px solid rgba(108, 117, 125, 0.2)", padding: "16px" }}>
+                        <Button
+                            style={{
+                                background: "rgba(154, 77, 226, 0.15)",
+                                color: "rgb(154, 77, 226)",
+                                border: "1.5px solid rgba(154, 77, 226, 0.5)",
+                                borderRadius: "8px",
+                                padding: "8px 20px",
+                                fontWeight: "500",
+                                fontSize: "1rem",
+                                marginRight: "10px",
+                                transition: "all 0.3s ease"
+                            }}
+                            onClick={() => {
+                                setShowUploadModal(false);
+                                setUploadFile(null);
+                                setUploadVersionName('');
+                                if (fileInputRef.current) {
+                                    fileInputRef.current.value = '';
+                                }
+                            }}
+                            disabled={actionLoading === 'upload'}
+                            onMouseOver={e => {
+                                e.currentTarget.style.background = "rgb(154, 77, 226)";
+                                e.currentTarget.style.color = "white";
+                                e.currentTarget.style.borderColor = "rgb(154, 77, 226)";
+                            }}
+                            onMouseOut={e => {
+                                e.currentTarget.style.background = "rgba(154, 77, 226, 0.15)";
+                                e.currentTarget.style.color = "rgb(154, 77, 226)";
+                                e.currentTarget.style.borderColor = "rgba(154, 77, 226, 0.5)";
+                            }}
+                        >
+                            <i className="mdi mdi-close mr-1"></i>
+                            Cancel
+                        </Button>
+                        <Button
+                            style={{
+                                background: "rgba(108, 117, 125, 0.1)",
+                                color: "rgb(108, 117, 125)",
+                                border: "1.5px solid rgba(108, 117, 125, 0.3)",
+                                borderRadius: "8px",
+                                padding: "8px 20px",
+                                fontWeight: "500",
+                                marginLeft: "10px",
+                                transition: "all 0.3s ease"
+                            }}
+                            onClick={handleUpload}
+                            disabled={!uploadFile || !uploadVersionName.trim() || actionLoading === 'upload'}
+                            onMouseOver={e => {
+                                if (!e.currentTarget.disabled) {
+                                    e.currentTarget.style.background = "rgb(108, 117, 125)";
+                                    e.currentTarget.style.color = "white";
+                                }
+                            }}
+                            onMouseOut={e => {
+                                if (!e.currentTarget.disabled) {
+                                    e.currentTarget.style.background = "rgba(108, 117, 125, 0.1)";
+                                    e.currentTarget.style.color = "rgb(108, 117, 125)";
+                                }
+                            }}
+                        >
+                            <Icon path={mdiUpload} size={0.6} style={{ marginRight: "6px" }} />
+                            {actionLoading === 'upload' ? <Spinner /> : 'Upload'}
                         </Button>
                     </Modal.Footer>
                 </Modal>

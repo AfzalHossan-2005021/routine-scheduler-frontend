@@ -155,6 +155,7 @@ export default function Initialize() {
       async () => {
         try {
           await deleteLevelTerm({ level_term, department });
+          toast.success(`Successfully deleted ${level_term} for ${department}`);
           setLevelTerms((prev) =>
             prev.filter(
               (lt) =>
@@ -224,7 +225,7 @@ export default function Initialize() {
       <div className="row mb-4">
         <div className="col-12">
           <div className="card">
-            <div className="card-body">
+            <div className="card-view">
               <div className="card-control-container">
                 <h4 className="card-name">
                   <div className="card-icon mdi mdi-clipboard-outline"></div>
@@ -260,8 +261,8 @@ export default function Initialize() {
                 </div>
               ) : (
                 <>
-                  <div className="table-responsive card-table">
-                    <table className="table">
+                  <div className="card-table-container table-responsive">
+                    <table className="card-table table">
                       <thead className="card-table-header">
                         <tr>
                           <th>
@@ -355,8 +356,9 @@ export default function Initialize() {
                   </div>
                   <Modal
                     show={showAddModal}
+                    centered
                     size="md"
-                    contentClassName="shadow modal-content"
+                    contentClassName="modal-content"
                     backdrop="static"
                   >
                     <Modal.Header className="modal-header">
@@ -365,6 +367,7 @@ export default function Initialize() {
                         <h4 className="modal-title">Add New Level-Term</h4>
                       </Modal.Title>
                       <button
+                        className="modal-header-close-button mdi mdi-close"
                         onClick={() => {
                           setShowAddModal(false);
                           setNewLevelTerm({
@@ -372,7 +375,6 @@ export default function Initialize() {
                             level_term: "",
                           });
                         }}
-                        className="modal-header-close-button mdi mdi-close"
                       ></button>
                     </Modal.Header>
                     <Modal.Body className="modal-body">
@@ -381,9 +383,7 @@ export default function Initialize() {
                           <Row>
                             <Col>
                               <FormGroup className="mb-3">
-                                <Form.Label
-                                  style={{ fontWeight: 600, color: "#7c4fd5" }}
-                                >
+                                <Form.Label className="form-label">
                                   Department
                                 </Form.Label>
                                 <Form.Select
@@ -415,9 +415,7 @@ export default function Initialize() {
                           <Row>
                             <Col>
                               <FormGroup>
-                                <Form.Label
-                                  style={{ fontWeight: 600, color: "#7c4fd5" }}
-                                >
+                                <Form.Label className="form-label">
                                   Level-Term
                                 </Form.Label>
                                 <Form.Select
@@ -474,6 +472,7 @@ export default function Initialize() {
                   </Modal>
                   <Modal
                     show={showActivateModal}
+                    centered
                     size="md"
                     contentClassName="shadow modal-content"
                     backdrop="static"
@@ -484,12 +483,12 @@ export default function Initialize() {
                         <h4 className="modal-title">Activate Level-Term</h4>
                       </Modal.Title>
                       <button
+                        className="modal-header-close-button mdi mdi-close"
                         onClick={() => {
                           setShowActivateModal(false);
                           setSelectedLevelTerms([]);
                           setBatchInputs({});
                         }}
-                        className="modal-header-close-button mdi mdi-close"
                       ></button>
                     </Modal.Header>
                     <Modal.Body className="modal-body">
@@ -499,7 +498,11 @@ export default function Initialize() {
                             <Row key={lt} className="mb-3 align-items-center">
                               <Col xs={1} className="pl-3 pr-0">
                                 <div
-                                  className="custom-checkbox-wrapper"
+                                  className={`custom-checkbox ${
+                                    selectedLevelTerms.includes(lt)
+                                      ? "checked mdi mdi-check"
+                                      : "unchecked"
+                                  }`}
                                   onClick={() => {
                                     if (selectedLevelTerms.includes(lt)) {
                                       setSelectedLevelTerms((prev) =>
@@ -512,15 +515,7 @@ export default function Initialize() {
                                       ]);
                                     }
                                   }}
-                                >
-                                  <div
-                                    className={`custom-checkbox ${
-                                      selectedLevelTerms.includes(lt)
-                                        ? "checked mdi mdi-check"
-                                        : "unchecked"
-                                    }`}
-                                  ></div>
-                                </div>
+                                ></div>
                               </Col>
                               <Col xs={4}>{lt}</Col>
                               <Col xs={7}>
