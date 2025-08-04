@@ -5,7 +5,23 @@ import { getDepartmentalSessionalSchedule, setSessionalSchedules, teacherContrad
 import { getSessionalTeachers } from '../api/theory-assign';
 import { getTeachers, getLabCourses } from '../api/db-crud';
 import { setTeacherSessionalAssignment, deleteTeacherSessionalAssignment } from '../api/theory-assign';
+import { getSchedules } from '../api/theory-schedule';
 import { Modal, Button } from 'react-bootstrap';
+
+/**
+ * Helper function to format section display for 0.75 credit courses
+ * @param {string} section - The section (A, B, C, etc.)
+ * @param {number} classPerWeek - The class per week value (1 for 0.75 credit, 2 for 1.5 credit)
+ * @returns {string} - Formatted section display
+ */
+function formatSectionDisplay(section, classPerWeek) {
+  // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
+  if (classPerWeek === 0.75) {
+    return `${section}1/${section}2`;
+  }
+  // For other courses, show the section as is
+  return section;
+}
 
 /**
  * CourseTeachers Component
@@ -529,42 +545,17 @@ export default function ShowSessionalDistribution() {
       try {
         const courses = await getLabCourses();
 
-        // Process courses to handle class_per_week = 0.75
-        const processedCourses = [];
-        
-        courses.forEach(course => {
-          if (course.class_per_week === 0.75) {
-            // For 0.75 class_per_week, create combined sections like A1/A2, B1/B2, etc.
-            const sectionBase = course.section.charAt(0); // Get 'A', 'B', 'C', etc.
-            const combinedSection = `${sectionBase}1/${sectionBase}2`;
-            
-            // Check if this combined section course is already assigned
-            const isAssigned = sessionalSchedules.some(schedule =>
-              schedule.course_id === course.course_id &&
-              schedule.section === combinedSection
-            );
-            
-            if (!isAssigned) {
-              processedCourses.push({
-                ...course,
-                section: combinedSection,
-                originalSection: course.section // Keep original for reference
-              });
-            }
-          } else {
-            // For regular courses, check if already assigned
-            const isAssigned = sessionalSchedules.some(schedule =>
-              schedule.course_id === course.course_id &&
-              schedule.section === course.section
-            );
-            
-            if (!isAssigned) {
-              processedCourses.push(course);
-            }
-          }
+        // Filter out courses that are already assigned in any time slot
+        const filteredCourses = courses.filter(course => {
+          // Check if this course exists in any schedule
+          const isAssigned = sessionalSchedules.some(schedule =>
+            schedule.course_id === course.course_id &&
+            schedule.section === course.section
+          );
+          return !isAssigned; // Keep only unassigned courses
         });
 
-        setLabCourses(processedCourses);
+        setLabCourses(filteredCourses);
       } catch (error) {
         console.error('Error fetching lab courses:', error);
       }
@@ -582,32 +573,83 @@ export default function ShowSessionalDistribution() {
         return;
       }
 
-      // Determine the section to use for scheduling
-      let sectionToUse = course.section;
-      
-      // If this is a 0.75 class_per_week course with combined section, use the original section for backend
-      if (course.class_per_week === 0.75 && course.originalSection) {
-        sectionToUse = course.originalSection;
-      }
-
       // First check if this section already has a course in this time slot
       const existingCourseInSlot = sessionalSchedules.find(schedule =>
         schedule.day === day &&
         schedule.time === time &&
         schedule.batch === course.batch &&
-        schedule.section === sectionToUse &&
+        schedule.section === course.section &&
         schedule.department === course.department
       );
 
       if (existingCourseInSlot) {
-        toast.error(`Section ${course.section} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
+        toast.error(`Section ${formatSectionDisplay(course.section, course.class_per_week)} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
         return;
+      }
+
+      const mainSection = course.section.replace(/\d+$/, '');
+      const allSchedule = await getSchedules(course.department, course.batch, mainSection);
+
+      console.log(allSchedule);
+      
+      // Check theory conflict schedules
+      if (allSchedule.mainSection && allSchedule.mainSection.length > 0) {
+        const theorySchedule = allSchedule.mainSection.filter(schedule => schedule.type === 0);
+        console.log(theorySchedule);
+        const theoryConflict = theorySchedule.filter(schedule =>
+          schedule.day === day && 
+          (schedule.time === time || schedule.time === (time + 1)%12 || schedule.time === (time + 2) % 12) 
+        );
+        console.log(theoryConflict);
+        if (theoryConflict.length > 0) {
+          toast.error(`Cannot add ${course.course_id} for section ${formatSectionDisplay(course.section,course.class_per_week)}. ${theoryConflict[0].course_id} for section ${formatSectionDisplay(theoryConflict[0].section, theoryConflict[0].class_per_week)} is already scheduled at this time slot.`);
+          return;
+        }
+      }
+
+      // Check for 0.75 credit course conflicts
+      // For 0.75 credit courses (class_per_week = 0.75), we need to check for subsection conflicts
+      if (course.class_per_week === 0.75) {
+        // If adding a 0.75 credit course for section A, check if A1 or A2 already exist
+        const subsectionConflicts = sessionalSchedules.filter(schedule =>
+          schedule.day === day &&
+          schedule.time === time &&
+          schedule.batch === course.batch &&
+          schedule.department === course.department &&
+          (schedule.section === `${course.section}1` || schedule.section === `${course.section}2`)
+        );
+
+        if (subsectionConflicts.length > 0) {
+          const conflictingSections = subsectionConflicts.map(s => s.section).join(', ');
+          toast.error(`Cannot add ${course.course_id} for section ${course.section}. Subsections ${conflictingSections} already have courses scheduled at this time slot`);
+          return;
+        }
+      } else {
+        // For 1.5 credit courses (subsections like A1, A2), check if main section already exists
+        // Extract the main section (remove the number at the end)
+        
+        if (mainSection !== course.section) {
+          // This is a subsection (like A1, A2)
+          const mainSectionConflict = sessionalSchedules.find(schedule =>
+            schedule.day === day &&
+            schedule.time === time &&
+            schedule.batch === course.batch &&
+            schedule.department === course.department &&
+            schedule.section === mainSection &&
+            schedule.class_per_week === 0.75 // Only check for 0.75 credit courses
+          );
+
+          if (mainSectionConflict) {
+            toast.error(`Cannot add ${course.course_id} for subsection ${course.section}. Section ${mainSection} already has (${mainSectionConflict.course_id}) scheduled at this time slot`);
+            return;
+          }
+        }
       }
 
       // Check for teacher schedule conflicts
       try {
-        const teacherConflicts = await getSessionalTeachers(course.course_id, sectionToUse);
-        const contradictions = await teacherContradiction(course.batch, sectionToUse, course.course_id);
+        const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
+        const contradictions = await teacherContradiction(course.batch, course.section, course.course_id);
 
         // Check if any assigned teacher has a schedule conflict
         for (const contradiction of contradictions) {
@@ -615,7 +657,10 @@ export default function ShowSessionalDistribution() {
             schedule => schedule.day === day && schedule.time === time
           );
           if (conflictingSchedules.length > 0) {
-            toast(`Warning: Teacher ${contradiction.initial} is already assigned to ${conflictingSchedules[0].course_id}(${conflictingSchedules[0].section}) at this time slot.`, {
+            const conflictingSchedule = conflictingSchedules[0];
+            // For the conflicting schedule, we need to find its class_per_week info
+            // For now, we'll use the section as is since we don't have class_per_week for the conflicting schedule
+            toast(`Warning: Teacher ${contradiction.initial} is already assigned to ${conflictingSchedule.course_id}(${conflictingSchedule.section}) at this time slot.`, {
               icon: '⚠️',
               duration: 5000,
               style: {
@@ -638,8 +683,8 @@ export default function ShowSessionalDistribution() {
         time: time
       };
 
-      // This will insert a new record in the database using the appropriate section
-      await setSessionalSchedules(course.batch, sectionToUse, course.department, schedule);
+      // This will insert a new record in the database
+      await setSessionalSchedules(course.batch, course.section, course.department, schedule);
 
       // Refresh the sessional schedules
       const data = await getDepartmentalSessionalSchedule();
@@ -807,8 +852,9 @@ export default function ShowSessionalDistribution() {
                                 
                                 // Determine if this course has permanent teachers based on color
                                 const hasPermTeachers = colorStyles.backgroundColor === '#1714dd2f';
+                                const formattedSection = formatSectionDisplay(schedule.section, schedule.class_per_week);
                                 const tooltipMessage = hasPermTeachers 
-                                  ? `${schedule.course_id} - Section ${schedule.section}` 
+                                  ? `${schedule.course_id} - Section ${formattedSection}` 
                                   : "No Full time Teacher Assigned";
                                 
                                 return (
@@ -871,7 +917,7 @@ export default function ShowSessionalDistribution() {
                                   </div>
                                   <div style={scheduleTableStyle.sectionBadge}>
                                     <i className="mdi mdi-account-group mr-1"></i>
-                                    Section {schedule.section}
+                                    Section {formatSectionDisplay(schedule.section, schedule.class_per_week)}
                                   </div>
                                   <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                                     <CourseTeachers
@@ -922,8 +968,8 @@ export default function ShowSessionalDistribution() {
                     >
                       <i className="mdi mdi-close"></i>
                     </button>
-                    <h5 style={{ marginBottom: '20px', color: '#333' }}>
-                      {selectedCourse.course_id} - Section {selectedCourse.section}
+                                        <h5 style={{ marginBottom: '20px', color: '#333' }}>
+                      {selectedCourse.course_id} - Section {formatSectionDisplay(selectedCourse.section, selectedCourse.class_per_week)}
                     </h5>
 
                     {!showTeachersList && !showRemoveTeacherList ? (
@@ -1264,7 +1310,7 @@ export default function ShowSessionalDistribution() {
                             marginBottom: '4px',
                             letterSpacing: '0.2px',
                           }}>
-                            {course.course_id} <span style={{ color: '#4a5568', fontWeight: '500' }}>({course.section})</span>
+                            {course.course_id} <span style={{ color: '#4a5568', fontWeight: '500' }}>({formatSectionDisplay(course.section, course.class_per_week)})</span>
                           </div>
                           <div style={{
                             color: '#718096',
