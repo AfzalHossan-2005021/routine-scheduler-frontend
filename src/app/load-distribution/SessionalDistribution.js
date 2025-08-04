@@ -32,14 +32,14 @@ export default function SessionalDistribution() {
       console.log(response);
       setCourses(response || []);
     } catch (error) {
-      console.error('Error fetching sessional distribution:', error);
-      toast.error('Failed to load sessional distribution data');
+      console.error("Error fetching sessional distribution:", error);
+      toast.error("Failed to load sessional distribution data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Table styles matching other components
+    // Table styles matching other components
   const tableStyle = {
     width: '100%',
     borderCollapse: 'separate',
@@ -81,8 +81,9 @@ export default function SessionalDistribution() {
     border: '1px solid #e1bee7',
   };
 
+
   const formatTime = (time) => {
-    if (!time) return 'Not scheduled';
+    if (!time) return "Not scheduled";
     return time;
   };
 
