@@ -5,6 +5,7 @@ import { getDepartmentalSessionalSchedule, setSessionalSchedules, teacherContrad
 import { getSessionalTeachers } from '../api/theory-assign';
 import { getTeachers, getLabCourses } from '../api/db-crud';
 import { setTeacherSessionalAssignment, deleteTeacherSessionalAssignment } from '../api/theory-assign';
+import { getSchedules } from '../api/theory-schedule';
 import { Modal, Button } from 'react-bootstrap';
 
 /**
@@ -586,6 +587,26 @@ export default function ShowSessionalDistribution() {
         return;
       }
 
+      const mainSection = course.section.replace(/\d+$/, '');
+      const allSchedule = await getSchedules(course.department, course.batch, mainSection);
+
+      console.log(allSchedule);
+      
+      // Check theory conflict schedules
+      if (allSchedule.mainSection && allSchedule.mainSection.length > 0) {
+        const theorySchedule = allSchedule.mainSection.filter(schedule => schedule.type === 0);
+        console.log(theorySchedule);
+        const theoryConflict = theorySchedule.filter(schedule =>
+          schedule.day === day && 
+          (schedule.time === time || schedule.time === (time + 1)%12 || schedule.time === (time + 2) % 12) 
+        );
+        console.log(theoryConflict);
+        if (theoryConflict.length > 0) {
+          toast.error(`Cannot add ${course.course_id} for section ${formatSectionDisplay(course.section,course.class_per_week)}. ${theoryConflict[0].course_id} for section ${formatSectionDisplay(theoryConflict[0].section, theoryConflict[0].class_per_week)} is already scheduled at this time slot.`);
+          return;
+        }
+      }
+
       // Check for 0.75 credit course conflicts
       // For 0.75 credit courses (class_per_week = 0.75), we need to check for subsection conflicts
       if (course.class_per_week === 0.75) {
@@ -606,7 +627,7 @@ export default function ShowSessionalDistribution() {
       } else {
         // For 1.5 credit courses (subsections like A1, A2), check if main section already exists
         // Extract the main section (remove the number at the end)
-        const mainSection = course.section.replace(/\d+$/, '');
+        
         if (mainSection !== course.section) {
           // This is a subsection (like A1, A2)
           const mainSectionConflict = sessionalSchedules.find(schedule =>

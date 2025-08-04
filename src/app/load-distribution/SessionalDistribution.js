@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { getSessionalDistribution } from '../api/theory-assign';
 
+/**
+ * Helper function to format section display for 0.75 credit courses
+ * @param {string} section - The section (A, B, C, etc.)
+ * @param {number} classPerWeek - The class per week value (1 for 0.75 credit, 2 for 1.5 credit)
+ * @returns {string} - Formatted section display
+ */
+function formatSectionDisplay(section, classPerWeek) {
+  // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
+  if (classPerWeek === 0.75) {
+    return `${section}1/${section}2`;
+  }
+  // For other courses, show the section as is
+  return section;
+}
+
 export default function SessionalDistribution() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -14,6 +29,7 @@ export default function SessionalDistribution() {
     setLoading(true);
     try {
       const response = await getSessionalDistribution();
+      console.log(response);
       setCourses(response || []);
     } catch (error) {
       console.error('Error fetching sessional distribution:', error);
@@ -132,7 +148,7 @@ export default function SessionalDistribution() {
                             {course.course_name || course.course_id}
                           </td>
                           <td style={cellStyle}>
-                            {course.section}
+                            {formatSectionDisplay(course.section,course.class_per_week)}
                           </td>
                           <td style={cellStyle}>
                             {course.day || 'Not scheduled'}

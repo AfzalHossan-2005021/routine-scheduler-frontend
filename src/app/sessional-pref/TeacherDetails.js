@@ -478,7 +478,8 @@ export default function TeacherDetails(props) {
         section: course.section || 'Unknown',
         batch: course.batch || 'All',
         day: course.day,
-        time: course.time
+        time: course.time,
+        class_per_week: course.class_per_week
       });
     });
 
@@ -776,7 +777,7 @@ export default function TeacherDetails(props) {
                           // Get details of the already selected course
                           const selectedCourse = selectedSchedules.find(s => s.day === day && s.time === time);
                           tooltip = selectedCourse
-                            ? `Already selected: ${selectedCourse.course_id} (Section ${selectedCourse.section})`
+                            ? `Already selected: ${selectedCourse.course_id} (Section ${formatSectionDisplay(selectedCourse.section, selectedCourse.class_per_week)})`
                             : config.defaultTooltip;
                         } else {
                           tooltip = generateConflictTooltip(day, time) || config.defaultTooltip;
@@ -1250,7 +1251,7 @@ export default function TeacherDetails(props) {
 
         if (result && result.success) {
           // Success - update local state
-          toast.success(`Successfully unassigned from ${courseInfo.course_id} (Section ${formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)})`);
+          toast.success(`Successfully unassigned from ${courseInfo.course_id} (Section ${courseInfo.section})`);
 
           // Update the assigned sessional courses state
           const updatedCourses = assignedSessionalCourses.filter(course =>
@@ -1625,7 +1626,7 @@ export default function TeacherDetails(props) {
                                               {sessionalAssignment.course_id}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                              Section {formatSectionDisplay(sessionalAssignment.section, sessionalAssignment.class_per_week)}
+                                              Section {formatSectionDisplay(sessionalAssignment.section,sessionalAssignment.class_per_week)}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
                                               <i className="mdi mdi-flask"></i> Lab
