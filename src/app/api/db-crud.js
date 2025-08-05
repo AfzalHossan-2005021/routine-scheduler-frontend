@@ -15,6 +15,9 @@ export const deleteTeacher = (initial) =>
 export const getCourses = () =>
     axios.get(api_url("/course")).then((res) => res.data);
 
+export const getActiveCourseIds = () =>
+    axios.get(api_url("/course/active")).then((res) => res.data);
+
 
 export const addCourse = (course) =>
   axios.post(api_url("/course"), course).then((res) => res.data);

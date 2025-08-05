@@ -8,6 +8,7 @@ import {
   deleteCourse,
   editCourse,
   getCourses,
+  getActiveCourseIds,
   getSections,
 } from "../api/db-crud";
 import {
@@ -50,6 +51,9 @@ const validateCourse = (course) => {
 
 export default function Courses() {
   const [courses, setCourses] = useState([]);
+  const [activeCourseIds, setActiveCourseIds] = useState(new Set());
+  const [displayedCourses, setDisplayedCourses] = useState([]);
+  const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [allHostedDepartments, setAllHostedDepartments] = useState([]);
   const [allDepartmentNames, setAllDepartmentNames] = useState([]);
   const [allLevelTermNames, setAllLevelTermNames] = useState([]);
@@ -114,6 +118,8 @@ export default function Courses() {
             setCourses((prevCourses) =>
               prevCourses.filter((c) => c.course_id !== course_id)
             );
+            // Update displayed courses after deletion
+            updateDisplayedCourses();
           });
         } catch (error) {
           console.error("Error deleting level term:", error);
@@ -127,10 +133,58 @@ export default function Courses() {
     );
   };
 
+  // Function to update displayed courses based on the toggle
+  const updateDisplayedCourses = () => {
+    console.log('updateDisplayedCourses called:', { 
+      showActiveOnly, 
+      coursesLength: courses.length, 
+      activeCourseIdsSize: activeCourseIds.size,
+      activeCourseIds: Array.from(activeCourseIds)
+    });
+    
+    if (showActiveOnly) {
+      // Filter courses to show only those that exist in the courses table
+      const filteredCourses = courses.filter(course => {
+        const isActive = activeCourseIds.has(course.course_id);
+        console.log(`Course ${course.course_id}: ${isActive ? 'ACTIVE' : 'NOT ACTIVE'}`);
+        return isActive;
+      });
+      console.log('Filtered courses:', filteredCourses.length);
+      setDisplayedCourses(filteredCourses);
+    } else {
+      // Show all courses from all_courses table
+      console.log('Showing all courses:', courses.length);
+      setDisplayedCourses(courses);
+    }
+  };
+
+  // Handle toggle between active and all courses
+  const handleToggleChange = (showActive) => {
+    setShowActiveOnly(showActive);
+  };
+
+  // Update displayed courses when courses, activeCourseIds, or showActiveOnly changes
   useEffect(() => {
+    updateDisplayedCourses();
+  }, [courses, activeCourseIds, showActiveOnly]);
+
+  useEffect(() => {
+    // Fetch all courses (from all_courses table) - this is the main dataset
     getCourses().then((res) => {
+      console.log('All courses fetched:', res);
       setCourses(res);
     });
+    
+    // Fetch active course IDs (from courses table) for filtering
+    getActiveCourseIds().then((res) => {
+      console.log('Active course IDs fetched:', res);
+      const activeIds = new Set(res.map(course => course.course_id));
+      console.log('Active IDs set:', Array.from(activeIds));
+      setActiveCourseIds(activeIds);
+    }).catch(error => {
+      console.error('Error fetching active course IDs:', error);
+    });
+    
     getHostedDepartments().then((res) => {
       setAllHostedDepartments(res);
     });
@@ -196,6 +250,27 @@ export default function Courses() {
                   Course Management
                 </h4>
                 <div className="card-control-button-container">
+                  {/* Toggle between All and Active Courses with buttons */}
+                  <div className="d-flex align-items-center me-3">
+                    <div className="btn-group" role="group" aria-label="Course filter">
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${!showActiveOnly ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => handleToggleChange(false)}
+                        style={{ fontSize: '12px', padding: '4px 12px' }}
+                      >
+                        All Courses
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${showActiveOnly ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => handleToggleChange(true)}
+                        style={{ fontSize: '12px', padding: '4px 12px' }}
+                      >
+                        Active Only
+                      </button>
+                    </div>
+                  </div>
                   <button
                     className="card-control-button mdi mdi-plus-circle"
                     onClick={(e) => {
@@ -256,7 +331,7 @@ export default function Courses() {
                     </tr>
                   </thead>
                   <tbody className="card-table-body">
-                    {courses.map((course, index) => (
+                    {displayedCourses.map((course, index) => (
                       <tr key={index}>
                         <td
                           className="sticky-col"
