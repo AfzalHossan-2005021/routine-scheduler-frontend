@@ -1,5 +1,20 @@
 // Utility functions for CSV export
 
+/**
+ * Helper function to format section display for 0.75 credit courses
+ * @param {string} section - The section (A, B, C, etc.)
+ * @param {number} classPerWeek - The class per week value (1 for 0.75 credit, 2 for 1.5 credit)
+ * @returns {string} - Formatted section display
+ */
+function formatSectionDisplay(section, classPerWeek) {
+  // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
+  if (classPerWeek === 0.75) {
+    return `${section}1/${section}2`;
+  }
+  // For other courses, show the section as is
+  return section;
+}
+
 // Convert array of objects to CSV string
 export const arrayToCsv = (data, headers = null) => {
   if (!data || data.length === 0) {
@@ -86,7 +101,7 @@ export const exportSessionalDistributionToCsv = (courses) => {
   const data = courses.map(course => ({
     'Course ID': course.course_id,
     'Course Name': course.course_name || course.course_id,
-    'Section': course.section,
+    'Section': formatSectionDisplay(course.section, course.class_per_week),
     'Day': course.day || 'Not scheduled',
     'Time': course.time || 'Not scheduled',
     'Assigned Teachers Count': course.teachers_details ? course.teachers_details.length : 0,
@@ -110,7 +125,7 @@ export const exportCreditDistributionToCsv = (teacherAssignments) => {
     
     // Format sessional assignments with line breaks for better readability
     const sessionalAssignments = assignment.sessionalAssignments.map(sa => 
-      `${sa.course_id} (${sa.section})`
+      `${sa.course_id} (${formatSectionDisplay(sa.section, sa.class_per_week)})`
     );
 
     return {
