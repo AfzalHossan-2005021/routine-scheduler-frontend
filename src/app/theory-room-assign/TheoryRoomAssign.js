@@ -3,9 +3,24 @@ import { Button, Modal } from "react-bootstrap";
 import { Form, FormControl } from "react-bootstrap";
 
 import { toast } from "react-hot-toast";
-import { getAllTheoryRoomAssignment, updateTheoryRoomAssignment, getAllSectionRoomAllocation, updateSectionRoomAllocation } from "../api/theory-room-assign";
-import { mdiDomain, mdiFormatListBulletedType, mdiDoor, mdiCalendar, mdiBookOpenPageVariant, mdiCheckCircle, mdiPencil, mdiContentSave, mdiClose } from '@mdi/js';
-import Icon from '@mdi/react';
+import {
+  getAllTheoryRoomAssignment,
+  updateTheoryRoomAssignment,
+  getAllSectionRoomAllocation,
+  updateSectionRoomAllocation,
+} from "../api/theory-room-assign";
+import {
+  mdiDomain,
+  mdiFormatListBulletedType,
+  mdiDoor,
+  mdiCalendar,
+  mdiBookOpenPageVariant,
+  mdiCheckCircle,
+  mdiPencil,
+  mdiContentSave,
+  mdiClose,
+} from "@mdi/js";
+import Icon from "@mdi/react";
 
 const validateAssignment = (assignment) => {
   if (!assignment.section) {
@@ -44,7 +59,7 @@ const inputCellStyle = {
   fontSize: "1rem",
   padding: "8px 12px",
   height: "40px",
-  transition: "all 0.3s ease"
+  transition: "all 0.3s ease",
 };
 
 // Define a shared style object for modal action buttons
@@ -59,7 +74,7 @@ const modalButtonStyle = {
   display: "flex",
   alignItems: "center",
   gap: "4px",
-  fontSize: "0.9rem"
+  fontSize: "0.9rem",
 };
 
 export default function TheoryRoomAssign() {
@@ -70,132 +85,88 @@ export default function TheoryRoomAssign() {
 
   useEffect(() => {
     getAllSectionRoomAllocation()
-      .then(response => {
+      .then((response) => {
         setAllSectionRoomAllocation(response);
       })
-      .catch(error => {
+      .catch((error) => {
         toast.error("Failed to load section room allocations");
       });
 
     getAllTheoryRoomAssignment()
-      .then(response => {
+      .then((response) => {
         setAssignments(response);
       })
-      .catch(error => {
+      .catch((error) => {
         toast.error("Failed to load theory room assignments");
       });
   }, []);
 
-
   return (
     <div>
-      {/* Modern Page Header */}
-      <div className="page-header" style={{
-        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-        borderRadius: "16px",
-        padding: "1.5rem",
-        marginBottom: "2rem",
-        boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
-        color: "white"
-      }}>
-        <h3 className="page-title" style={{
-          fontSize: "1.8rem",
-          fontWeight: "700",
-          marginBottom: "0.5rem",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          color: "white"
-        }}>
-          <div style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            backgroundColor: "rgba(255, 255, 255, 0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
-          }}>
-            <Icon path={mdiDoor} size={1} color="white" />
-          </div>
+      <div className="page-header">
+        <h3 className="page-title">
+          <div className="page-title-icon-container mdi mdi-door"></div>
           Theory Room Assignment
         </h3>
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb" style={{ marginBottom: "0", background: "transparent" }}>
-            <li className="breadcrumb-item" style={{ color: "rgba(255,255,255,0.8)" }}>
-              <a href="!#" onClick={(event) => event.preventDefault()} style={{ color: "rgba(255,255,255,0.8)", textDecoration: "none" }}>
-                Schedule
-              </a>
-            </li>
-            <li className="breadcrumb-item active" aria-current="page" style={{ color: "rgba(255,255,255,0.9)", fontWeight: "500" }}>
-              Theory Room Assignments
-            </li>
-          </ol>
-        </nav>
       </div>
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="card" style={{
-            borderRadius: "16px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-            border: "none",
-            transition: "all 0.3s ease",
-            background: "white"
-          }}>
-            <div className="card-body" style={{ padding: "2rem" }}>
-              <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h4 className="card-title" style={{
-                  color: "rgb(174, 117, 228)",
-                  marginBottom: 0,
-                  fontWeight: "700",
-                  display: "flex",
-                  alignItems: "center",
-                  fontSize: "1.5rem",
-                  letterSpacing: "0.3px"
-                }}>
-                  <span style={{ marginRight: "12px" }}>
-                    <Icon path={mdiDoor} size={1} color="rgb(194, 137, 248)" />
-                  </span>
-                  Section Room Management
-                </h4>
-              </div>
-              <div className="table-responsive">
-                <table className="table" style={{ margin: 0 }}>
-                  <thead>
-                    <tr style={{
-                      backgroundColor: "rgba(174, 117, 228, 0.08)",
-                      borderBottom: "2px solid rgba(174, 117, 228, 0.1)"
-                    }}>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiDomain} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Department
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiDomain} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Level-Term
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiFormatListBulletedType} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Section
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiDoor} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Room No
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiCheckCircle} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.isArray(allSectionRoomAllocation) && allSectionRoomAllocation.map((theoryRoomAllocation, index) => (
-                      <tr key={index} style={{ transition: "all 0.2s", cursor: "pointer" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(194, 137, 248, 0.08)"}
-                        onMouseLeave={e => e.currentTarget.style.background = ""}
-                      >
+      <div className="card" style={{ marginBottom: "24px" }}>
+        <div className="card-view">
+          <div className="card-control-container">
+            <h4 className="card-name">
+              <div className="card-icon mdi mdi-door"></div>
+              Section Room Management
+            </h4>
+          </div>
+          <div className="card-table-container table-responsive">
+            <table className="card-table table">
+              <thead className="card-table-header">
+                <tr style={{ textAlign: "center" }}>
+                  <th>
+                    <i className="mdi mdi-domain"></i>
+                    Department
+                  </th>
+                  <th>
+                    <i className="mdi mdi-format-list-bulleted-type"></i>
+                    Level-Term
+                  </th>
+                  <th>
+                    <i className="mdi mdi-book"></i>
+                    Section
+                  </th>
+                  <th>
+                    <i className="mdi mdi-door"></i>
+                    Room No
+                  </th>
+                  <th
+                    style={{
+                      padding: "18px 20px",
+                      color: "rgb(174, 117, 228)",
+                      fontWeight: "700",
+                      fontSize: "0.95rem",
+                      border: "none",
+                    }}
+                  >
+                    <Icon
+                      path={mdiCheckCircle}
+                      size={0.7}
+                      color="rgb(174, 117, 228)"
+                      style={{ marginRight: "8px", verticalAlign: "middle" }}
+                    />
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(allSectionRoomAllocation) &&
+                  allSectionRoomAllocation.map(
+                    (theoryRoomAllocation, index) => (
+                      <tr key={index} style={{ textAlign: "center" }}>
                         <td> {theoryRoomAllocation.department} </td>
                         <td> {theoryRoomAllocation.level_term} </td>
                         <td> {theoryRoomAllocation.section} </td>
                         <td> {theoryRoomAllocation.room_no} </td>
                         <td>
-                          <div className="d-flex">
+                          <div className="d-flex justify-content-center">
                             <button
                               type="button"
                               style={{
@@ -209,141 +180,109 @@ export default function TheoryRoomAssign() {
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "6px",
-                                marginRight: "8px"
+                                marginRight: "8px",
                               }}
                               className="btn"
-                              onClick={() => setSelectedSectionRoom({
-                                ...theoryRoomAllocation
-                              })}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = "rgb(154, 77, 226)";
+                              onClick={() =>
+                                setSelectedSectionRoom({
+                                  ...theoryRoomAllocation,
+                                })
+                              }
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.background =
+                                  "rgb(154, 77, 226)";
                                 e.currentTarget.style.color = "white";
                               }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = "rgba(154, 77, 226, 0.15)";
-                                e.currentTarget.style.color = "rgb(154, 77, 226)";
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.background =
+                                  "rgba(154, 77, 226, 0.15)";
+                                e.currentTarget.style.color =
+                                  "rgb(154, 77, 226)";
                               }}
                             >
-                              <Icon path={mdiPencil} size={0.7} style={{ marginRight: "6px" }} />
+                              <Icon
+                                path={mdiPencil}
+                                size={0.7}
+                                style={{ marginRight: "6px" }}
+                              />
                               Update
                             </button>
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                    )
+                  )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-      <div className="row mb-4">
-        <div className="col-12">
-          <div className="card" style={{
-            borderRadius: "16px",
-            boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-            border: "none",
-            transition: "all 0.3s ease",
-            background: "white"
-          }}>
-            <div className="card-body" style={{ padding: "2rem" }}>
-              <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h4 className="card-title" style={{
-                  color: "rgb(174, 117, 228)",
-                  marginBottom: 0,
-                  fontWeight: "700",
-                  display: "flex",
-                  alignItems: "center",
-                  fontSize: "1.5rem",
-                  letterSpacing: "0.3px"
-                }}>
-                  <span style={{ marginRight: "12px" }}>
-                    <Icon path={mdiDoor} size={1} color="rgb(194, 137, 248)" />
-                  </span>
-                  Course Room Management
-                </h4>
-
-              </div>
-              <div className="table-responsive">
-                <table className="table" style={{ margin: 0 }}>
-                  <thead>
-                    <tr style={{
-                      backgroundColor: "rgba(174, 117, 228, 0.08)",
-                      borderBottom: "2px solid rgba(174, 117, 228, 0.1)"
-                    }}>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiBookOpenPageVariant} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Course ID
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiFormatListBulletedType} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Section
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiCalendar} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Day
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiCalendar} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Time
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiDoor} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Room No
-                      </th>
-                      <th style={{ padding: "18px 20px", color: "rgb(174, 117, 228)", fontWeight: "700", fontSize: "0.95rem", border: "none" }}>
-                        <Icon path={mdiCheckCircle} size={0.7} color="rgb(174, 117, 228)" style={{ marginRight: "8px", verticalAlign: "middle" }} />Action
-                      </th>
+      <div className="card">
+        <div className="card-view">
+          <div className="card-control-container">
+            <h4 className="card-name">
+              <div className="card-icon mdi mdi-book-open-page-variant"></div>
+              Course Room Management
+            </h4>
+          </div>
+          <div className="card-table-container table-responsive">
+            <table className="card-table table">
+              <thead className="card-table-header">
+                <tr style={{ textAlign: "center" }}>
+                  <th>
+                    <i className="mdi mdi-book-open-page-variant"></i>
+                    Course ID
+                  </th>
+                  <th>
+                    <i className="mdi mdi-format-list-bulleted-type"></i>
+                    Section
+                  </th>
+                  <th>
+                    <i className="mdi mdi-calendar"></i>
+                    Day
+                  </th>
+                  <th>
+                    <i className="mdi mdi-clock"></i>
+                    Time
+                  </th>
+                  <th>
+                    <i className="mdi mdi-door"></i>
+                    Room No
+                  </th>
+                  <th>
+                    <i className="mdi mdi-check-circle"></i>
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(assignments) &&
+                  assignments.map((assignment, index) => (
+                    <tr key={index} style={{ textAlign: "center" }}>
+                      <td> {assignment.course_id} </td>
+                      <td> {assignment.section} </td>
+                      <td> {assignment.day} </td>
+                      <td> {assignment.time} </td>
+                      <td> {assignment.room_no} </td>
+                      <td>
+                        <div className="d-flex justify-content-center">
+                          <button
+                            className="card-control-button"
+                            onClick={() =>
+                              setSelectedSection({
+                                ...assignment,
+                              })
+                            }
+                          >
+                            <i className="mdi mdi-pencil"></i>
+                            Update
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {Array.isArray(assignments) && assignments.map((assignment, index) => (
-                      <tr key={index} style={{ transition: "all 0.2s", cursor: "pointer" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(194, 137, 248, 0.08)"}
-                        onMouseLeave={e => e.currentTarget.style.background = ""}
-                      >
-                        <td> {assignment.course_id} </td>
-                        <td> {assignment.section} </td>
-                        <td> {assignment.day} </td>
-                        <td> {assignment.time} </td>
-                        <td> {assignment.room_no} </td>
-                        <td>
-                          <div className="d-flex">
-                            <button
-                              type="button"
-                              style={{
-                                background: "rgba(154, 77, 226, 0.15)",
-                                color: "rgb(154, 77, 226)",
-                                border: "1px solid rgba(154, 77, 226, 0.5)",
-                                borderRadius: "6px",
-                                padding: "7px 14px",
-                                transition: "all 0.3s ease",
-                                fontWeight: "500",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                marginRight: "8px"
-                              }}
-                              className="btn"
-                              onClick={() => setSelectedSection({
-                                ...assignment
-                              })}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = "rgb(154, 77, 226)";
-                                e.currentTarget.style.color = "white";
-                              }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = "rgba(154, 77, 226, 0.15)";
-                                e.currentTarget.style.color = "rgb(154, 77, 226)";
-                              }}
-                            >
-                              <Icon path={mdiPencil} size={0.7} style={{ marginRight: "6px" }} />
-                              Update
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -405,15 +344,18 @@ export default function TheoryRoomAssign() {
               margin: 0 -2rem 1.5rem -2rem;
             }
           `}</style>
-          <Modal.Header style={{
-            background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-            color: "white",
-            borderBottom: "none",
-            borderRadius: "20px 20px 0 0",
-            padding: "24px 30px 24px 30px",
-            position: "relative",
-            overflow: "hidden"
-          }}>
+          <Modal.Header
+            style={{
+              background:
+                "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+              color: "white",
+              borderBottom: "none",
+              borderRadius: "20px 20px 0 0",
+              padding: "24px 30px 24px 30px",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
             <div className="add-section-modal-header-bg"></div>
             <div className="add-section-modal-header-content">
               <div className="add-section-modal-header-icon">
@@ -424,31 +366,50 @@ export default function TheoryRoomAssign() {
               </h4>
             </div>
           </Modal.Header>
-          <Modal.Body style={{ background: "#f8f9fa", borderRadius: "0 0 20px 20px", padding: "2rem 2rem 0 2rem" }}>
-            <div style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 4px 24px rgba(174, 117, 228, 0.08)", padding: "2rem 1.5rem", marginBottom: "1.5rem" }}>
+          <Modal.Body
+            style={{
+              background: "#f8f9fa",
+              borderRadius: "0 0 20px 20px",
+              padding: "2rem 2rem 0 2rem",
+            }}
+          >
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "16px",
+                boxShadow: "0 4px 24px rgba(174, 117, 228, 0.08)",
+                padding: "2rem 1.5rem",
+                marginBottom: "1.5rem",
+              }}
+            >
               <Form>
                 <div className="d-flex align-items-center mb-3">
-                  <Form.Label style={{ 
-                    fontWeight: 600, 
-                    color: "#7c4fd5", 
-                    marginRight: "15px", 
-                    marginBottom: 0,
-                    whiteSpace: "nowrap"
-                  }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: 600,
+                      color: "#7c4fd5",
+                      marginRight: "15px",
+                      marginBottom: 0,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Section
                   </Form.Label>
                   <div style={{ flex: 1, fontWeight: 500, color: "#666" }}>
-                    {selectedSection.section} - {selectedSection.course_id} ({selectedSection.day}, {selectedSection.time})
+                    {selectedSection.section} - {selectedSection.course_id} (
+                    {selectedSection.day}, {selectedSection.time})
                   </div>
                 </div>
                 <div className="d-flex align-items-center">
-                  <Form.Label style={{ 
-                    fontWeight: 600, 
-                    color: "#7c4fd5", 
-                    marginRight: "15px", 
-                    marginBottom: 0,
-                    whiteSpace: "nowrap"
-                  }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: 600,
+                      color: "#7c4fd5",
+                      marginRight: "15px",
+                      marginBottom: 0,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Room No
                   </Form.Label>
                   <FormControl
@@ -463,7 +424,7 @@ export default function TheoryRoomAssign() {
                     }
                     style={{
                       ...inputCellStyle,
-                      flex: 1
+                      flex: 1,
                     }}
                   />
                 </div>
@@ -471,16 +432,22 @@ export default function TheoryRoomAssign() {
             </div>
             <div className="add-section-modal-divider"></div>
           </Modal.Body>
-          <Modal.Footer style={{ borderTop: "none", padding: "0 2rem 1.5rem 2rem", background: "#f8f9fa" }}>
+          <Modal.Footer
+            style={{
+              borderTop: "none",
+              padding: "0 2rem 1.5rem 2rem",
+              background: "#f8f9fa",
+            }}
+          >
             <Button
               style={modalButtonStyle}
               className="d-flex align-items-center justify-content-center"
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.target.style.background = "rgb(154, 77, 226)";
                 e.target.style.color = "white";
                 e.target.style.borderColor = "rgb(154, 77, 226)";
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.target.style.background = "rgba(154, 77, 226, 0.15)";
                 e.target.style.color = "rgb(154, 77, 226)";
                 e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
@@ -493,12 +460,12 @@ export default function TheoryRoomAssign() {
             <Button
               style={modalButtonStyle}
               className="d-flex align-items-center justify-content-center"
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.target.style.background = "rgb(154, 77, 226)";
                 e.target.style.color = "white";
                 e.target.style.borderColor = "rgb(154, 77, 226)";
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.target.style.background = "rgba(154, 77, 226, 0.15)";
                 e.target.style.color = "rgb(154, 77, 226)";
                 e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
@@ -510,25 +477,31 @@ export default function TheoryRoomAssign() {
                   updateTheoryRoomAssignment(selectedSection)
                     .then((res) => {
                       getAllTheoryRoomAssignment()
-                        .then(response => {
+                        .then((response) => {
                           const assignmentData = response.data || response;
-                          setAssignments(Array.isArray(assignmentData) ? assignmentData : []);
+                          setAssignments(
+                            Array.isArray(assignmentData) ? assignmentData : []
+                          );
                           setSelectedSection(null);
                           toast.success("Assignment updated successfully");
                         })
-                        .catch(error => {
+                        .catch((error) => {
                           setSelectedSection(null);
                           toast.success("Error refreshing assignments");
                         });
                     })
-                    .catch(error => {
+                    .catch((error) => {
                       console.error("Error saving assignment:", error);
                       toast.error("Failed to save assignment");
                     });
                 } else toast.error(result);
               }}
             >
-              <Icon path={mdiContentSave} size={0.9} style={{ marginRight: 6 }} />
+              <Icon
+                path={mdiContentSave}
+                size={0.9}
+                style={{ marginRight: 6 }}
+              />
               Save
             </Button>
           </Modal.Footer>
@@ -592,15 +565,18 @@ export default function TheoryRoomAssign() {
               margin: 0 -2rem 1.5rem -2rem;
             }
           `}</style>
-          <Modal.Header style={{
-            background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-            color: "white",
-            borderBottom: "none",
-            borderRadius: "20px 20px 0 0",
-            padding: "24px 30px 24px 30px",
-            position: "relative",
-            overflow: "hidden"
-          }}>
+          <Modal.Header
+            style={{
+              background:
+                "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+              color: "white",
+              borderBottom: "none",
+              borderRadius: "20px 20px 0 0",
+              padding: "24px 30px 24px 30px",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
             <div className="add-section-modal-header-bg"></div>
             <div className="add-section-modal-header-content">
               <div className="add-section-modal-header-icon">
@@ -611,31 +587,51 @@ export default function TheoryRoomAssign() {
               </h4>
             </div>
           </Modal.Header>
-          <Modal.Body style={{ background: "#f8f9fa", borderRadius: "0 0 20px 20px", padding: "2rem 2rem 0 2rem" }}>
-            <div style={{ background: "#fff", borderRadius: "16px", boxShadow: "0 4px 24px rgba(174, 117, 228, 0.08)", padding: "2rem 1.5rem", marginBottom: "1.5rem" }}>
+          <Modal.Body
+            style={{
+              background: "#f8f9fa",
+              borderRadius: "0 0 20px 20px",
+              padding: "2rem 2rem 0 2rem",
+            }}
+          >
+            <div
+              style={{
+                background: "#fff",
+                borderRadius: "16px",
+                boxShadow: "0 4px 24px rgba(174, 117, 228, 0.08)",
+                padding: "2rem 1.5rem",
+                marginBottom: "1.5rem",
+              }}
+            >
               <Form>
                 <div className="d-flex align-items-center mb-3">
-                  <Form.Label style={{ 
-                    fontWeight: 600, 
-                    color: "#7c4fd5", 
-                    marginRight: "15px", 
-                    marginBottom: 0,
-                    whiteSpace: "nowrap"
-                  }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: 600,
+                      color: "#7c4fd5",
+                      marginRight: "15px",
+                      marginBottom: 0,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Section
                   </Form.Label>
                   <div style={{ flex: 1, fontWeight: 500, color: "#666" }}>
-                    {selectedSectionRoom.section} ({selectedSectionRoom.level_term}, {selectedSectionRoom.department})
+                    {selectedSectionRoom.section} (
+                    {selectedSectionRoom.level_term},{" "}
+                    {selectedSectionRoom.department})
                   </div>
                 </div>
                 <div className="d-flex align-items-center">
-                  <Form.Label style={{ 
-                    fontWeight: 600, 
-                    color: "#7c4fd5", 
-                    marginRight: "15px", 
-                    marginBottom: 0,
-                    whiteSpace: "nowrap"
-                  }}>
+                  <Form.Label
+                    style={{
+                      fontWeight: 600,
+                      color: "#7c4fd5",
+                      marginRight: "15px",
+                      marginBottom: 0,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Room No
                   </Form.Label>
                   <FormControl
@@ -650,7 +646,7 @@ export default function TheoryRoomAssign() {
                     }
                     style={{
                       ...inputCellStyle,
-                      flex: 1
+                      flex: 1,
                     }}
                   />
                 </div>
@@ -658,16 +654,22 @@ export default function TheoryRoomAssign() {
             </div>
             <div className="add-section-modal-divider"></div>
           </Modal.Body>
-          <Modal.Footer style={{ borderTop: "none", padding: "0 2rem 1.5rem 2rem", background: "#f8f9fa" }}>
+          <Modal.Footer
+            style={{
+              borderTop: "none",
+              padding: "0 2rem 1.5rem 2rem",
+              background: "#f8f9fa",
+            }}
+          >
             <Button
               style={modalButtonStyle}
               className="d-flex align-items-center justify-content-center"
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.target.style.background = "rgb(154, 77, 226)";
                 e.target.style.color = "white";
                 e.target.style.borderColor = "rgb(154, 77, 226)";
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.target.style.background = "rgba(154, 77, 226, 0.15)";
                 e.target.style.color = "rgb(154, 77, 226)";
                 e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
@@ -680,19 +682,22 @@ export default function TheoryRoomAssign() {
             <Button
               style={modalButtonStyle}
               className="d-flex align-items-center justify-content-center"
-              onMouseEnter={e => {
+              onMouseEnter={(e) => {
                 e.target.style.background = "rgb(154, 77, 226)";
                 e.target.style.color = "white";
                 e.target.style.borderColor = "rgb(154, 77, 226)";
               }}
-              onMouseLeave={e => {
+              onMouseLeave={(e) => {
                 e.target.style.background = "rgba(154, 77, 226, 0.15)";
                 e.target.style.color = "rgb(154, 77, 226)";
                 e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
               }}
               onClick={(e) => {
                 e.preventDefault();
-                if (!selectedSectionRoom.room_no || selectedSectionRoom.room_no.trim() === "") {
+                if (
+                  !selectedSectionRoom.room_no ||
+                  selectedSectionRoom.room_no.trim() === ""
+                ) {
                   toast.error("Room number cannot be empty");
                   return;
                 }
@@ -700,29 +705,33 @@ export default function TheoryRoomAssign() {
                 updateSectionRoomAllocation(selectedSectionRoom)
                   .then((res) => {
                     getAllSectionRoomAllocation()
-                      .then(response => {
+                      .then((response) => {
                         setAllSectionRoomAllocation(response);
                         toast.success("Section room updated successfully");
                       })
-                      .catch(error => {
+                      .catch((error) => {
                         toast.error("Error refreshing section rooms");
                       });
-                      getAllTheoryRoomAssignment()
-                      .then(response => {
+                    getAllTheoryRoomAssignment()
+                      .then((response) => {
                         setAssignments(response);
                       })
-                      .catch(error => {
+                      .catch((error) => {
                         toast.error("Failed to refresh assignments");
                       });
-                      setSelectedSectionRoom(null);
+                    setSelectedSectionRoom(null);
                   })
-                  .catch(error => {
+                  .catch((error) => {
                     setSelectedSectionRoom(null);
                     toast.error("Failed to update section room");
                   });
               }}
             >
-              <Icon path={mdiContentSave} size={0.9} style={{ marginRight: 6 }} />
+              <Icon
+                path={mdiContentSave}
+                size={0.9}
+                style={{ marginRight: 6 }}
+              />
               Save
             </Button>
           </Modal.Footer>
