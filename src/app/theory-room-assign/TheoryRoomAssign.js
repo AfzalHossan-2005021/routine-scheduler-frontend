@@ -118,102 +118,122 @@ export default function TheoryRoomAssign() {
             </h4>
           </div>
           <div className="card-table-container table-responsive">
-            <table className="card-table table">
-              <thead className="card-table-header">
-                <tr style={{ textAlign: "center" }}>
-                  <th>
-                    <i className="mdi mdi-domain"></i>
-                    Department
-                  </th>
-                  <th>
-                    <i className="mdi mdi-format-list-bulleted-type"></i>
-                    Level-Term
-                  </th>
-                  <th>
-                    <i className="mdi mdi-book"></i>
-                    Section
-                  </th>
-                  <th>
-                    <i className="mdi mdi-door"></i>
-                    Room No
-                  </th>
-                  <th
+            {Array.isArray(allSectionRoomAllocation) &&
+            allSectionRoomAllocation.length === 0 ? (
+              <div className="text-center py-4">
+                <div className="mb-3">
+                  <i
+                    className="mdi mdi-book-off-outline"
                     style={{
-                      padding: "18px 20px",
-                      color: "rgb(174, 117, 228)",
-                      fontWeight: "700",
-                      fontSize: "0.95rem",
-                      border: "none",
+                      fontSize: "3rem",
+                      color: "#6c757d",
+                      opacity: 0.5,
                     }}
-                  >
-                    <Icon
-                      path={mdiCheckCircle}
-                      size={0.7}
-                      color="rgb(174, 117, 228)"
-                      style={{ marginRight: "8px", verticalAlign: "middle" }}
-                    />
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.isArray(allSectionRoomAllocation) &&
-                  allSectionRoomAllocation.map(
-                    (theoryRoomAllocation, index) => (
-                      <tr key={index} style={{ textAlign: "center" }}>
-                        <td> {theoryRoomAllocation.department} </td>
-                        <td> {theoryRoomAllocation.level_term} </td>
-                        <td> {theoryRoomAllocation.section} </td>
-                        <td> {theoryRoomAllocation.room_no} </td>
-                        <td>
-                          <div className="d-flex justify-content-center">
-                            <button
-                              type="button"
-                              style={{
-                                background: "rgba(154, 77, 226, 0.15)",
-                                color: "rgb(154, 77, 226)",
-                                border: "1px solid rgba(154, 77, 226, 0.5)",
-                                borderRadius: "6px",
-                                padding: "7px 14px",
-                                transition: "all 0.3s ease",
-                                fontWeight: "500",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                marginRight: "8px",
-                              }}
-                              className="btn"
-                              onClick={() =>
-                                setSelectedSectionRoom({
-                                  ...theoryRoomAllocation,
-                                })
-                              }
-                              onMouseOver={(e) => {
-                                e.currentTarget.style.background =
-                                  "rgb(154, 77, 226)";
-                                e.currentTarget.style.color = "white";
-                              }}
-                              onMouseOut={(e) => {
-                                e.currentTarget.style.background =
-                                  "rgba(154, 77, 226, 0.15)";
-                                e.currentTarget.style.color =
-                                  "rgb(154, 77, 226)";
-                              }}
-                            >
-                              <Icon
-                                path={mdiPencil}
-                                size={0.7}
-                                style={{ marginRight: "6px" }}
-                              />
-                              Update
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  )}
-              </tbody>
-            </table>
+                  ></i>
+                </div>
+                <h6 className="text-muted mb-2">Routine Not Initailized.</h6>
+                <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
+                  Initialize routine to assign rooms to theory sections.
+                </p>
+              </div>
+            ) : (
+              <table className="card-table table">
+                <thead className="card-table-header">
+                  <tr style={{ textAlign: "center" }}>
+                    <th>
+                      <i className="mdi mdi-domain"></i>
+                      Department
+                    </th>
+                    <th>
+                      <i className="mdi mdi-format-list-bulleted-type"></i>
+                      Level-Term
+                    </th>
+                    <th>
+                      <i className="mdi mdi-book"></i>
+                      Section
+                    </th>
+                    <th>
+                      <i className="mdi mdi-door"></i>
+                      Room No
+                    </th>
+                    <th
+                      style={{
+                        padding: "18px 20px",
+                        color: "rgb(174, 117, 228)",
+                        fontWeight: "700",
+                        fontSize: "0.95rem",
+                        border: "none",
+                      }}
+                    >
+                      <Icon
+                        path={mdiCheckCircle}
+                        size={0.7}
+                        color="rgb(174, 117, 228)"
+                        style={{ marginRight: "8px", verticalAlign: "middle" }}
+                      />
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.isArray(allSectionRoomAllocation) &&
+                    allSectionRoomAllocation.map(
+                      (theoryRoomAllocation, index) => (
+                        <tr key={index} style={{ textAlign: "center" }}>
+                          <td> {theoryRoomAllocation.department} </td>
+                          <td> {theoryRoomAllocation.level_term} </td>
+                          <td> {theoryRoomAllocation.section} </td>
+                          <td> {theoryRoomAllocation.room_no} </td>
+                          <td>
+                            <div className="d-flex justify-content-center">
+                              <button
+                                type="button"
+                                style={{
+                                  background: "rgba(154, 77, 226, 0.15)",
+                                  color: "rgb(154, 77, 226)",
+                                  border: "1px solid rgba(154, 77, 226, 0.5)",
+                                  borderRadius: "6px",
+                                  padding: "7px 14px",
+                                  transition: "all 0.3s ease",
+                                  fontWeight: "500",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  marginRight: "8px",
+                                }}
+                                className="btn"
+                                onClick={() =>
+                                  setSelectedSectionRoom({
+                                    ...theoryRoomAllocation,
+                                  })
+                                }
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.background =
+                                    "rgb(154, 77, 226)";
+                                  e.currentTarget.style.color = "white";
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.background =
+                                    "rgba(154, 77, 226, 0.15)";
+                                  e.currentTarget.style.color =
+                                    "rgb(154, 77, 226)";
+                                }}
+                              >
+                                <Icon
+                                  path={mdiPencil}
+                                  size={0.7}
+                                  style={{ marginRight: "6px" }}
+                                />
+                                Update
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
@@ -226,38 +246,55 @@ export default function TheoryRoomAssign() {
             </h4>
           </div>
           <div className="card-table-container table-responsive">
-            <table className="card-table table">
-              <thead className="card-table-header">
-                <tr style={{ textAlign: "center" }}>
-                  <th>
-                    <i className="mdi mdi-book-open-page-variant"></i>
-                    Course ID
-                  </th>
-                  <th>
-                    <i className="mdi mdi-format-list-bulleted-type"></i>
-                    Section
-                  </th>
-                  <th>
-                    <i className="mdi mdi-calendar"></i>
-                    Day
-                  </th>
-                  <th>
-                    <i className="mdi mdi-clock"></i>
-                    Time
-                  </th>
-                  <th>
-                    <i className="mdi mdi-door"></i>
-                    Room No
-                  </th>
-                  <th>
-                    <i className="mdi mdi-check-circle"></i>
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.isArray(assignments) &&
-                  assignments.map((assignment, index) => (
+            {Array.isArray(assignments) && assignments.length === 0 ? (
+              <div className="text-center py-4">
+                <div className="mb-3">
+                  <i
+                    className="mdi mdi-book-off-outline"
+                    style={{
+                      fontSize: "3rem",
+                      color: "#6c757d",
+                      opacity: 0.5,
+                    }}
+                  ></i>
+                </div>
+                <h6 className="text-muted mb-2">No Theory Course Assignment</h6>
+                <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
+                  No teacher have been assigned to any theory course yet.
+                </p>
+              </div>
+            ) : (
+              <table className="card-table table">
+                <thead className="card-table-header">
+                  <tr style={{ textAlign: "center" }}>
+                    <th>
+                      <i className="mdi mdi-book-open-page-variant"></i>
+                      Course ID
+                    </th>
+                    <th>
+                      <i className="mdi mdi-format-list-bulleted-type"></i>
+                      Section
+                    </th>
+                    <th>
+                      <i className="mdi mdi-calendar"></i>
+                      Day
+                    </th>
+                    <th>
+                      <i className="mdi mdi-clock"></i>
+                      Time
+                    </th>
+                    <th>
+                      <i className="mdi mdi-door"></i>
+                      Room No
+                    </th>
+                    <th>
+                      <i className="mdi mdi-check-circle"></i>
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignments.map((assignment, index) => (
                     <tr key={index} style={{ textAlign: "center" }}>
                       <td> {assignment.course_id} </td>
                       <td> {assignment.section} </td>
@@ -281,8 +318,9 @@ export default function TheoryRoomAssign() {
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

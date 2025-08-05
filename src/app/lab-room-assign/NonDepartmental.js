@@ -95,30 +95,43 @@ export default function NonDepartmental() {
             </h4>
           </div>
           <div className="card-table-container table-responsive">
-            <table className="card-table table">
-              <thead className="card-table-header">
-                <tr style={{ textAlign: "center" }}>
-                  <th>
-                    <i className="mdi mdi-book-open-page-variant"></i>
-                    Course ID
-                  </th>
-                  <th>
-                    <i className="mdi mdi-format-list-bulleted-type"></i>
-                    Section
-                  </th>
-                  <th>
-                    <i className="mdi mdi-door"></i>
-                    Room No
-                  </th>
-                  <th>
-                    <i className="mdi mdi-cog"></i>
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {Array.isArray(assignments) &&
-                  assignments.map((assignment, index) => (
+            {Array.isArray(assignments) && assignments.length === 0 ? (
+              <div className="text-center py-4">
+                <div className="mb-3">
+                  <i
+                    className="mdi mdi-clipboard-text-outline"
+                    style={{ fontSize: "3rem", color: "#6c757d", opacity: 0.5 }}
+                  ></i>
+                </div>
+                <h6 className="text-muted mb-2">No Current Allocation</h6>
+                <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
+                  No Non-Departmental Lab is scheduled yet.
+                </p>
+              </div>
+            ) : (
+              <table className="card-table table">
+                <thead className="card-table-header">
+                  <tr style={{ textAlign: "center" }}>
+                    <th>
+                      <i className="mdi mdi-book-open-page-variant"></i>
+                      Course ID
+                    </th>
+                    <th>
+                      <i className="mdi mdi-format-list-bulleted-type"></i>
+                      Section
+                    </th>
+                    <th>
+                      <i className="mdi mdi-door"></i>
+                      Room No
+                    </th>
+                    <th>
+                      <i className="mdi mdi-cog"></i>
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignments.map((assignment, index) => (
                     <tr key={index} style={{ textAlign: "center" }}>
                       <td> {assignment.course_id} </td>
                       <td> {assignment.section} </td>
@@ -138,8 +151,9 @@ export default function NonDepartmental() {
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

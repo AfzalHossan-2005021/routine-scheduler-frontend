@@ -5,7 +5,22 @@ import {
   getTeacherTheoryAssigments,
   getTeacherSessionalAssignment,
   getAllTeachersCredit,
-} from "../api/theory-assign";
+} from '../api/theory-assign';
+
+/**
+ * Helper function to format section display for 0.75 credit courses
+ * @param {string} section - The section (A, B, C, etc.)
+ * @param {number} classPerWeek - The class per week value (1 for 0.75 credit, 2 for 1.5 credit)
+ * @returns {string} - Formatted section display
+ */
+function formatSectionDisplay(section, classPerWeek) {
+  // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
+  if (classPerWeek === 0.75) {
+    return `${section}1/${section}2`;
+  }
+  // For other courses, show the section as is
+  return section;
+}
 
 export default function ShowLoadDistribution() {
   // State variables

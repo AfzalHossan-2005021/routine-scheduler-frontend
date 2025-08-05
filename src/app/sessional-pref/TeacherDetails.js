@@ -9,13 +9,29 @@ import {
   getTeacherSessionalAssignment,
   setTeacherSessionalAssignment,
   deleteTeacherSessionalAssignment,
-  getSessionalTeachers
+  getSessionalTeachers,
+  getTeacherTotalCredit
 } from '../api/theory-assign';
 import { getCourseAllSchedule, getCourseSectionalSchedule } from '../api/theory-schedule';
 import { getDepartmentalSessionalSchedule } from '../api/sessional-schedule';
 
 // UI components and utilities
 import toast from 'react-hot-toast';
+
+/**
+ * Helper function to format section display for 0.75 credit courses
+ * @param {string} section - The section (A, B, C, etc.)
+ * @param {number} classPerWeek - The class per week value (1 for 0.75 credit, 2 for 1.5 credit)
+ * @returns {string} - Formatted section display
+ */
+function formatSectionDisplay(section, classPerWeek) {
+  // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
+  if (classPerWeek === 0.75) {
+    return `${section}1/${section}2`;
+  }
+  // For other courses, show the section as is
+  return section;
+}
 
 // Add some custom styles for the schedule table
 const scheduleTableStyle = {
@@ -226,6 +242,8 @@ export default function TeacherDetails(props) {
   // Basic teacher information
   const [teacher, setTeacher] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [totalCredits, setTotalCredits] = useState(0);
+  const [loadingCredits, setLoadingCredits] = useState(false);
 
   // Course and assignment data
   const [assignedTheoryCourses, setAssignedTheoryCourses] = useState([]);       // Assigned theory courses
@@ -346,6 +364,26 @@ export default function TeacherDetails(props) {
     }
   }, [assignedTheoryCourses, assignedSessionalCourses, teacherId]);
 
+  // Fetch total credits whenever teacher assignments change
+  useEffect(() => {
+    const fetchTotalCredits = async () => {
+      if (!teacherId) return;
+      
+      try {
+        setLoadingCredits(true);
+        const creditData = await getTeacherTotalCredit(teacherId);
+        setTotalCredits(creditData?.totalCredit || 0);
+      } catch (error) {
+        console.error("Error fetching teacher total credits:", error);
+        setTotalCredits(0); // Set to 0 on error
+      } finally {
+        setLoadingCredits(false);
+      }
+    };
+
+    fetchTotalCredits();
+  }, [teacherId, assignedTheoryCourses, assignedSessionalCourses]); // Refetch when assignments change
+
   /**
    * Check for time conflicts with existing schedules
    * @param {string} day - The day to check
@@ -440,7 +478,8 @@ export default function TeacherDetails(props) {
         section: course.section || 'Unknown',
         batch: course.batch || 'All',
         day: course.day,
-        time: course.time
+        time: course.time,
+        class_per_week: course.class_per_week
       });
     });
 
@@ -668,11 +707,11 @@ export default function TeacherDetails(props) {
                                   ? scheduleTableStyle.selectedCourseItem
                                   : {})
                               }}
-                              title={`${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})`}
+                              title={`${courseInfo.course_id} - Section ${formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)} (Batch ${courseInfo.batch})`}
                             >
                               <strong>{courseInfo.course_id}</strong>
                               <br />
-                              {courseInfo.section && <span>Section: {courseInfo.section}</span>}
+                              {courseInfo.section && <span>Section: {formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)}</span>}
                               {courseInfo.batch && <span> | Batch: {courseInfo.batch}</span>}
                             </div>
                           </td>
@@ -738,7 +777,7 @@ export default function TeacherDetails(props) {
                           // Get details of the already selected course
                           const selectedCourse = selectedSchedules.find(s => s.day === day && s.time === time);
                           tooltip = selectedCourse
-                            ? `Already selected: ${selectedCourse.course_id} (Section ${selectedCourse.section})`
+                            ? `Already selected: ${selectedCourse.course_id} (Section ${formatSectionDisplay(selectedCourse.section, selectedCourse.class_per_week)})`
                             : config.defaultTooltip;
                         } else {
                           tooltip = generateConflictTooltip(day, time) || config.defaultTooltip;
@@ -868,9 +907,9 @@ export default function TeacherDetails(props) {
                                     position: 'relative'
                                   }}
                                   // Keep a simple title for non-conflict items
-                                  title={!conflict ? `${courseInfo.course_id} - Section ${courseInfo.section} (Batch ${courseInfo.batch})` : ''}
+                                  title={!conflict ? `${courseInfo.course_id} - Section ${formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)} (Batch ${courseInfo.batch})` : ''}
                                 >
-                                  <strong style={isAlreadyScheduled ? { color: '#28a745' } : {}}>{courseInfo.course_id} ({courseInfo.section})</strong>
+                                  <strong style={isAlreadyScheduled ? { color: '#28a745' } : {}}>{courseInfo.course_id} ({formatSectionDisplay(courseInfo.section, courseInfo.class_per_week)})</strong>
                                   <br />
                                   {courseInfo.section && (
                                     <CourseTeachers
@@ -974,7 +1013,7 @@ export default function TeacherDetails(props) {
     if (isExactCourseSelected) {
       setSelectedSessionalSchedules(prev => prev.filter(s => !isExactMatch(s)));
 
-      toast.success(`Removed ${schedule.course_id} (Section ${schedule.section}) from selection`, {
+      toast.success(`Removed ${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)}) from selection`, {
         icon: '❌',
         duration: 2000
       });
@@ -1030,7 +1069,7 @@ export default function TeacherDetails(props) {
     setSelectedSessionalSchedules(prev => [...prev, schedule]);
 
     // Show a success notification
-    toast.success(`Selected ${schedule.course_id} (Section ${schedule.section}) for ${schedule.day} at ${schedule.time}:00`, {
+    toast.success(`Selected ${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)}) for ${schedule.day} at ${schedule.time}:00`, {
       icon: '✅',
       duration: 2000
     });
@@ -1078,7 +1117,7 @@ export default function TeacherDetails(props) {
               console.warn(`Empty response received for ${schedule.course_id} assignment`);
             }
           } catch (error) {
-            console.error(`Error assigning ${schedule.course_id} (Section ${schedule.section}):`, error);
+            console.error(`Error assigning ${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)}):`, error);
 
             // Extract and log detailed error information
             if (error.response) {
@@ -1095,12 +1134,12 @@ export default function TeacherDetails(props) {
             successCount++;
           } else {
             failCount++;
-            failedCourses.push(`${schedule.course_id} (Section ${schedule.section})`);
+            failedCourses.push(`${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)})`);
           }
         } catch (error) {
           console.error(`Error assigning course ${schedule.course_id}:`, error);
           failCount++;
-          failedCourses.push(`${schedule.course_id} (Section ${schedule.section})`);
+          failedCourses.push(`${schedule.course_id} (Section ${formatSectionDisplay(schedule.section, schedule.class_per_week)})`);
         }
       }
 
@@ -1296,12 +1335,15 @@ export default function TeacherDetails(props) {
         padding: "1.5rem",
         marginBottom: "2rem",
         boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
-        color: "white"
+        color: "white",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center"
       }}>
         <h3 className="page-title" style={{
           fontSize: "1.8rem",
           fontWeight: "700",
-          marginBottom: "0.5rem",
+          marginBottom: "0",
           display: "flex",
           alignItems: "center",
           gap: "12px",
@@ -1321,6 +1363,64 @@ export default function TeacherDetails(props) {
           </div>
           {teacher?.name || teacherId}
         </h3>
+        
+        {/* Total Credits Display */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          backgroundColor: "rgba(255, 255, 255, 0.15)",
+          borderRadius: "12px",
+          padding: "12px 20px",
+          backdropFilter: "blur(10px)",
+          boxShadow: "0 4px 15px rgba(0, 0, 0, 0.1)"
+        }}>
+          <div style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "8px",
+            backgroundColor: "rgba(255, 255, 255, 0.2)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            <i className="mdi mdi-calculator" style={{ fontSize: "18px" }}></i>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+            <span style={{ 
+              fontSize: "0.85rem", 
+              opacity: 0.9, 
+              fontWeight: "500",
+              lineHeight: 1,
+              marginBottom: "2px"
+            }}>
+              Total Credits
+            </span>
+            {loadingCredits ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div 
+                  className="spinner-border spinner-border-sm" 
+                  style={{ 
+                    width: "14px", 
+                    height: "14px",
+                    borderWidth: "2px",
+                    color: "rgba(255, 255, 255, 0.8)"
+                  }}
+                ></div>
+                <span style={{ fontSize: "1.1rem", fontWeight: "600" }}>Loading...</span>
+              </div>
+            ) : (
+              <span style={{ 
+                fontSize: "1.4rem", 
+                fontWeight: "700",
+                lineHeight: 1,
+                color: totalCredits > 12 ? "#ffeb3b" : "white"
+              }}>
+                {totalCredits.toFixed(1)}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
       {teacher && (
         <div>
@@ -1524,7 +1624,7 @@ export default function TeacherDetails(props) {
                                               {sessionalAssignment.course_id}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                              Section {sessionalAssignment.section}
+                                              Section {formatSectionDisplay(sessionalAssignment.section,sessionalAssignment.class_per_week)}
                                             </div>
                                             <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>
                                               <i className="mdi mdi-flask"></i> Lab

@@ -9,7 +9,6 @@ import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
 import { getAllSchedule } from "../api/theory-schedule";
 import { useConfig } from "../shared/ConfigContext";
 import { useHistory } from "react-router-dom";
-import { set } from "mnemonist";
 
 export default function LabRoomAssign() {
   const history = useHistory();
@@ -57,7 +56,7 @@ export default function LabRoomAssign() {
         if (res.length > 0) {
           const labRooms = rooms_.map((room) => {
             const courses = res
-              .filter((obj) => obj.room === room.room)
+              .filter((obj) => obj.room && obj.room === room.room)
               .map((obj) => {
                 return courses_.find(
                   (course) =>
@@ -91,13 +90,13 @@ export default function LabRoomAssign() {
 
   const levelTermAllocation = fixedRoomAllocation.reduce((map, room) => {
     room.courses.forEach((course) => {
+      if (!course) return; // <-- Fix: skip undefined/null
       const { level_term } = course;
       if (!map[level_term]) map[level_term] = new Set();
       map[level_term].add(room.room);
     });
     return map;
   }, {});
-
   const levelTermAllocationArray = Object.keys(levelTermAllocation)
     .map((level_term) => {
       return {
@@ -582,6 +581,7 @@ export default function LabRoomAssign() {
                             margin: "0 0 5px 0",
                             color: "#055160",
                             fontWeight: "600",
+                            textAlign: "left",
                           }}
                         >
                           Automatic Assignment
@@ -1237,218 +1237,242 @@ export default function LabRoomAssign() {
         </div>
         <div className="card-view">
           <div className="card-inner-table-container table-responsive">
-            {/* Statistics Tab */}
-            {!viewLevelTermAssignment &&
-              !viewRoomAssignment &&
-              !viewCourseAssignment && (
-                <table className="card-inner-table table">
-                  <thead className="card-inner-tabale-header">
-                    <tr>
-                      <th> Lab Room </th>
-                      <th> Number of courses </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fixedRoomAllocation
-                      .sort((a, b) => a.room.localeCompare(b.room))
-                      .map((room, index) => (
+            {fixedRoomAllocation.length === 0 ? (
+              <div className="text-center py-4">
+                <div className="mb-3">
+                  <i
+                    className="mdi mdi-flask-off-outline"
+                    style={{
+                      fontSize: "3rem",
+                      color: "#6c757d",
+                      opacity: 0.5,
+                    }}
+                  ></i>
+                </div>
+                <h6 className="text-muted mb-2">No Sessional Courses</h6>
+                <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
+                  No sessional courses have been distributed yet.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Statistics Tab */}
+                {!viewLevelTermAssignment &&
+                  !viewRoomAssignment &&
+                  !viewCourseAssignment && (
+                    <table className="card-inner-table table">
+                      <thead className="card-inner-tabale-header">
+                        <tr>
+                          <th> Lab Room </th>
+                          <th> Number of courses </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fixedRoomAllocation
+                          .sort((a, b) => a.room.localeCompare(b.room))
+                          .map((room, index) => (
+                            <tr key={index}>
+                              <td>
+                                <div className="d-flex flex-column align-items-center">
+                                  <div className="colored-icon-container">
+                                    <i className="mdi mdi-door"></i>
+                                  </div>
+                                  <span className="bold-text">{room.room}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <div
+                                  className={`status-container ${
+                                    room.count > 0 ? "green" : "gray"
+                                  }`}
+                                >
+                                  {room.count}
+                                </div>
+                                <div className="dimmed-text">
+                                  {room.count === 1 ? "course" : "courses"}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                {/* Room Assignment Tab */}
+                {!viewLevelTermAssignment &&
+                  viewRoomAssignment &&
+                  !viewCourseAssignment && (
+                    <table className="card-inner-table table">
+                      <thead className="card-inner-tabale-header">
+                        <tr>
+                          <th> Lab Room </th>
+                          <th> Assigned Courses </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fixedRoomAllocation.map((room, index) => (
+                          <tr key={index}>
+                            <td>
+                              <div className="d-flex flex-column align-items-center">
+                                <div className="colored-icon-container">
+                                  <i className="mdi mdi-door"></i>
+                                </div>
+                                <span className="bold-text">{room.room}</span>
+                                <div className="colored-badge-light">
+                                  {room.count}{" "}
+                                  {room.count === 1 ? "course" : "courses"}
+                                </div>
+                              </div>
+                            </td>
+                            {room.courses.length === 0 ? (
+                              <td>
+                                <div className="dotted-border-div">
+                                  <i
+                                    className="mdi mdi-information-outline"
+                                    style={{ color: "rgb(174, 117, 228)" }}
+                                  ></i>
+                                  No courses assigned
+                                </div>
+                              </td>
+                            ) : (
+                              <td>
+                                <div className="d-flex flex-column align-items-center gap-4">
+                                  {room.courses.map((course, index) => (
+                                    <div key={index} className="animated-div">
+                                      <div className="d-flex align-items-center justify-content-center gap-4 flex-column">
+                                        <Badge className="colored-badge-dark">
+                                          {course.course_id}
+                                        </Badge>
+                                        <span
+                                          style={{
+                                            fontWeight: "500",
+                                            padding: "8px",
+                                          }}
+                                        >
+                                          {course.name}
+                                        </span>
+                                        <Badge bg="secondary">
+                                          Section {course.section}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+
+                {/* Course Assignment Tab */}
+                {!viewLevelTermAssignment &&
+                  viewCourseAssignment &&
+                  !viewRoomAssignment && (
+                    <table className="card-inner-table table">
+                      <thead className="card-inner-tabale-header">
+                        <tr>
+                          <th> Course ID </th>
+                          <th> Course Name </th>
+                          <th> Level-Term </th>
+                          <th> Section </th>
+                          <th> Assigned Room </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {offeredCourse.map((course, index) => {
+                          // Find the current room assignment for this course
+                          const currentRoom = fixedRoomAllocation.find((room) =>
+                            room.courses.some(
+                              (c) =>
+                                c.course_id === course.course_id &&
+                                c.section === course.section
+                            )
+                          );
+                          return (
+                            <tr key={index}>
+                              <td>{course.course_id}</td>
+                              <td>{course.name}</td>
+                              <td>{course.level_term}</td>
+                              <td>{course.section}</td>
+                              <td>
+                                <select
+                                  className="form-select"
+                                  value={currentRoom ? currentRoom.room : ""}
+                                  onChange={(e) =>
+                                    updateCourseRoomAssignment(
+                                      course,
+                                      e.target.value
+                                    )
+                                  }
+                                >
+                                  <option value="">Select a room</option>
+                                  {rooms.map((room) => (
+                                    <option key={room.room} value={room.room}>
+                                      {room.room}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+
+                {/* Level-Term Assignment Tab */}
+                {viewLevelTermAssignment && (
+                  <table className="card-inner-table table">
+                    <thead className="card-inner-tabale-header">
+                      <tr>
+                        <th> Level-Term </th>
+                        <th> Used Labs </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {levelTermAllocationArray.map((lt, index) => (
                         <tr key={index}>
                           <td>
                             <div className="d-flex flex-column align-items-center">
                               <div className="colored-icon-container">
-                                <i className="mdi mdi-door"></i>
+                                <i className="mdi mdi-school"></i>
                               </div>
-                              <span className="bold-text">{room.room}</span>
+                              {lt.level_term}
                             </div>
                           </td>
-                          <td>
-                            <div
-                              className={`status-container ${
-                                room.count > 0 ? "green" : "gray"
-                              }`}
-                            >
-                              {room.count}
-                            </div>
-                            <div className="dimmed-text">
-                              {room.count === 1 ? "course" : "courses"}
-                            </div>
-                          </td>
+                          {lt.rooms.length === 0 ? (
+                            <td>
+                              <div className="dotted-border-div">
+                                <i
+                                  className="mdi mdi-information-outline"
+                                  style={{ color: "rgb(174, 117, 228)" }}
+                                ></i>
+                                No rooms assigned
+                              </div>
+                            </td>
+                          ) : (
+                            <td>
+                              <div className="d-flex flex-wrap justify-content-center">
+                                {lt.rooms.map((room, index) => (
+                                  <span
+                                    key={index}
+                                    className="colored-badge-light"
+                                  >
+                                    <i className="mdi mdi-door"></i>
+                                    {room}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       ))}
-                  </tbody>
-                </table>
-              )}
-
-            {/* Room Assignment Tab */}
-            {!viewLevelTermAssignment &&
-              viewRoomAssignment &&
-              !viewCourseAssignment && (
-                <table className="card-inner-table table">
-                  <thead className="card-inner-tabale-header">
-                    <tr>
-                      <th> Lab Room </th>
-                      <th> Assigned Courses </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fixedRoomAllocation.map((room, index) => (
-                      <tr key={index}>
-                        <td>
-                          <div className="d-flex flex-column align-items-center">
-                            <div className="colored-icon-container">
-                              <i className="mdi mdi-door"></i>
-                            </div>
-                            <span className="bold-text">{room.room}</span>
-                            <div className="colored-badge-light">
-                              {room.count}{" "}
-                              {room.count === 1 ? "course" : "courses"}
-                            </div>
-                          </div>
-                        </td>
-                        {room.courses.length === 0 ? (
-                          <td>
-                            <div className="dotted-border-div">
-                              <i
-                                className="mdi mdi-information-outline"
-                                style={{ color: "rgb(174, 117, 228)" }}
-                              ></i>
-                              No courses assigned
-                            </div>
-                          </td>
-                        ) : (
-                          <td>
-                            <div className="d-flex flex-column align-items-center gap-4">
-                              {room.courses.map((course, index) => (
-                                <div key={index} className="animated-div">
-                                  <div className="d-flex align-items-center justify-content-center gap-4 flex-column">
-                                    <Badge className="colored-badge-dark">
-                                      {course.course_id}
-                                    </Badge>
-                                    <span
-                                      style={{
-                                        fontWeight: "500",
-                                        padding: "8px",
-                                      }}
-                                    >
-                                      {course.name}
-                                    </span>
-                                    <Badge bg="secondary">
-                                      Section {course.section}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
-            {/* Course Assignment Tab */}
-            {!viewLevelTermAssignment &&
-              viewCourseAssignment &&
-              !viewRoomAssignment && (
-                <table className="card-inner-table table">
-                  <thead className="card-inner-tabale-header">
-                    <tr>
-                      <th> Course ID </th>
-                      <th> Course Name </th>
-                      <th> Level-Term </th>
-                      <th> Section </th>
-                      <th> Assigned Room </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {offeredCourse.map((course, index) => {
-                      // Find the current room assignment for this course
-                      const currentRoom = fixedRoomAllocation.find((room) =>
-                        room.courses.some(
-                          (c) =>
-                            c.course_id === course.course_id &&
-                            c.section === course.section
-                        )
-                      );
-                      return (
-                        <tr key={index}>
-                          <td>{course.course_id}</td>
-                          <td>{course.name}</td>
-                          <td>{course.level_term}</td>
-                          <td>{course.section}</td>
-                          <td>
-                            <select
-                              className="form-select"
-                              value={currentRoom ? currentRoom.room : ""}
-                              onChange={(e) =>
-                                updateCourseRoomAssignment(
-                                  course,
-                                  e.target.value
-                                )
-                              }
-                            >
-                              <option value="">Select a room</option>
-                              {rooms.map((room) => (
-                                <option key={room.room} value={room.room}>
-                                  {room.room}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-
-            {/* Level-Term Assignment Tab */}
-            {viewLevelTermAssignment && (
-              <table className="card-inner-table table">
-                <thead className="card-inner-tabale-header">
-                  <tr>
-                    <th> Level-Term </th>
-                    <th> Used Labs </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {levelTermAllocationArray.map((lt, index) => (
-                    <tr key={index}>
-                      <td>
-                        <div className="d-flex flex-column align-items-center">
-                          <div className="colored-icon-container">
-                            <i className="mdi mdi-school"></i>
-                          </div>
-                          {lt.level_term}
-                        </div>
-                      </td>
-                      {lt.rooms.length === 0 ? (
-                        <td>
-                          <div className="dotted-border-div">
-                            <i
-                              className="mdi mdi-information-outline"
-                              style={{ color: "rgb(174, 117, 228)" }}
-                            ></i>
-                            No rooms assigned
-                          </div>
-                        </td>
-                      ) : (
-                        <td>
-                          <div className="d-flex flex-wrap justify-content-center">
-                            {lt.rooms.map((room, index) => (
-                              <span key={index} className="colored-badge-light">
-                                <i className="mdi mdi-door"></i>
-                                {room}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    </tbody>
+                  </table>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -517,7 +517,6 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
                             menuList: (base) => ({
                               ...base,
                               padding: "6px",
-                              maxHeight: "unset", // Prevent default scroll-triggering height
                               overflowY: "auto",
                             }),
                             container: (base) => ({
