@@ -35,9 +35,9 @@ export const forgetPassword = (username) =>
       }
     });
 
-export const register = (username, email, password) =>
+export const changePassword = (currentPassword, newPassword) =>
   axios
-    .post(api_url("/auth/register"), { username, email, password })
+    .post(api_url("/auth/change-password"), { currentPassword, newPassword })
     .then((res) => res.data)
     .catch((error) => {
       if (error.response) {

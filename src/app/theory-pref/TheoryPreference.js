@@ -81,7 +81,6 @@ export default function TheoryPreference() {
 
   const handleGetStatus = () => {
     getStatus().then((res) => {
-      console.log("Status fetched:", res);
       // Sort the teachers in the status by seniority rank
       let modifiedRes = { ...res };
       if (modifiedRes.values && modifiedRes.values.length > 0) {
@@ -479,86 +478,80 @@ export default function TheoryPreference() {
       )}
       {(status.values.length !== 0 ||
         (parseInt(status.status) > 0 && parseInt(status.status) < 3)) && (
-        <div className="row mb-4">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-view">
-                <div className="card-control-container">
-                  <h4 className="card-name">
-                    <div className="card-name-icon mdi mdi-account-multiple"></div>
-                    Already Submitted
-                  </h4>
-                </div>
-                {(status.submitted.length !== 0 ||
-                  parseInt(status.status) >= 1) && (
-                  <div className="card-table-container table-responsive">
-                    <table className="card-table table">
-                      <thead className="card-table-header">
-                        <tr>
-                          <th>
-                            <i className="mdi mdi-account" />
-                            Initial
-                          </th>
-                          <th>
-                            <i className="mdi mdi-account-box" />
-                            Name
-                          </th>
-                          <th>
-                            <i className="mdi mdi-email" />
-                            Email
-                          </th>
-                          <th>
-                            <i className="mdi mdi-account-tie" />
-                            Seniority Rank
-                          </th>
-                          <th>
-                            <i className="mdi mdi-cog" />
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="card-table-body">
-                        {[...status.submitted]
-                          .sort((a, b) => a.seniority_rank - b.seniority_rank)
-                          .map((teacher, index) => (
-                            <tr key={index}>
-                              <td> {teacher.initial}</td>
-                              <td>{teacher.name}</td>
-                              <td>{teacher.email}</td>
-                              <td>{teacher.seniority_rank}</td>
-                              <td>
-                                <button
-                                  className="card-control-button mdi mdi-pencil"
-                                  onClick={() => {
-                                    setSelectedTeacher({
-                                      ...teacher,
-                                    });
-                                    setSelectedCourse(teacher.response);
-                                  }}
-                                >
-                                  Edit Preference
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {status.submitted.length === 0 &&
-                  parseInt(status.status) === 0 && (
-                    <Alert variant="info text-center">
-                      Click "Initial Phase" to start and show submitted teachers
-                    </Alert>
-                  )}
-                {status.submitted.length === 0 &&
-                  parseInt(status.status) >= 1 && (
-                    <Alert variant="info text-center">
-                      No teachers have submitted yet
-                    </Alert>
-                  )}
-              </div>
+        <div className="card">
+          <div className="card-view">
+            <div className="card-control-container">
+              <h4 className="card-name">
+                <div className="card-name-icon mdi mdi-account-multiple"></div>
+                Already Submitted
+              </h4>
             </div>
+            {(status.submitted.length !== 0 ||
+              parseInt(status.status) >= 1) && (
+              <div className="card-table-container table-responsive">
+                <table className="card-table table">
+                  <thead className="card-table-header">
+                    <tr>
+                      <th>
+                        <i className="mdi mdi-account" />
+                        Initial
+                      </th>
+                      <th>
+                        <i className="mdi mdi-account-box" />
+                        Name
+                      </th>
+                      <th>
+                        <i className="mdi mdi-email" />
+                        Email
+                      </th>
+                      <th>
+                        <i className="mdi mdi-account-tie" />
+                        Seniority Rank
+                      </th>
+                      <th>
+                        <i className="mdi mdi-cog" />
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="card-table-body">
+                    {[...status.submitted]
+                      .sort((a, b) => a.seniority_rank - b.seniority_rank)
+                      .map((teacher, index) => (
+                        <tr key={index}>
+                          <td> {teacher.initial}</td>
+                          <td>{teacher.name}</td>
+                          <td>{teacher.email}</td>
+                          <td>{teacher.seniority_rank}</td>
+                          <td>
+                            <button
+                              className="card-control-button mdi mdi-pencil"
+                              onClick={() => {
+                                setSelectedTeacher({
+                                  ...teacher,
+                                });
+                                setSelectedCourse(teacher.response);
+                              }}
+                            >
+                              Edit Preference
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {status.submitted.length === 0 && parseInt(status.status) === 0 && (
+              <Alert variant="info text-center">
+                Click "Initial Phase" to start and show submitted teachers
+              </Alert>
+            )}
+            {status.submitted.length === 0 && parseInt(status.status) >= 1 && (
+              <Alert variant="info text-center">
+                No teachers have submitted yet
+              </Alert>
+            )}
           </div>
         </div>
       )}
@@ -758,358 +751,61 @@ export default function TheoryPreference() {
 
       {parseInt(status.status) === 3 && (
         <div>
-          <div className="row mb-4">
-            <div className="col-12">
-              <div className="card">
-                <div className="card-view">
-                  <div className="card-control-container">
-                    <h4 className="card-name">
-                      <div className="card-icon mdi mdi-open-in-new" />
-                      Assigned Teachers
-                    </h4>
-                  </div>
-                  <div className="card-table-container table-responsive">
-                    <table className="card-table table">
-                      <thead className="card-table-header">
-                        <tr>
-                          <th>
-                            <i className="mdi mdi-book" />
-                            Course ID
-                          </th>
-                          <th>
-                            <i className="mdi mdi-book-open-variant" />
-                            Course Name
-                          </th>
-                          <th>
-                            <i className="mdi mdi-door" />
-                            Section Count
-                          </th>
-                          <th>
-                            <i className="mdi mdi-clipboard-outline" />
-                            Status
-                          </th>
-                          <th>
-                            <i className="mdi mdi-account-multiple" />
-                            Teachers
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="card-table-body">
-                        {(status.assignment || parseInt(status.status) === 3
-                          ? (status.assignment || []).length > 0
-                            ? status.assignment
-                            : // When status = 3 but no assignment data, show placeholder courses
-                              [
-                                {
-                                  course_id: "TBD",
-                                  name: "Courses will be loaded after assignment",
-                                  teachers: [],
-                                },
-                              ]
-                          : []
-                        ).map((course, index) => {
-                          return (
-                            <tr key={index}>
-                              <td>{course.course_id}</td>
-                              <td>{course.name}</td>
-                              <td className="text-center">
-                                {course.section_count}
-                              </td>
-                              <td className="text-center">
-                                {course.teachers ? (
-                                  course.teachers.length <
-                                  parseInt(course.section_count) ? (
-                                    <i
-                                      className="mdi mdi-alert-circle-outline"
-                                      title="Not enough teachers assigned"
-                                      style={{ color: "orange" }}
-                                    />
-                                  ) : course.teachers.length ===
-                                    parseInt(course.section_count) ? (
-                                    <i
-                                      className="mdi mdi-check-circle-outline"
-                                      title="Teachers assigned correctly"
-                                      style={{ color: "green" }}
-                                    />
-                                  ) : (
-                                    <i
-                                      className="mdi mdi-close-circle-outline"
-                                      title="More teachers than sections"
-                                      style={{ color: "red" }}
-                                    />
-                                  )
-                                ) : (
+          <div className="card mb-4">
+            <div className="card-view">
+              <div className="card-control-container">
+                <h4 className="card-name">
+                  <div className="card-icon mdi mdi-open-in-new" />
+                  Assigned Teachers
+                </h4>
+              </div>
+              <div className="card-table-container table-responsive">
+                {(status.assignment || []).length > 0 ? (
+                  <table className="card-table table">
+                    <thead className="card-table-header">
+                      <tr>
+                        <th>
+                          <i className="mdi mdi-book" />
+                          Course ID
+                        </th>
+                        <th>
+                          <i className="mdi mdi-book-open-variant" />
+                          Course Name
+                        </th>
+                        <th>
+                          <i className="mdi mdi-door" />
+                          Section Count
+                        </th>
+                        <th style={{ textAlign: "center" }}>
+                          <i className="mdi mdi-clipboard-outline" />
+                          Status
+                        </th>
+                        <th>
+                          <i className="mdi mdi-account-multiple" />
+                          Teachers
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="card-table-body">
+                      {status.assignment.map((course, index) => {
+                        return (
+                          <tr key={index}>
+                            <td>{course.course_id}</td>
+                            <td>{course.name}</td>
+                            <td className="text-center">
+                              {course.section_count}
+                            </td>
+                            <td className="text-center">
+                              {course.teachers ? (
+                                course.teachers.length <
+                                parseInt(course.section_count) ? (
                                   <i
                                     className="mdi mdi-alert-circle-outline"
-                                    title="No teachers assigned"
+                                    title="Not enough teachers assigned"
                                     style={{ color: "orange" }}
                                   />
-                                )}
-                              </td>
-                              <td>
-                                <div className="d-flex flex-wrap align-items-center">
-                                  {course.teachers &&
-                                    course.teachers.map((teacher) => (
-                                      <div
-                                        key={`${course.course_id}-${teacher.initial}`}
-                                        style={{
-                                          display: "inline-flex",
-                                          alignItems: "center",
-                                          background:
-                                            "rgba(174, 117, 228, 0.1)",
-                                          borderRadius: "4px",
-                                          padding: "4px 8px",
-                                          margin: "2px",
-                                          border:
-                                            "1px solid rgba(174, 117, 228, 0.2)",
-                                        }}
-                                      >
-                                        <span
-                                          style={{
-                                            color: "#333",
-                                            fontWeight: "500",
-                                            marginRight: "5px",
-                                          }}
-                                        >
-                                          {teacher.initial}
-                                        </span>
-                                        <button
-                                          onClick={() => {
-                                            const loadingToast = toast.loading(
-                                              "Removing teacher..."
-                                            );
-
-                                            setTeacherAssignment({
-                                              course_id: course.course_id,
-                                              initial: "None",
-                                              old_initial: teacher.initial,
-                                            })
-                                              .then(() => {
-                                                handleGetStatus();
-                                                getAllTheoryTeacherAssignment().then(
-                                                  setAllTheoryTeacherAssignment
-                                                );
-                                                toast.dismiss(loadingToast);
-                                                toast.success(
-                                                  `Removed ${teacher.initial} from ${course.course_id}`
-                                                );
-                                              })
-                                              .catch((error) => {
-                                                toast.dismiss(loadingToast);
-                                                toast.error(
-                                                  "Failed to remove teacher"
-                                                );
-                                                console.error(
-                                                  "Error removing teacher:",
-                                                  error
-                                                );
-                                              });
-                                          }}
-                                          style={{
-                                            background: "none",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            padding: "2px",
-                                            color: "#dc3545",
-                                          }}
-                                        >
-                                          <i className="mdi mdi-delete-outline" />
-                                        </button>
-                                      </div>
-                                    ))}
-
-                                  <Dropdown>
-                                    <Dropdown.Toggle
-                                      variant="outline-primary"
-                                      id={`dropdown-${course.course_id}`}
-                                      size="sm"
-                                      style={{
-                                        padding: "6px 12px",
-                                        borderRadius: "4px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                        fontSize: "0.95rem",
-                                      }}
-                                    >
-                                      <i className="mdi mdi-plus" />
-                                    </Dropdown.Toggle>
-
-                                    <Dropdown.Menu
-                                      style={{
-                                        padding: "8px",
-                                        borderRadius: "8px",
-                                        boxShadow:
-                                          "0 4px 16px rgba(0, 0, 0, 0.1)",
-                                        border:
-                                          "1px solid rgba(174, 117, 228, 0.2)",
-                                        zIndex: 1,
-                                      }}
-                                    >
-                                      {allTeachers
-                                        .filter((teacher) => {
-                                          // If course.teachers is not defined or not an array, allow all teachers
-                                          if (!Array.isArray(course.teachers))
-                                            return true;
-                                          // Exclude teachers already assigned to this course
-                                          return !course.teachers.some(
-                                            (t) => t.initial === teacher.initial
-                                          );
-                                        })
-                                        .map((teacher) => (
-                                          <Dropdown.Item
-                                            key={teacher.initial}
-                                            style={{
-                                              display: "flex",
-                                              alignItems: "center",
-                                              padding: "8px 12px",
-                                              borderRadius: "4px",
-                                              transition:
-                                                "background 0.2s ease",
-                                            }}
-                                            onClick={() => {
-                                              // Check if the course has already reached its section limit
-                                              if (
-                                                course.teachers &&
-                                                course.teachers.length >=
-                                                  parseInt(course.section_count)
-                                              ) {
-                                                toast.error(
-                                                  `The course ${course.course_id} has been assigned more teachers than its section count`
-                                                );
-                                              }
-                                              // Check if the teacher is already assigned to another course
-                                              const isAlreadyAssigned =
-                                                status.assignment.some(
-                                                  (c) =>
-                                                    c.teachers &&
-                                                    c.teachers.some(
-                                                      (t) =>
-                                                        t.initial ===
-                                                        teacher.initial
-                                                    )
-                                                );
-                                              if (isAlreadyAssigned) {
-                                                toast.error(
-                                                  `${teacher.initial} is already assigned to another course`
-                                                );
-                                              }
-                                              const loadingToast =
-                                                toast.loading(
-                                                  "Adding teacher..."
-                                                );
-
-                                              setTeacherAssignment({
-                                                course_id: course.course_id,
-                                                initial: teacher.initial,
-                                                old_initial: "None",
-                                              })
-                                                .then(() => {
-                                                  handleGetStatus();
-                                                  getAllTheoryTeacherAssignment().then(
-                                                    setAllTheoryTeacherAssignment
-                                                  );
-                                                  toast.dismiss(loadingToast);
-                                                  toast.success(
-                                                    `Added ${teacher.initial} to ${course.course_id}`
-                                                  );
-                                                })
-                                                .catch((error) => {
-                                                  toast.dismiss(loadingToast);
-                                                  toast.error(
-                                                    "Failed to add teacher"
-                                                  );
-                                                  console.error(
-                                                    "Error adding teacher:",
-                                                    error
-                                                  );
-                                                });
-                                            }}
-                                          >
-                                            <span
-                                              style={{
-                                                flex: 1,
-                                                color: "#333",
-                                                fontWeight: "500",
-                                              }}
-                                            >
-                                              {teacher.initial} - {teacher.name}
-                                            </span>
-                                          </Dropdown.Item>
-                                        ))}
-                                      {allTeachers.filter((teacher) => {
-                                        if (!Array.isArray(course.teachers))
-                                          return true;
-                                        return !course.teachers.some(
-                                          (t) => t.initial === teacher.initial
-                                        );
-                                      }).length === 0 && (
-                                        <Dropdown.Item disabled>
-                                          No available teachers
-                                        </Dropdown.Item>
-                                      )}
-                                    </Dropdown.Menu>
-                                  </Dropdown>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="row mb-4">
-            <div className="col-12">
-              <div className="card">
-                <div className="card-view">
-                  <div className="card-control-container">
-                    <h4 className="card-name">
-                      <div className="card-icon mdi mdi-account-multiple" />
-                      Sectionwise Assigned Teachers
-                    </h4>
-                  </div>
-                  <div className="card-table-container table-responsive">
-                    <table className="card-table table">
-                      <thead className="card-table-header">
-                        <tr>
-                          <th>
-                            <i className="mdi mdi-book" />
-                            Course ID
-                          </th>
-                          <th>
-                            <i className="mdi mdi-book-open-variant" />
-                            Sections
-                          </th>
-                          <th className="text-center">
-                            <i className="mdi mdi-clipboard-outline" />
-                            Status
-                          </th>
-                          <th>
-                            <i className="mdi mdi-account-multiple" />
-                            Teachers
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allTheoryTeacherAssignment.map((course) =>
-                          course.sections.map((section, index) => (
-                            <tr key={index}>
-                              {index === 0 && (
-                                <td rowSpan={course.sections.length}>
-                                  {course.course_id}
-                                </td>
-                              )}
-                              <td style={{ borderLeft: "1px solid #f0f0f0" }}>
-                                {section.section}
-                              </td>
-                              <td className="text-center">
-                                {section.teachers &&
-                                section.teachers.length > 0 ? (
+                                ) : course.teachers.length ===
+                                  parseInt(course.section_count) ? (
                                   <i
                                     className="mdi mdi-check-circle-outline"
                                     title="Teachers assigned correctly"
@@ -1117,17 +813,25 @@ export default function TheoryPreference() {
                                   />
                                 ) : (
                                   <i
-                                    className="mdi mdi-alert-circle-outline"
-                                    title="No teachers assigned"
-                                    style={{ color: "orange" }}
+                                    className="mdi mdi-close-circle-outline"
+                                    title="More teachers than sections"
+                                    style={{ color: "red" }}
                                   />
-                                )}
-                              </td>
-                              <td style={{ position: "relative" }}>
-                                <div className="d-flex flex-wrap align-items-center">
-                                  {section.teachers.map((teacher) => (
+                                )
+                              ) : (
+                                <i
+                                  className="mdi mdi-alert-circle-outline"
+                                  title="No teachers assigned"
+                                  style={{ color: "orange" }}
+                                />
+                              )}
+                            </td>
+                            <td>
+                              <div className="d-flex flex-wrap align-items-center">
+                                {course.teachers &&
+                                  course.teachers.map((teacher) => (
                                     <div
-                                      key={`${course.course_id}-${section.section}-${teacher}`}
+                                      key={`${course.course_id}-${teacher.initial}`}
                                       style={{
                                         display: "inline-flex",
                                         alignItems: "center",
@@ -1146,7 +850,7 @@ export default function TheoryPreference() {
                                           marginRight: "5px",
                                         }}
                                       >
-                                        {teacher}
+                                        {teacher.initial}
                                       </span>
                                       <button
                                         onClick={() => {
@@ -1154,18 +858,19 @@ export default function TheoryPreference() {
                                             "Removing teacher..."
                                           );
 
-                                          deleteTheoryTeacherAssignment(
-                                            course.course_id,
-                                            section.section,
-                                            teacher
-                                          )
+                                          setTeacherAssignment({
+                                            course_id: course.course_id,
+                                            initial: "None",
+                                            old_initial: teacher.initial,
+                                          })
                                             .then(() => {
+                                              handleGetStatus();
                                               getAllTheoryTeacherAssignment().then(
                                                 setAllTheoryTeacherAssignment
                                               );
                                               toast.dismiss(loadingToast);
                                               toast.success(
-                                                `Removed ${teacher} from ${course.course_id} section ${section.section}`
+                                                `Removed ${teacher.initial} from ${course.course_id}`
                                               );
                                             })
                                             .catch((error) => {
@@ -1188,148 +893,450 @@ export default function TheoryPreference() {
                                           color: "#dc3545",
                                         }}
                                       >
-                                        <Icon
-                                          path={mdiDeleteOutline}
-                                          size={0.7}
-                                        />
+                                        <i className="mdi mdi-delete-outline" />
                                       </button>
                                     </div>
                                   ))}
 
-                                  <Dropdown style={{ marginLeft: "5px" }}>
-                                    <Dropdown.Toggle
-                                      variant="outline-primary"
-                                      id={`dropdown-${course.course_id}-${section.section}`}
-                                      size="sm"
-                                      style={{
-                                        padding: "6px 12px",
-                                        borderRadius: "4px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "6px",
-                                        fontSize: "0.95rem",
-                                      }}
-                                    >
-                                      <Icon path={mdiPlus} size={0.7} />
-                                    </Dropdown.Toggle>
+                                <Dropdown>
+                                  <Dropdown.Toggle
+                                    variant="outline-primary"
+                                    id={`dropdown-${course.course_id}`}
+                                    size="sm"
+                                    style={{
+                                      padding: "6px 12px",
+                                      borderRadius: "4px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      fontSize: "0.95rem",
+                                    }}
+                                  >
+                                    <i className="mdi mdi-plus" />
+                                  </Dropdown.Toggle>
 
-                                    <Dropdown.Menu
-                                      style={{
-                                        padding: "8px",
-                                        borderRadius: "8px",
-                                        boxShadow:
-                                          "0 4px 16px rgba(0, 0, 0, 0.1)",
-                                        border:
-                                          "1px solid rgba(174, 117, 228, 0.2)",
-                                      }}
-                                    >
-                                      {status.assignment
-                                        .filter(
-                                          (a) =>
-                                            a.course_id === course.course_id
-                                        )
-                                        .map(
-                                          (assignment) =>
-                                            assignment.teachers &&
-                                            assignment.teachers.length > 0 &&
-                                            assignment.teachers
-                                              .filter(
-                                                (teacher) =>
-                                                  !section.teachers.includes(
-                                                    teacher.initial
-                                                  )
-                                              )
-                                              .map((teacher) => (
-                                                <Dropdown.Item
-                                                  key={teacher.initial}
-                                                  onClick={() => {
-                                                    const loadingToast =
-                                                      toast.loading(
-                                                        "Adding teacher..."
-                                                      );
-
-                                                    addTheoryTeacherAssignment(
-                                                      course.course_id,
-                                                      section.section,
-                                                      teacher.initial
-                                                    )
-                                                      .then(() => {
-                                                        getAllTheoryTeacherAssignment().then(
-                                                          setAllTheoryTeacherAssignment
-                                                        );
-                                                        toast.dismiss(
-                                                          loadingToast
-                                                        );
-                                                        toast.success(
-                                                          `Added ${teacher.initial} to ${course.course_id} section ${section.section}`
-                                                        );
-                                                      })
-                                                      .catch((error) => {
-                                                        toast.dismiss(
-                                                          loadingToast
-                                                        );
-                                                        toast.error(
-                                                          "Failed to add teacher"
-                                                        );
-                                                        console.error(
-                                                          "Error adding teacher:",
-                                                          error
-                                                        );
-                                                      });
-                                                  }}
-                                                  style={{
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    padding: "8px 12px",
-                                                    borderRadius: "4px",
-                                                    transition:
-                                                      "background 0.2s ease",
-                                                  }}
-                                                >
-                                                  <span
-                                                    style={{
-                                                      flex: 1,
-                                                      color: "#333",
-                                                      fontWeight: "500",
-                                                    }}
-                                                  >
-                                                    {teacher.initial} -{" "}
-                                                    {teacher.name}
-                                                  </span>
-                                                </Dropdown.Item>
-                                              ))
-                                        )}
-                                      {allTeachers.filter(
-                                        (teacher) =>
-                                          !section.teachers.includes(
-                                            teacher.initial
-                                          )
-                                      ).length === 0 && (
+                                  <Dropdown.Menu
+                                    style={{
+                                      padding: "8px",
+                                      borderRadius: "8px",
+                                      boxShadow:
+                                        "0 4px 16px rgba(0, 0, 0, 0.1)",
+                                      border:
+                                        "1px solid rgba(174, 117, 228, 0.2)",
+                                      zIndex: 1,
+                                    }}
+                                  >
+                                    {allTeachers
+                                      .filter((teacher) => {
+                                        // If course.teachers is not defined or not an array, allow all teachers
+                                        if (!Array.isArray(course.teachers))
+                                          return true;
+                                        // Exclude teachers already assigned to this course
+                                        return !course.teachers.some(
+                                          (t) => t.initial === teacher.initial
+                                        );
+                                      })
+                                      .map((teacher) => (
                                         <Dropdown.Item
-                                          disabled
-                                          style={{ color: "#999" }}
+                                          key={teacher.initial}
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            padding: "8px 12px",
+                                            borderRadius: "4px",
+                                            transition: "background 0.2s ease",
+                                          }}
+                                          onClick={() => {
+                                            // Check if the course has already reached its section limit
+                                            if (
+                                              course.teachers &&
+                                              course.teachers.length >=
+                                                parseInt(course.section_count)
+                                            ) {
+                                              toast.error(
+                                                `The course ${course.course_id} has been assigned more teachers than its section count`
+                                              );
+                                            }
+                                            // Check if the teacher is already assigned to another course
+                                            const isAlreadyAssigned =
+                                              status.assignment.some(
+                                                (c) =>
+                                                  c.teachers &&
+                                                  c.teachers.some(
+                                                    (t) =>
+                                                      t.initial ===
+                                                      teacher.initial
+                                                  )
+                                              );
+                                            if (isAlreadyAssigned) {
+                                              toast.error(
+                                                `${teacher.initial} is already assigned to another course`
+                                              );
+                                            }
+                                            const loadingToast =
+                                              toast.loading(
+                                                "Adding teacher..."
+                                              );
+
+                                            setTeacherAssignment({
+                                              course_id: course.course_id,
+                                              initial: teacher.initial,
+                                              old_initial: "None",
+                                            })
+                                              .then(() => {
+                                                handleGetStatus();
+                                                getAllTheoryTeacherAssignment().then(
+                                                  setAllTheoryTeacherAssignment
+                                                );
+                                                toast.dismiss(loadingToast);
+                                                toast.success(
+                                                  `Added ${teacher.initial} to ${course.course_id}`
+                                                );
+                                              })
+                                              .catch((error) => {
+                                                toast.dismiss(loadingToast);
+                                                toast.error(
+                                                  "Failed to add teacher"
+                                                );
+                                                console.error(
+                                                  "Error adding teacher:",
+                                                  error
+                                                );
+                                              });
+                                          }}
                                         >
-                                          No available teachers
+                                          <span
+                                            style={{
+                                              flex: 1,
+                                              color: "#333",
+                                              fontWeight: "500",
+                                            }}
+                                          >
+                                            {teacher.initial} - {teacher.name}
+                                          </span>
                                         </Dropdown.Item>
-                                      )}
-                                    </Dropdown.Menu>
-                                  </Dropdown>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                        {allTheoryTeacherAssignment.length === 0 && (
-                          <tr>
-                            <td colSpan="3" className="text-center py-4">
-                              No assignments found
+                                      ))}
+                                    {allTeachers.filter((teacher) => {
+                                      if (!Array.isArray(course.teachers))
+                                        return true;
+                                      return !course.teachers.some(
+                                        (t) => t.initial === teacher.initial
+                                      );
+                                    }).length === 0 && (
+                                      <Dropdown.Item disabled>
+                                        No available teachers
+                                      </Dropdown.Item>
+                                    )}
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
                             </td>
                           </tr>
-                        )}
-                      </tbody>
-                    </table>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="mb-3">
+                      <i
+                        className="mdi mdi-clipboard-text-outline"
+                        style={{
+                          fontSize: "3rem",
+                          color: "#6c757d",
+                          opacity: 0.5,
+                        }}
+                      ></i>
+                    </div>
+                    <h6 className="text-muted mb-2">Not Inialize Yet</h6>
+                    <p
+                      className="text-muted mb-0"
+                      style={{ fontSize: "0.9rem" }}
+                    >
+                      First initialize the routine to assign teachers.
+                    </p>
                   </div>
-                </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="card-view">
+              <div className="card-control-container">
+                <h4 className="card-name">
+                  <div className="card-icon mdi mdi-account-multiple" />
+                  Sectionwise Assigned Teachers
+                </h4>
+              </div>
+              <div className="card-table-container table-responsive">
+                {allTheoryTeacherAssignment.length === 0 ? (
+                  <div className="text-center py-4">
+                    <div className="mb-3">
+                      <i
+                        className="mdi mdi-clipboard-text-outline"
+                        style={{
+                          fontSize: "3rem",
+                          color: "#6c757d",
+                          opacity: 0.5,
+                        }}
+                      ></i>
+                    </div>
+                    <h6 className="text-muted mb-2">No Current Assignments</h6>
+                    <p
+                      className="text-muted mb-0"
+                      style={{ fontSize: "0.9rem" }}
+                    >
+                      No teacher has theory course assignments yet.
+                    </p>
+                  </div>
+                ) : (
+                  <table className="card-table table">
+                    <thead className="card-table-header">
+                      <tr>
+                        <th>
+                          <i className="mdi mdi-book" />
+                          Course ID
+                        </th>
+                        <th>
+                          <i className="mdi mdi-book-open-variant" />
+                          Sections
+                        </th>
+                        <th className="text-center">
+                          <i className="mdi mdi-clipboard-outline" />
+                          Status
+                        </th>
+                        <th>
+                          <i className="mdi mdi-account-multiple" />
+                          Teachers
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allTheoryTeacherAssignment.map((course) =>
+                        course.sections.map((section, index) => (
+                          <tr key={index}>
+                            {index === 0 && (
+                              <td rowSpan={course.sections.length}>
+                                {course.course_id}
+                              </td>
+                            )}
+                            <td style={{ borderLeft: "1px solid #f0f0f0" }}>
+                              {section.section}
+                            </td>
+                            <td className="text-center">
+                              {section.teachers &&
+                              section.teachers.length > 0 ? (
+                                <i
+                                  className="mdi mdi-check-circle-outline"
+                                  title="Teachers assigned correctly"
+                                  style={{ color: "green" }}
+                                />
+                              ) : (
+                                <i
+                                  className="mdi mdi-alert-circle-outline"
+                                  title="No teachers assigned"
+                                  style={{ color: "orange" }}
+                                />
+                              )}
+                            </td>
+                            <td style={{ position: "relative" }}>
+                              <div className="d-flex flex-wrap align-items-center">
+                                {section.teachers.map((teacher) => (
+                                  <div
+                                    key={`${course.course_id}-${section.section}-${teacher}`}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      background: "rgba(174, 117, 228, 0.1)",
+                                      borderRadius: "4px",
+                                      padding: "4px 8px",
+                                      margin: "2px",
+                                      border:
+                                        "1px solid rgba(174, 117, 228, 0.2)",
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        color: "#333",
+                                        fontWeight: "500",
+                                        marginRight: "5px",
+                                      }}
+                                    >
+                                      {teacher}
+                                    </span>
+                                    <button
+                                      onClick={() => {
+                                        const loadingToast = toast.loading(
+                                          "Removing teacher..."
+                                        );
+
+                                        deleteTheoryTeacherAssignment(
+                                          course.course_id,
+                                          section.section,
+                                          teacher
+                                        )
+                                          .then(() => {
+                                            getAllTheoryTeacherAssignment().then(
+                                              setAllTheoryTeacherAssignment
+                                            );
+                                            toast.dismiss(loadingToast);
+                                            toast.success(
+                                              `Removed ${teacher} from ${course.course_id} section ${section.section}`
+                                            );
+                                          })
+                                          .catch((error) => {
+                                            toast.dismiss(loadingToast);
+                                            toast.error(
+                                              "Failed to remove teacher"
+                                            );
+                                            console.error(
+                                              "Error removing teacher:",
+                                              error
+                                            );
+                                          });
+                                      }}
+                                      style={{
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        padding: "2px",
+                                        color: "#dc3545",
+                                      }}
+                                    >
+                                      <Icon
+                                        path={mdiDeleteOutline}
+                                        size={0.7}
+                                      />
+                                    </button>
+                                  </div>
+                                ))}
+
+                                <Dropdown style={{ marginLeft: "5px" }}>
+                                  <Dropdown.Toggle
+                                    variant="outline-primary"
+                                    id={`dropdown-${course.course_id}-${section.section}`}
+                                    size="sm"
+                                    style={{
+                                      padding: "6px 12px",
+                                      borderRadius: "4px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      fontSize: "0.95rem",
+                                    }}
+                                  >
+                                    <Icon path={mdiPlus} size={0.7} />
+                                  </Dropdown.Toggle>
+
+                                  <Dropdown.Menu
+                                    style={{
+                                      padding: "8px",
+                                      borderRadius: "8px",
+                                      boxShadow:
+                                        "0 4px 16px rgba(0, 0, 0, 0.1)",
+                                      border:
+                                        "1px solid rgba(174, 117, 228, 0.2)",
+                                    }}
+                                  >
+                                    {status.assignment
+                                      .filter(
+                                        (a) => a.course_id === course.course_id
+                                      )
+                                      .map(
+                                        (assignment) =>
+                                          assignment.teachers &&
+                                          assignment.teachers.length > 0 &&
+                                          assignment.teachers
+                                            .filter(
+                                              (teacher) =>
+                                                !section.teachers.includes(
+                                                  teacher.initial
+                                                )
+                                            )
+                                            .map((teacher) => (
+                                              <Dropdown.Item
+                                                key={teacher.initial}
+                                                onClick={() => {
+                                                  const loadingToast =
+                                                    toast.loading(
+                                                      "Adding teacher..."
+                                                    );
+
+                                                  addTheoryTeacherAssignment(
+                                                    course.course_id,
+                                                    section.section,
+                                                    teacher.initial
+                                                  )
+                                                    .then(() => {
+                                                      getAllTheoryTeacherAssignment().then(
+                                                        setAllTheoryTeacherAssignment
+                                                      );
+                                                      toast.dismiss(
+                                                        loadingToast
+                                                      );
+                                                      toast.success(
+                                                        `Added ${teacher.initial} to ${course.course_id} section ${section.section}`
+                                                      );
+                                                    })
+                                                    .catch((error) => {
+                                                      toast.dismiss(
+                                                        loadingToast
+                                                      );
+                                                      toast.error(
+                                                        "Failed to add teacher"
+                                                      );
+                                                      console.error(
+                                                        "Error adding teacher:",
+                                                        error
+                                                      );
+                                                    });
+                                                }}
+                                                style={{
+                                                  display: "flex",
+                                                  alignItems: "center",
+                                                  padding: "8px 12px",
+                                                  borderRadius: "4px",
+                                                  transition:
+                                                    "background 0.2s ease",
+                                                }}
+                                              >
+                                                <span
+                                                  style={{
+                                                    flex: 1,
+                                                    color: "#333",
+                                                    fontWeight: "500",
+                                                  }}
+                                                >
+                                                  {teacher.initial} -{" "}
+                                                  {teacher.name}
+                                                </span>
+                                              </Dropdown.Item>
+                                            ))
+                                      )}
+                                    {allTeachers.filter(
+                                      (teacher) =>
+                                        !section.teachers.includes(
+                                          teacher.initial
+                                        )
+                                    ).length === 0 && (
+                                      <Dropdown.Item
+                                        disabled
+                                        style={{ color: "#999" }}
+                                      >
+                                        No available teachers
+                                      </Dropdown.Item>
+                                    )}
+                                  </Dropdown.Menu>
+                                </Dropdown>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>

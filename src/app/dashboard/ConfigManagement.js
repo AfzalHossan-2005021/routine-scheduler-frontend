@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, Form, Button, Row, Col } from "react-bootstrap";
+import { Form, Row, Col } from "react-bootstrap";
 import {
   getAllConfigurations,
   setConfiguration,
@@ -11,16 +11,15 @@ import {
   mdiClockOutline,
   mdiCalendarWeek,
   mdiSchool,
-  mdiRefresh,
-  mdiContentSave,
-  mdiCalendarMultipleCheck,
 } from "@mdi/js";
+import { useConfig } from "../shared/ConfigContext";
 import Icon from "@mdi/react";
 import Select from "react-select";
 import CreatableSelect from "react-select/creatable";
 import ConfirmationModal from "../shared/ConfirmationModal";
 
 const ConfigManagement = () => {
+  const { refreshConfigs } = useConfig();
   // Define state for the specific config values we're interested in
   const [currentSession, setCurrentSession] = useState("");
   const [times, setTimes] = useState([8, 9, 10, 11, 12, 1, 2, 3, 4]);
@@ -116,6 +115,8 @@ const ConfigManagement = () => {
       await setConfiguration("days", days);
       await setConfiguration("possibleLabTimes", possibleLabTimes);
 
+      // Refresh configs after saving
+      refreshConfigs();
       toast.success("Configurations saved successfully");
     } catch (err) {
       console.error("Error saving configurations:", err);
@@ -168,8 +169,8 @@ const ConfigManagement = () => {
       justifyContent: "center",
       marginRight: "0.5rem",
       padding: "6px 16px 6px 6px",
-      boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
-      cursor: "default",
+      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.25)",
+      cursor: "pointer",
       borderRadius: "6px",
     }),
     multiValueLabel: (provided) => ({
@@ -317,82 +318,28 @@ const ConfigManagement = () => {
   };
 
   return (
-    <Card
-      style={{
-        borderRadius: "12px",
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-        border: "none",
-        overflow: "hidden",
-        marginBottom: "2rem",
-      }}
-    >
-      <Card.Body style={{ padding: "2rem" }}>
-        <div
-          style={{
-            borderBottom: "3px solid rgb(154, 77, 226)",
-            paddingBottom: "16px",
-            marginBottom: "24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <h4
-            className="card-title"
-            style={{
-              color: "rgb(154, 77, 226)",
-              marginBottom: 0,
-              fontWeight: "700",
-              display: "flex",
-              alignItems: "center",
-              fontSize: "1.5rem",
-              letterSpacing: "0.3px",
-            }}
-          >
-            <span style={{ marginRight: "12px" }}>
-              <Icon
-                path={mdiCalendarMultipleCheck}
-                size={1.2}
-                color="rgb(154, 77, 226)"
-              />
-            </span>
+    <div className="card">
+      <div className="card-view">
+        <div className="card-control-container">
+          <h4 className="card-name">
+            <i className="card-icon mdi mdi-calendar-multiple-check"></i>
             Schedule Configuration
           </h4>
-          <div style={{ display: "flex", gap: "12px" }}>
-            <Button
-              variant="light"
+          <div className="card-control-button-container">
+            <button
+              className="card-control-button mdi mdi-refresh"
               onClick={handleResetConfigsWithConfirmation}
               disabled={loading}
-              size="sm"
-              style={{
-                borderRadius: "6px",
-                padding: "7px 14px",
-                fontWeight: "500",
-                background: "rgba(154, 77, 226, 0.15)",
-                border: "1px solid rgba(154, 77, 226, 0.5)",
-                color: "rgb(154, 77, 226)",
-                transition: "all 0.3s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "0.95rem",
-                cursor: "pointer",
-                position: "relative",
-                overflow: "hidden",
-                minWidth: "auto",
-                justifyContent: "center",
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = "rgb(154, 77, 226)";
-                e.target.style.color = "white";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                e.target.style.color = "rgb(154, 77, 226)";
-              }}
             >
-              <Icon path={mdiRefresh} size={0.8} /> Reset to Defaults
-            </Button>
+              Reset to Defaults
+            </button>
+            <button
+              onClick={handleSaveConfigsWithConfirmation}
+              disabled={loading}
+              className="card-control-button mdi mdi-content-save"
+            >
+              Save Configuration
+            </button>
           </div>
         </div>
         {loading ? (
@@ -403,180 +350,160 @@ const ConfigManagement = () => {
             <p className="mt-3 text-muted">Loading configurations...</p>
           </div>
         ) : (
-          <Form>
-            <Row className="mb-4">
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      color: "rgb(154, 77, 226)",
-                      fontWeight: "500",
-                    }}
-                  >
-                    <Icon
-                      path={mdiCalendarCheck}
-                      size={1}
-                      color="rgb(154, 77, 226)"
-                      style={{ marginRight: "8px" }}
+          <div style={{ maxHeight: "600px", overflowY: "auto" }}>
+            <Form className="p-4">
+              <Row className="mb-4">
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: "rgb(154, 77, 226)",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <Icon
+                        path={mdiCalendarCheck}
+                        size={1}
+                        color="rgb(154, 77, 226)"
+                        style={{ marginRight: "8px" }}
+                      />
+                      Current Session
+                    </Form.Label>
+                    <CreatableSelect
+                      value={
+                        currentSession
+                          ? { value: currentSession, label: currentSession }
+                          : null
+                      }
+                      onChange={handleSessionChange}
+                      options={sessionOptions}
+                      placeholder="Select or create a session (e.g., January 2025)"
+                      isClearable
+                      styles={customStyles}
+                      formatCreateLabel={(inputValue) =>
+                        `Create "${inputValue}"`
+                      }
                     />
-                    Current Session
-                  </Form.Label>
-                  <CreatableSelect
-                    value={
-                      currentSession
-                        ? { value: currentSession, label: currentSession }
-                        : null
-                    }
-                    onChange={handleSessionChange}
-                    options={sessionOptions}
-                    placeholder="Select or create a session (e.g., January 2025)"
-                    isClearable
-                    styles={customStyles}
-                    formatCreateLabel={(inputValue) => `Create "${inputValue}"`}
-                  />
-                  <Form.Text className="text-muted mt-2">
-                    Select or type to create a new academic session
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
+                    <Form.Text className="text-muted mt-2">
+                      Select or type to create a new academic session
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </Row>
 
-            <Row className="mb-4">
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      color: "rgb(154, 77, 226)",
-                      fontWeight: "500",
-                    }}
-                  >
-                    <Icon
-                      path={mdiCalendarWeek}
-                      size={1}
-                      color="rgb(154, 77, 226)"
-                      style={{ marginRight: "8px" }}
+              <Row className="mb-4">
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: "rgb(154, 77, 226)",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <Icon
+                        path={mdiCalendarWeek}
+                        size={1}
+                        color="rgb(154, 77, 226)"
+                        style={{ marginRight: "8px" }}
+                      />
+                      Working Days
+                    </Form.Label>
+                    <CreatableSelect
+                      isMulti
+                      value={getSelectedDayOptions()}
+                      onChange={handleDaysChange}
+                      options={dayOptions}
+                      placeholder="Select working days"
+                      styles={customStyles}
+                      closeMenuOnSelect={false}
+                      formatCreateLabel={(inputValue) =>
+                        `Add "${inputValue}" as a day`
+                      }
                     />
-                    Working Days
-                  </Form.Label>
-                  <CreatableSelect
-                    isMulti
-                    value={getSelectedDayOptions()}
-                    onChange={handleDaysChange}
-                    options={dayOptions}
-                    placeholder="Select working days"
-                    styles={customStyles}
-                    closeMenuOnSelect={false}
-                    formatCreateLabel={(inputValue) =>
-                      `Add "${inputValue}" as a day`
-                    }
-                  />
-                  <Form.Text className="text-muted mt-2">
-                    Select days or type to add custom days
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
+                    <Form.Text className="text-muted mt-2">
+                      Select days or type to add custom days
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </Row>
 
-            <Row className="mb-4">
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      color: "rgb(154, 77, 226)",
-                      fontWeight: "500",
-                    }}
-                  >
-                    <Icon
-                      path={mdiClockOutline}
-                      size={1}
-                      color="rgb(154, 77, 226)"
-                      style={{ marginRight: "8px" }}
+              <Row className="mb-4">
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: "rgb(154, 77, 226)",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <Icon
+                        path={mdiClockOutline}
+                        size={1}
+                        color="rgb(154, 77, 226)"
+                        style={{ marginRight: "8px" }}
+                      />
+                      Class Times
+                    </Form.Label>
+                    <Select
+                      isMulti
+                      value={getSelectedTimeOptions()}
+                      onChange={handleTimesChange}
+                      options={timeOptions}
+                      placeholder="Select class times"
+                      styles={customStyles}
+                      closeMenuOnSelect={false}
                     />
-                    Class Times
-                  </Form.Label>
-                  <Select
-                    isMulti
-                    value={getSelectedTimeOptions()}
-                    onChange={handleTimesChange}
-                    options={timeOptions}
-                    placeholder="Select class times"
-                    styles={customStyles}
-                    closeMenuOnSelect={false}
-                  />
-                  <Form.Text className="text-muted mt-2">
-                    Select one or more class starting times
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
+                    <Form.Text className="text-muted mt-2">
+                      Select one or more class starting times
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </Row>
 
-            <Row className="mb-4">
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      color: "rgb(154, 77, 226)",
-                      fontWeight: "500",
-                    }}
-                  >
-                    <Icon
-                      path={mdiSchool}
-                      size={1}
-                      color="rgb(154, 77, 226)"
-                      style={{ marginRight: "8px" }}
+              <Row>
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        color: "rgb(154, 77, 226)",
+                        fontWeight: "500",
+                      }}
+                    >
+                      <Icon
+                        path={mdiSchool}
+                        size={1}
+                        color="rgb(154, 77, 226)"
+                        style={{ marginRight: "8px" }}
+                      />
+                      Lab Times
+                    </Form.Label>
+                    <Select
+                      isMulti
+                      value={getSelectedLabTimeOptions()}
+                      onChange={handleLabTimesChange}
+                      options={timeOptions}
+                      placeholder="Select lab times"
+                      styles={customStyles}
+                      closeMenuOnSelect={false}
                     />
-                    Lab Times
-                  </Form.Label>
-                  <Select
-                    isMulti
-                    value={getSelectedLabTimeOptions()}
-                    onChange={handleLabTimesChange}
-                    options={timeOptions}
-                    placeholder="Select lab times"
-                    styles={customStyles}
-                    closeMenuOnSelect={false}
-                  />
-                  <Form.Text className="text-muted mt-2">
-                    Select one or more lab starting times
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-
-            <Row>
-              <Col className="d-flex justify-content-center">
-                <Button
-                  onClick={handleSaveConfigsWithConfirmation}
-                  disabled={loading}
-                  style={{
-                    background:
-                      "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    padding: "0.75rem 1.5rem",
-                    fontWeight: "600",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Icon path={mdiContentSave} size={1} />
-                  Save Configuration
-                </Button>
-              </Col>
-            </Row>
-          </Form>
+                    <Form.Text className="text-muted mt-2">
+                      Select one or more lab starting times
+                    </Form.Text>
+                  </Form.Group>
+                </Col>
+              </Row>
+            </Form>
+          </div>
         )}
-      </Card.Body>
+      </div>
       <ConfirmationModal
         show={showConfirmation}
         onHide={handleHideConfirmation}
@@ -594,7 +521,7 @@ const ConfigManagement = () => {
         green={confirmationDetails.green}
         blue={confirmationDetails.blue}
       />
-    </Card>
+    </div>
   );
 };
 

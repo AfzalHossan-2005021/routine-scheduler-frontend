@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, Form, Button, Table, Row, Col, Modal } from "react-bootstrap";
+import { Form, Button, Row, Modal } from "react-bootstrap";
 import {
   getDefaultAllSectionCount,
   setDefaultSectionCount,
@@ -21,16 +21,17 @@ import {
   mdiClose,
   mdiDelete,
   mdiPencil,
-  mdiDomain,
   mdiSchool,
   mdiViewGrid,
   mdiViewGridPlus,
   mdiCog,
 } from "@mdi/js";
 import Icon from "@mdi/react";
+import { useConfig } from "../shared/ConfigContext";
 import ConfirmationModal from "../shared/ConfirmationModal";
 
 const AcademicConfig = () => {
+  const { refreshConfigs } = useConfig();
   const [hostedDepartments, setHostedDepartments] = useState([]);
   const [showHostedDepartmentModal, setShowHostedDepartmentModal] =
     useState(false);
@@ -275,7 +276,7 @@ const AcademicConfig = () => {
       if (!level.success || !term.success) {
         throw new Error("Failed to save level or term configuration");
       }
-
+      refreshConfigs();
       toast.success("Level-Term configuration saved successfully");
     } catch (err) {
       console.error("Error saving level-term configuration:", err);
@@ -496,51 +497,26 @@ const AcademicConfig = () => {
 
   return (
     <div className="academic-config-container">
-      <Card
-        style={{
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-          border: "none",
-          overflow: "hidden",
-          marginBottom: "2rem",
-        }}
-      >
-        <Card.Body style={{ padding: "2rem" }}>
-          <div
-            style={{
-              borderBottom: "3px solid rgb(194, 137, 248)",
-              paddingBottom: "16px",
-              marginBottom: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h4
-              className="card-title"
-              style={{
-                color: "rgb(174, 117, 228)",
-                marginBottom: 0,
-                fontWeight: "700",
-                display: "flex",
-                alignItems: "center",
-                fontSize: "1.5rem",
-                letterSpacing: "0.3px",
-              }}
-            >
-              <span style={{ marginRight: "12px" }}>
-                <Icon
-                  path={mdiViewGrid}
-                  size={1.2}
-                  color="rgb(194, 137, 248)"
-                />
-              </span>
+      <div className="card mb-4">
+        <div className="card-view">
+          <div className="card-control-container">
+            <h4 className="card-name">
+              <i className="card-icon mdi mdi-school" />
               Level-Term Configuration
             </h4>
+            <div className="card-control-button-container">
+              <button
+                onClick={saveLevelTermConfig}
+                className="card-control-button mdi mdi-content-save"
+                disabled={loading}
+              >
+                Save Configuration
+              </button>
+            </div>
           </div>
-          <div className="level-term-config" style={{ padding: "0 1.25rem" }}>
+          <div>
             <Row>
-              <Col md={5}>
+              <div className="m-4">
                 <div
                   style={{
                     background: "rgba(194, 137, 248, 0.05)",
@@ -640,36 +616,15 @@ const AcademicConfig = () => {
                       system)
                     </Form.Text>
                   </Form.Group>
-
-                  <Button
-                    onClick={saveLevelTermConfig}
-                    style={{
-                      background:
-                        "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "8px 16px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      fontWeight: "500",
-                      marginTop: "0.5rem",
-                    }}
-                    disabled={loading}
-                  >
-                    <Icon path={mdiContentSave} size={0.9} />
-                    Save Configuration
-                  </Button>
                 </div>
-              </Col>
-              <Col md={7}>
+              </div>
+              <div className="m-4">
                 <div
                   style={{
                     background: "rgba(194, 137, 248, 0.05)",
                     padding: "1.5rem",
                     borderRadius: "12px",
                     border: "1px solid rgba(194, 137, 248, 0.2)",
-                    height: "100%",
                   }}
                 >
                   <h5
@@ -741,86 +696,26 @@ const AcademicConfig = () => {
                     ))}
                   </div>
                 </div>
-              </Col>
+              </div>
             </Row>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
 
       {/* Hosted Departments Card */}
-      <Card
-        style={{
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-          border: "none",
-          overflow: "hidden",
-          marginBottom: "2rem",
-        }}
-      >
-        <Card.Body style={{ padding: "2rem" }}>
-          <div
-            style={{
-              borderBottom: "3px solid rgb(194, 137, 248)",
-              paddingBottom: "16px",
-              marginBottom: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h4
-              className="card-title"
-              style={{
-                color: "rgb(174, 117, 228)",
-                marginBottom: 0,
-                fontWeight: "700",
-                display: "flex",
-                alignItems: "center",
-                fontSize: "1.5rem",
-                letterSpacing: "0.3px",
-              }}
-            >
-              <span style={{ marginRight: "12px" }}>
-                <Icon
-                  path={mdiViewGrid}
-                  size={1.2}
-                  color="rgb(194, 137, 248)"
-                />
-              </span>
+      <div className="card mb-4">
+        <div className="card-view">
+          <div className="card-control-container mb-4">
+            <h4 className="card-name">
+              <i className="card-icon mdi mdi-domain" />
               Offering From Departments
             </h4>
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                type="button"
-                style={{
-                  borderRadius: "6px",
-                  padding: "7px 14px",
-                  fontWeight: "500",
-                  background: "rgba(154, 77, 226, 0.15)",
-                  border: "1px solid rgba(154, 77, 226, 0.5)",
-                  color: "rgb(154, 77, 226)",
-                  transition: "all 0.3s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.95rem",
-                  cursor: "pointer",
-                  position: "relative",
-                  overflow: "hidden",
-                  minWidth: "auto",
-                  justifyContent: "center",
-                }}
+                className="card-control-button"
                 onClick={() => setShowHostedDepartmentModal(true)}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "rgb(154, 77, 226)";
-                  e.target.style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                  e.target.style.color = "rgb(154, 77, 226)";
-                }}
               >
-                <Icon path={mdiPlus} size={1} />
+                <i className="mdi mdi-plus" />
                 Add New Department
               </button>
             </div>
@@ -877,8 +772,8 @@ const AcademicConfig = () => {
               </div>
             )}
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
       {/* Hosted Department Modal */}
       <Modal
         show={showHostedDepartmentModal}
@@ -959,64 +854,16 @@ const AcademicConfig = () => {
       </Modal>
 
       {/* Department Section Count Table Card */}
-      <Card
-        style={{
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-          border: "none",
-          overflow: "hidden",
-          marginBottom: "2rem",
-        }}
-      >
-        <Card.Body style={{ padding: "2rem" }}>
-          <div
-            style={{
-              borderBottom: "3px solid rgb(194, 137, 248)",
-              paddingBottom: "16px",
-              marginBottom: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h4
-              className="card-title"
-              style={{
-                color: "rgb(174, 117, 228)",
-                marginBottom: 0,
-                fontWeight: "700",
-                display: "flex",
-                alignItems: "center",
-                fontSize: "1.5rem",
-                letterSpacing: "0.3px",
-              }}
-            >
-              <span style={{ marginRight: "12px" }}>
-                <Icon path={mdiDomain} size={1.2} color="rgb(194, 137, 248)" />
-              </span>
+      <div className="card mb-4">
+        <div className="card-view">
+          <div className="card-control-container">
+            <h4 className="card-name">
+              <i className="card-icon mdi mdi-school" />
               Offering To Departments & Default Section Count
             </h4>
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                type="button"
-                style={{
-                  borderRadius: "6px",
-                  padding: "7px 14px",
-                  fontWeight: "500",
-                  background: "rgba(154, 77, 226, 0.15)",
-                  border: "1px solid rgba(154, 77, 226, 0.5)",
-                  color: "rgb(154, 77, 226)",
-                  transition: "all 0.3s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.95rem",
-                  cursor: "pointer",
-                  position: "relative",
-                  overflow: "hidden",
-                  minWidth: "auto",
-                  justifyContent: "center",
-                }}
+                className="card-control-button mdi mdi-plus"
                 onClick={() => {
                   setNewDepartment({
                     department: "",
@@ -1026,109 +873,34 @@ const AcademicConfig = () => {
                   setEditMode(false);
                   setShowAddModal(true);
                 }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "rgb(154, 77, 226)";
-                  e.target.style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                  e.target.style.color = "rgb(154, 77, 226)";
-                }}
               >
-                <Icon path={mdiPlus} size={1} />
                 Add New Department
               </button>
             </div>
           </div>
-          <div className="table-responsive" style={{ padding: "0 1.25rem" }}>
-            <Table style={{ marginBottom: "1.25rem" }} hover>
-              <thead style={{ background: "rgba(194, 137, 248, 0.08)" }}>
+          <div className="card-table-container table-responsive">
+            <table className="card-table table">
+              <thead className="card-table-header">
                 <tr>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <Icon
-                        path={mdiSchool}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Department
-                    </div>
+                  <th style={{ textAlign: "center" }}>
+                    <i className="mdi mdi-domain" />
+                    Department
                   </th>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon
-                        path={mdiViewGrid}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Sections
-                    </div>
+                  <th style={{ textAlign: "center" }}>
+                    <i className="mdi mdi-view-grid" />
+                    Sections
                   </th>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon
-                        path={mdiViewGridPlus}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Subsections per Section
-                    </div>
+                  <th style={{ textAlign: "center" }}>
+                    <i className="mdi mdi-view-grid-plus" />
+                    Subsections per Section
                   </th>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <Icon
-                        path={mdiCog}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Actions
-                    </div>
+                  <th style={{ textAlign: "center" }}>
+                    <i className="mdi mdi-pencil" />
+                    Actions
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="card-table-body">
                 {loading ? (
                   <tr>
                     <td colSpan="5" className="text-center py-4">
@@ -1149,47 +921,35 @@ const AcademicConfig = () => {
                 ) : (
                   departments.map((dept, index) => (
                     <tr key={dept.department}>
-                      <td style={{ padding: "1rem" }}>{dept.department}</td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
+                      <td style={{ textAlign: "center" }}>{dept.department}</td>
+                      <td style={{ textAlign: "center" }}>
                         {dept.section_count}
                       </td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
+                      <td style={{ textAlign: "center" }}>
                         {dept.subsection_count_per_section}
                       </td>
-                      <td style={{ padding: "1rem" }}>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          style={{
-                            ...actionButtonStyle,
-                            borderColor: "rgba(154, 77, 226, 0.5)",
-                            color: "rgb(154, 77, 226)",
-                          }}
+                      <td style={{ textAlign: "center"  }}>
+                        <div className="card-control-button-container d-flex justify-content-center">
+                        <button
+                          className="card-control-button mdi mdi-pencil"
                           onClick={() => handleEdit(dept)}
-                        >
-                          <Icon path={mdiPencil} size={0.8} />
-                        </Button>
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          style={{
-                            ...actionButtonStyle,
-                            borderColor: "rgba(220, 53, 69, 0.5)",
-                            color: "#dc3545",
-                          }}
+                          >
+                        </button>
+                        <button
+                          className="delete mdi mdi-delete"
                           onClick={() => handleDelete(dept.department)}
                         >
-                          <Icon path={mdiDelete} size={0.8} />
-                        </Button>
+                        </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
-            </Table>
+            </table>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
 
       {/* Add/Edit Department Modal */}
       <Modal
@@ -1574,79 +1334,19 @@ const AcademicConfig = () => {
       </Modal>
 
       {/* Batch Management Card */}
-      <Card
-        style={{
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-          border: "none",
-          overflow: "hidden",
-          marginBottom: "2rem",
-        }}
-      >
-        <Card.Body style={{ padding: "2rem" }}>
-          <div
-            style={{
-              borderBottom: "3px solid rgb(194, 137, 248)",
-              paddingBottom: "16px",
-              marginBottom: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h4
-              className="card-title"
-              style={{
-                color: "rgb(174, 117, 228)",
-                marginBottom: 0,
-                fontWeight: "700",
-                display: "flex",
-                alignItems: "center",
-                fontSize: "1.5rem",
-                letterSpacing: "0.3px",
-              }}
-            >
-              <span style={{ marginRight: "12px" }}>
-                <Icon
-                  path={mdiViewGrid}
-                  size={1.2}
-                  color="rgb(194, 137, 248)"
-                />
-              </span>
+      <div className="card mb-4">
+        <div className="card-view">
+          <div className="card-control-container mb-4">
+            <h4 className="card-name">
+              <i className="card-icon mdi mdi-view-grid" />
               Batches
             </h4>
             <div style={{ display: "flex", gap: "12px" }}>
               <button
-                type="button"
-                style={{
-                  borderRadius: "6px",
-                  padding: "7px 14px",
-                  fontWeight: "500",
-                  background: "rgba(154, 77, 226, 0.15)",
-                  border: "1px solid rgba(154, 77, 226, 0.5)",
-                  color: "rgb(154, 77, 226)",
-                  transition: "all 0.3s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  fontSize: "0.95rem",
-                  cursor: "pointer",
-                  position: "relative",
-                  overflow: "hidden",
-                  minWidth: "auto",
-                  justifyContent: "center",
-                }}
+                className="card-control-button"
                 onClick={() => setShowBatchModal(true)}
-                onMouseEnter={(e) => {
-                  e.target.style.background = "rgb(154, 77, 226)";
-                  e.target.style.color = "white";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                  e.target.style.color = "rgb(154, 77, 226)";
-                }}
               >
-                <Icon path={mdiPlus} size={1} />
+                <i className="mdi mdi-plus" />
                 Add New Batch
               </button>
             </div>
@@ -1700,154 +1400,41 @@ const AcademicConfig = () => {
               </div>
             )}
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
 
       {/* Section Counts Table Card */}
-      <Card
-        style={{
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.05)",
-          border: "none",
-          overflow: "hidden",
-          marginBottom: "2rem",
-        }}
-      >
-        <Card.Body style={{ padding: "2rem" }}>
-          <div
-            style={{
-              borderBottom: "3px solid rgb(194, 137, 248)",
-              paddingBottom: "16px",
-              marginBottom: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <h4
-              className="card-title"
-              style={{
-                color: "rgb(174, 117, 228)",
-                marginBottom: 0,
-                fontWeight: "700",
-                display: "flex",
-                alignItems: "center",
-                fontSize: "1.5rem",
-                letterSpacing: "0.3px",
-              }}
-            >
-              <span style={{ marginRight: "12px" }}>
-                <Icon
-                  path={mdiViewGridPlus}
-                  size={1.2}
-                  color="rgb(194, 137, 248)"
-                />
-              </span>
+      <div className="card">
+        <div className="card-view">
+          <div className="card-control-container">
+            <h4 className="card-name">
+              <i className="card-icon mdi mdi-view-grid" />
               Section Counts by Batch & Department
             </h4>
           </div>
-          <div className="table-responsive" style={{ padding: "0 1.25rem" }}>
-            <Table style={{ marginBottom: "1.25rem" }} hover>
-              <thead style={{ background: "rgba(194, 137, 248, 0.08)" }}>
+          <div className="card-table-container table-responsive">
+            <table className="card-table table">
+              <thead className="card-table-header">
                 <tr>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <Icon
-                        path={mdiSchool}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Department
-                    </div>
+                  <th>
+                    <i className="mdi mdi-domain" />
+                    Department
                   </th>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <Icon
-                        path={mdiViewGrid}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Batch
-                    </div>
+                  <th>
+                    <i className="mdi mdi-door" />
+                    Batch
                   </th>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon
-                        path={mdiViewGrid}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Sections
-                    </div>
+                  <th>
+                    <i className="mdi mdi-view-grid" />
+                    Sections
                   </th>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon
-                        path={mdiViewGridPlus}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Subsections per Section
-                    </div>
+                  <th>
+                    <i className="mdi mdi-view-grid-plus" />
+                    Subsections per Section
                   </th>
-                  <th
-                    style={{
-                      padding: "1rem",
-                      fontWeight: 600,
-                      color: "rgb(154, 77, 226)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <Icon
-                        path={mdiCog}
-                        size={0.8}
-                        color="rgb(194, 137, 248)"
-                        style={{ marginRight: "8px" }}
-                      />
-                      Actions
-                    </div>
+                  <th>
+                    <i className="mdi mdi-pencil" />
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -1875,17 +1462,19 @@ const AcademicConfig = () => {
                     <tr
                       key={`${sectionCount.batch}-${sectionCount.department}`}
                     >
-                      <td style={{ padding: "1rem" }}>
+                      <td style={{ textAlign: "center" }}>
                         {sectionCount.department}
                       </td>
-                      <td style={{ padding: "1rem" }}>{sectionCount.batch}</td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
+                      <td style={{ textAlign: "center" }}>
+                        {sectionCount.batch}
+                      </td>
+                      <td style={{ textAlign: "center" }}>
                         {sectionCount.section_count}
                       </td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
+                      <td style={{ textAlign: "center" }}>
                         {sectionCount.subsection_count_per_section}
                       </td>
-                      <td style={{ padding: "1rem" }}>
+                      <td style={{ textAlign: "center" }}>
                         <Button
                           variant="outline-primary"
                           size="sm"
@@ -1903,10 +1492,10 @@ const AcademicConfig = () => {
                   ))
                 )}
               </tbody>
-            </Table>
+            </table>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </div>
 
       {/* Confirmation Modal */}
       <ConfirmationModal

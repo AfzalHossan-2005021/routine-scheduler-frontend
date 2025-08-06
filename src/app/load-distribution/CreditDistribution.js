@@ -108,42 +108,6 @@ export default function ShowLoadDistribution() {
     fetchTeachersAndAssignments();
   }, []);
 
-  // Table styles
-  const tableStyle = {
-    width: '100%',
-    borderCollapse: 'separate',
-    borderSpacing: 0,
-    backgroundColor: '#f8f9fa',
-    boxShadow: '0 3px 12px rgba(0,0,0,0.1)',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    border: '2px solid #ccd4e0',
-  };
-
-  const headerStyle = {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
-    fontWeight: '600',
-    padding: '15px 12px',
-    textAlign: 'center',
-    border: 'none',
-    fontSize: '0.95rem',
-  };
-
-  const cellStyle = {
-    padding: '12px',
-    border: '1px solid #dee2e6',
-    backgroundColor: 'white',
-    verticalAlign: 'top',
-  };
-
-  const teacherCellStyle = {
-    ...cellStyle,
-    backgroundColor: '#f8f9fa',
-    fontWeight: '600',
-    color: '#495057',
-  };
-
   const courseBadgeStyle = {
     display: "inline-block",
     padding: "4px 8px",
@@ -353,29 +317,38 @@ export default function ShowLoadDistribution() {
                     )}
                   </td>
 
-                            {/* Sessional Assignments */}
-                            <td style={cellStyle}>
-                              {sessionalAssignments.length > 0 ? (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                  {sessionalAssignments.map((course, idx) => (
-                                    <span key={idx} style={sessionalBadgeStyle}>
-                                      <i className="mdi mdi-laptop mr-1"></i>
-                                      {course.course_id}
-                                      {course.section && (
-                                        <span style={{ fontSize: '0.7rem', opacity: 0.8 }}>
-                                          {' '}({formatSectionDisplay(course.section,course.class_per_week)})
-                                        </span>
-                                      )}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div style={emptyStyle}>
-                                  <i className="mdi mdi-minus-circle mr-1"></i>
-                                  No sessional assignments
-                                </div>
-                              )}
-                            </td>
+                  {/* Sessional Assignments */}
+                  <td>
+                    {sessionalAssignments.length > 0 ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "4px",
+                        }}
+                      >
+                        {sessionalAssignments.map((course, idx) => (
+                          <span key={idx} style={sessionalBadgeStyle}>
+                            <i className="mdi mdi-laptop mr-1"></i>
+                            {course.course_id}
+                            {course.section && (
+                              <span
+                                style={{ fontSize: "0.7rem", opacity: 0.8 }}
+                              >
+                                {" "}
+                                ({course.section})
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={emptyStyle}>
+                        <i className="mdi mdi-minus-circle mr-1"></i>
+                        No sessional assignments
+                      </div>
+                    )}
+                  </td>
 
                   {/* Total Credits */}
                   <td>

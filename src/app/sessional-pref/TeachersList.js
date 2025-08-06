@@ -234,7 +234,7 @@ export default function TeachersList() {
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td className="d-flex justify-content-center">
                       <button
                         className="card-control-button"
                         ref={(el) => (buttonRefs.current[teacher.initial] = el)}
