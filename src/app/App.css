@@ -83,8 +83,6 @@
   border: none;
   transition: all 0.3s ease;
   background: white;
-  max-height: 750px;
-  overflow: auto;
 }
 
 .card-view {
@@ -119,6 +117,25 @@
   gap: 12px;
 }
 
+@media (max-width: 768px) {
+  .card-control-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+  .card-control-button-container {
+    width: 100%;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-control-button-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+}
 .card-control-button {
   border-radius: 6px;
   padding: 7px 14px;
@@ -398,7 +415,6 @@
 }
 .modal-divider {
   border-top: 1px solid #e1e5e9;
-  margin: 0 -2rem 1.5rem -2rem;
 }
 .modal-footer {
   border-top: none;

@@ -13,36 +13,43 @@ import { FORBIDDEN, UNAUTHORIZED } from "./api";
 import { toast } from "react-hot-toast";
 import { ConfigProvider } from "./shared/ConfigContext";
 
-export const UserContext = createContext({user: undefined, setUser: u => {}});
+export const UserContext = createContext({
+  user: undefined,
+  setUser: (u) => {},
+});
 export const UserProvider = UserContext.Provider;
 
 function App(props) {
   const location = useLocation();
   const [isFullPageLayout, setIsFullPageLayout] = useState(false);
 
-  const [user, setUser] = useState({loggedIn: Boolean(localStorage.getItem("token"))});
+  const [user, setUser] = useState({
+    loggedIn: Boolean(localStorage.getItem("token")),
+  });
 
   axios.interceptors.response.use(
     (response) => response,
     (error) => {
       console.log(error);
-      
+
       // Check if error.response exists before accessing its properties
       if (error.response) {
         const status = error.response.status;
 
         if (status === UNAUTHORIZED || status === FORBIDDEN) {
           localStorage.removeItem("token");
-          setUser({loggedIn: false});
+          setUser({ loggedIn: false });
           return Promise.reject(error);
         } else {
-          const message = error.response.data?.message || "Something went wrong...";
+          const message =
+            error.response.data?.message || "Something went wrong...";
           toast.error(message);
           return Promise.reject(error);
         }
       } else {
         // Handle network errors or other errors without response
-        const message = error.message || "Network error or server is unreachable";
+        const message =
+          error.message || "Network error or server is unreachable";
         toast.error(message);
         return Promise.reject(error);
       }
@@ -59,9 +66,11 @@ function App(props) {
       "/auth/login",
       "/auth/forgot-password",
       "/auth/change-password",
-      "/form/"
+      "/form/",
     ];
-    const isFullPageLayout = fullPageLayoutRoutes.some(l => location.pathname.startsWith(l))
+    const isFullPageLayout = fullPageLayoutRoutes.some((l) =>
+      location.pathname.startsWith(l)
+    );
     setIsFullPageLayout(isFullPageLayout);
 
     if (isFullPageLayout) {
@@ -82,7 +91,23 @@ function App(props) {
 
   return (
     <UserProvider value={{ user: user, setUser }}>
-      <ConfigProvider>
+      {user && user.loggedIn ? (
+        <ConfigProvider>
+          <div className="container-scroller">
+            {navbarComponent}
+            <div className={"container-fluid page-body-wrapper"}>
+              {sidebarComponent}
+              <div className="main-panel">
+                <div className="content-wrapper">
+                  <AppRoutes />
+                  {SettingsPanelComponent}
+                </div>
+                {footerComponent}
+              </div>
+            </div>
+          </div>
+        </ConfigProvider>
+      ) : (
         <div className="container-scroller">
           {navbarComponent}
           <div className={"container-fluid page-body-wrapper"}>
@@ -96,7 +121,7 @@ function App(props) {
             </div>
           </div>
         </div>
-      </ConfigProvider>
+      )}
     </UserProvider>
   );
 }
