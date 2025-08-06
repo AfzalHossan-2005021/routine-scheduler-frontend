@@ -343,14 +343,15 @@ export default function Courses() {
                     <FormGroup>
                       <Form.Label className="form-label">Credit</Form.Label>
                       <FormControl
-                        type="text"
+                        type="number"
+                        step="0.1"
                         className="form-control"
                         placeholder="e.g. 1.5"
                         value={selectedCourse.class_per_week}
                         onChange={(e) => {
                           setSelectedCourse({
                             ...selectedCourse,
-                            class_per_week: Number.parseInt(
+                            class_per_week: Number.parseFloat(
                               e.target.value || "0"
                             ),
                           });
