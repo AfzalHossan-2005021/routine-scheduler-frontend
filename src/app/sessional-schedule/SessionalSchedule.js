@@ -14,7 +14,7 @@ import {
   getSessionalSchedules,
   setSessionalSchedules,
 } from "../api/sessional-schedule";
-import { getSchedules } from "../api";
+import { getSchedules } from "../api/theory-schedule";
 import { mdiContentSave, mdiAccountGroupOutline } from "@mdi/js";
 import Icon from "@mdi/react";
 import { useHistory } from "react-router-dom";
@@ -32,6 +32,168 @@ function formatSectionDisplay(section, classPerWeek) {
   }
   // For other courses, show the section as is
   return section;
+}
+
+/**
+ * Helper function to check if a lab time slot conflicts with theory courses
+ * @param {Object} theorySchedules - Theory schedules object
+ * @param {string} mainSection - Main section (A, B, C)
+ * @param {string} day - Day of the week
+ * @param {number} labTime - Lab time slot (8, 11, 2)
+ * @returns {Array} - Array of conflicting course IDs, empty if no conflict
+ */
+function hasTheoryConflict(theorySchedules, mainSection, day, labTime) {
+  // Check for theory conflicts based on lab time slots
+  // Lab at 8:00 conflicts with theory at 8, 9, or 10
+  // Lab at 11:00 conflicts with theory at 11, 12, or 1
+  // Lab at 2:00 conflicts with theory at 2, 3, or 4
+  
+  let conflictingTheoryTimes = [(labTime)%12, (labTime+1)%12, (labTime+2)%12];
+  if (labTime === 8) {
+    conflictingTheoryTimes = [8, 9, 10];
+  } else if (labTime === 11) {
+    conflictingTheoryTimes = [11, 12, 1];
+  } else if (labTime === 2) {
+    conflictingTheoryTimes = [2, 3, 4];
+  }
+
+  const conflictingCourses = [];
+
+  // Debug logging
+  console.log(`Checking conflict for ${mainSection} ${day} ${labTime}:`, {
+    theorySchedules,
+    conflictingTheoryTimes
+  });
+
+  // Check all theory sections that could affect this main section
+  for (const [sectionKey, scheduleData] of Object.entries(theorySchedules)) {
+    if (!scheduleData) continue;
+    
+    // Check if this section belongs to our main section (e.g., A1, A2 belong to A)
+    const sectionMainLetter = sectionKey.charAt(0);
+    if (sectionMainLetter !== mainSection) continue;
+    
+    // Check mainSection schedules if they exist
+    if (scheduleData.mainSection && Array.isArray(scheduleData.mainSection)) {
+      scheduleData.mainSection.forEach(slot => {
+        if (slot.day === day && 
+            conflictingTheoryTimes.includes(slot.time) &&
+            slot.type === 0 && // Only consider theory courses (type = 0)
+            slot.course_id) {
+          conflictingCourses.push(slot.course_id);
+        }
+      });
+    }
+    
+    // Check subsections schedules if they exist
+    if (scheduleData.subsections && typeof scheduleData.subsections === 'object') {
+      for (const [subsectionKey, subsectionSchedules] of Object.entries(scheduleData.subsections)) {
+        if (Array.isArray(subsectionSchedules)) {
+          subsectionSchedules.forEach(slot => {
+            if (slot.day === day && 
+                conflictingTheoryTimes.includes(slot.time) &&
+                slot.type === 0 && // Only consider theory courses (type = 0)
+                slot.course_id) {
+              conflictingCourses.push(slot.course_id);
+            }
+          });
+        }
+      }
+    }
+    
+    // Also check if scheduleData is directly an array (fallback)
+    if (Array.isArray(scheduleData)) {
+      scheduleData.forEach(slot => {
+        if (slot.day === day && 
+            conflictingTheoryTimes.includes(slot.time) &&
+            slot.type === 0 && // Only consider theory courses (type = 0)
+            slot.course_id) {
+          conflictingCourses.push(slot.course_id);
+        }
+      });
+    }
+  }
+
+  // Return unique course IDs sorted in lexicographical order
+  return [...new Set(conflictingCourses)].sort();
+}
+
+/**
+ * Helper function to check if a course is already assigned elsewhere in the SAME section
+ * @param {Object} labSchedulesBySection - All lab schedules by section
+ * @param {string} courseId - Course ID to check
+ * @param {string} currentSectionKey - Current section key being checked
+ * @param {string} currentDay - Current day
+ * @param {number} currentTime - Current time
+ * @returns {boolean} - True if the course is already assigned elsewhere in the same section
+ */
+function isCourseAlreadyAssigned(labSchedulesBySection, courseId, currentSectionKey, currentDay, currentTime) {
+  // Only check within the same section (not across different subsections)
+  const schedules = labSchedulesBySection[currentSectionKey];
+  if (!Array.isArray(schedules)) return false;
+  
+  // Check if this course is assigned in any other slot within this section
+  const hasAssignment = schedules.some(slot => 
+    slot.course_id === courseId && 
+    !(slot.day === currentDay && slot.time === currentTime)
+  );
+  
+  return hasAssignment;
+}
+
+/**
+ * Helper function to check for sessional course conflicts - students can't attend multiple courses at the same time
+ * @param {Object} labSchedulesBySection - All lab schedules by section
+ * @param {string} targetSectionKey - Section key where we want to add a course
+ * @param {string} day - Day of the week
+ * @param {number} time - Time slot
+ * @param {string} selectedDepartment - Department
+ * @param {Object} selectedLevelTermBatch - Level term batch object
+ * @returns {boolean} - True if there's a conflict (slot is already occupied)
+ */
+function hasSessionalConflict(labSchedulesBySection, targetSectionKey, day, time, selectedDepartment, selectedLevelTermBatch) {
+  if (!selectedDepartment || !selectedLevelTermBatch?.batch) return false;
+  
+  // Parse the target section to get main section and subsection info
+  const sectionParts = targetSectionKey.split(' ');
+  const targetSection = sectionParts[sectionParts.length - 1]; // e.g., 'A1', 'A2', 'A'
+  const mainSection = targetSection.charAt(0); // e.g., 'A', 'B', 'C'
+  
+  // Check for conflicts with:
+  // 1. Same section (A1 with A1)
+  // 2. Main section (A1 with A, A2 with A)
+  // 3. Other subsections if target is main section (A with A1, A with A2)
+  
+  const sectionsToCheck = [];
+  
+  if (targetSection.length === 1) {
+    // Target is main section (A, B, C) - check main section and all subsections
+    sectionsToCheck.push(`${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}`); // Main section
+    sectionsToCheck.push(`${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}1`); // Subsection 1
+    sectionsToCheck.push(`${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}2`); // Subsection 2
+  } else {
+    // Target is subsection (A1, A2) - check same subsection and main section
+    sectionsToCheck.push(targetSectionKey); // Same subsection
+    sectionsToCheck.push(`${selectedDepartment} ${selectedLevelTermBatch.batch} ${mainSection}`); // Main section
+  }
+  
+  // Check if any of these sections already have a course at this time slot
+  for (const sectionKey of sectionsToCheck) {
+    const schedules = labSchedulesBySection[sectionKey];
+    if (Array.isArray(schedules)) {
+      const hasConflict = schedules.some(slot => 
+        slot.day === day && 
+        slot.time === time && 
+        slot.course_id && 
+        slot.course_id.trim() !== ''
+      );
+      if (hasConflict) {
+        return true; // Conflict found
+      }
+    }
+  }
+  
+  return false; // No conflict
 }
 
 export default function SessionalSchedule() {
@@ -260,6 +422,9 @@ export default function SessionalSchedule() {
 
           // Set the theory schedules state with the flattened array for compatibility with existing code
           setTheorySchedules(schedulesMap);
+          
+          // Debug: Log the theory schedules structure
+          console.log('Theory schedules loaded:', schedulesMap);
 
           toast.dismiss(loadingToast);
         } catch (error) {
@@ -1280,13 +1445,9 @@ export default function SessionalSchedule() {
                                 <tr key={day}>
                                   <td style={scheduleTableStyle.dayCell}>{day}</td>
                                   {possibleLabTimes.map((time) => {
-                                    // Safely check for theory slots
-                                    let isTheorySlot = false;
-                                    if (hasTheorySchedules(theorySchedules, mainSection)) {
-                                      isTheorySlot = theorySchedules[mainSection].some(slot => 
-                                        slot.day === day && slot.time === time
-                                      );
-                                    }
+                                    // Check for theory conflicts
+                                    const conflictingCourses = hasTheoryConflict(theorySchedules, mainSection, day, time);
+                                    const hasConflict = conflictingCourses.length > 0;
                                     
                                     // Ensure subsectionNames is an array
                                     const subsections = Array.isArray(subsectionNames) ? subsectionNames : [];
@@ -1337,12 +1498,12 @@ export default function SessionalSchedule() {
                                         key={time} 
                                         style={{
                                           ...scheduleTableStyle.courseCell,
-                                          backgroundColor: isTheorySlot ? '#f8f9fa' : 'white',
+                                          backgroundColor: hasConflict ? '#ffebee' : 'white',
                                           position: 'relative'
                                         }}
                                       >
-                                        {/* Edit icon in top-right corner */}
-                                        {!isTheorySlot && (
+                                        {/* Edit icon in top-right corner - only show if no conflicts */}
+                                        {!hasConflict && (
                                           <div style={{
                                             position: 'absolute',
                                             top: '8px',
@@ -1404,16 +1565,28 @@ export default function SessionalSchedule() {
                                           </div>
                                         )}
                                         
-                                        {isTheorySlot ? (
+                                        {hasConflict ? (
                                           <div style={{
                                             padding: '8px',
-                                            backgroundColor: '#e9ecef',
+                                            backgroundColor: '#ffcdd2',
                                             borderRadius: '4px',
                                             fontSize: '0.8rem',
-                                            color: '#6c757d',
-                                            textAlign: 'center'
+                                            color: '#d32f2f',
+                                            textAlign: 'center',
+                                            fontWeight: '600',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: '100%',
+                                            minHeight: '60px',
+                                            flexDirection: 'column',
+                                            gap: '2px'
                                           }}>
-                                            Theory Class
+                                            {conflictingCourses.map((courseId, index) => (
+                                              <div key={index} style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                                                {courseId}
+                                              </div>
+                                            ))}
                                           </div>
                                         ) : (
                                           <>
@@ -1683,17 +1856,40 @@ export default function SessionalSchedule() {
                       const targetSection = mainSection;
                       const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}`;
                       
-                      // Check if already scheduled for this section
-                      const isAlreadyScheduled = labSchedulesBySection[targetSectionKey]?.some(slot => 
+                      // Check if already scheduled for this section OR if course is already assigned elsewhere
+                      const isSlotOccupied = labSchedulesBySection[targetSectionKey]?.some(slot => 
                         slot.day === selectedCell.day && 
                         slot.time === selectedCell.time && 
                         slot.course_id === (course.course_id || course.id)
                       ) || false;
                       
+                      const isCourseAssigned = isCourseAlreadyAssigned(
+                        labSchedulesBySection, 
+                        course.course_id || course.id, 
+                        targetSectionKey, 
+                        selectedCell.day, 
+                        selectedCell.time
+                      );
+                      
+                      // Check for sessional conflicts (students can't attend multiple courses at same time)
+                      const hasSessionalTimeConflict = hasSessionalConflict(
+                        labSchedulesBySection,
+                        targetSectionKey,
+                        selectedCell.day,
+                        selectedCell.time,
+                        selectedDepartment,
+                        selectedLevelTermBatch
+                      );
+                      
+                      const isAlreadyScheduled = isSlotOccupied || isCourseAssigned || hasSessionalTimeConflict;
+                      
                       courseCards.push({
                         section: targetSection,
                         sectionKey: targetSectionKey,
                         isAlreadyScheduled,
+                        isSlotOccupied,
+                        isCourseAssigned,
+                        hasSessionalTimeConflict,
                         displayText: `Section ${targetSection}`,
                         courseId: course.course_id || course.id
                       });
@@ -1704,16 +1900,39 @@ export default function SessionalSchedule() {
                       subsections.forEach(subsection => {
                         const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
                         
-                        const isAlreadyScheduled = labSchedulesBySection[targetSectionKey]?.some(slot => 
+                        const isSlotOccupied = labSchedulesBySection[targetSectionKey]?.some(slot => 
                           slot.day === selectedCell.day && 
                           slot.time === selectedCell.time && 
                           slot.course_id === (course.course_id || course.id)
                         ) || false;
                         
+                        const isCourseAssigned = isCourseAlreadyAssigned(
+                          labSchedulesBySection, 
+                          course.course_id || course.id, 
+                          targetSectionKey, 
+                          selectedCell.day, 
+                          selectedCell.time
+                        );
+                        
+                        // Check for sessional conflicts (students can't attend multiple courses at same time)
+                        const hasSessionalTimeConflict = hasSessionalConflict(
+                          labSchedulesBySection,
+                          targetSectionKey,
+                          selectedCell.day,
+                          selectedCell.time,
+                          selectedDepartment,
+                          selectedLevelTermBatch
+                        );
+                        
+                        const isAlreadyScheduled = isSlotOccupied || isCourseAssigned || hasSessionalTimeConflict;
+                        
                         courseCards.push({
                           section: subsection,
                           sectionKey: targetSectionKey,
                           isAlreadyScheduled,
+                          isSlotOccupied,
+                          isCourseAssigned,
+                          hasSessionalTimeConflict,
                           displayText: `Section ${subsection}`,
                           courseId: course.course_id || course.id
                         });
@@ -1803,7 +2022,12 @@ export default function SessionalSchedule() {
                             borderRadius: '4px',
                             fontWeight: '600'
                           }}>
-                            Already Scheduled
+                            {cardInfo.hasSessionalTimeConflict 
+                              ? 'Time Conflict' 
+                              : cardInfo.isCourseAssigned 
+                                ? 'Course Assigned' 
+                                : 'Slot Occupied'
+                            }
                           </div>
                         )}
                       </div>
