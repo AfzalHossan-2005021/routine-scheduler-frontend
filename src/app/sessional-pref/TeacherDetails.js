@@ -26,7 +26,7 @@ import toast from 'react-hot-toast';
  */
 function formatSectionDisplay(section, classPerWeek) {
   // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
-  if (classPerWeek === 0.75) {
+  if (classPerWeek === 0.75 && !section.includes('+')) {
     return `${section}1/${section}2`;
   }
   // For other courses, show the section as is
@@ -1046,10 +1046,8 @@ export default function TeacherDetails(props) {
 
       // Format and show error message
       const formattedMessage = conflictInfo.message.replace('%s', conflictInfo.courses);
-      toast.error(`${conflictInfo.icon} Can't select this time slot - ${formattedMessage}`, {
-        duration: 4000
+      toast.error(`${conflictInfo.icon} ${formattedMessage}`, {
       });
-      return;
     }
 
     // CASE 3: Replace an existing selection in the same time slot
@@ -1897,7 +1895,7 @@ export default function TeacherDetails(props) {
                       </div>
                     </div>
                   )}
-                  <div className="d-flex justify-content-end mt-3">
+                  <div className="d-flex justify-content-end mt-4 pb-4">
                     <button
                       className="btn"
                       onClick={handleSessionalCourseAssign}
@@ -1958,7 +1956,7 @@ export default function TeacherDetails(props) {
               <Modal.Title style={{ fontSize: "18px", fontWeight: "600", color: "#dc3545" }}>Unassign Course</Modal.Title>
             </div>
           </Modal.Header>
-          <Modal.Body className="px-4 bg-white">
+          <Modal.Body className="px-4 bg-white border-radius-0">
             <p style={{ fontSize: "16px", color: "#495057" }}>
               Are you sure you want to unassign the assignment: <strong>{selectedAssignment.course_id}</strong>?
             </p>

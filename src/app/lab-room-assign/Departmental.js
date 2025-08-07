@@ -1,37 +1,40 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Badge } from "react-bootstrap";
+import { Badge } from "react-bootstrap";
 import { toast } from "react-hot-toast";
-import { mdiLockCheck, mdiRefresh, mdiAlertCircleOutline } from '@mdi/js';
-import Icon from '@mdi/react';
+import { mdiAlertCircleOutline } from "@mdi/js";
+import Icon from "@mdi/react";
 
 import { getLabCourses, getLabRooms } from "../api/db-crud";
 import { getRoomAssign, setRoomAssign } from "../api/theory-assign";
 import { getAllSchedule } from "../api/theory-schedule";
 import { useConfig } from "../shared/ConfigContext";
+import { useHistory } from "react-router-dom";
 
 export default function LabRoomAssign() {
+  const history = useHistory();
   const { days, possibleLabTimes } = useConfig();
   const [offeredCourse, setOfferedCourse] = useState([]);
   const [sessionalSchedule, setSessionalSchedule] = useState([]);
 
-  const [savedConstraints, setSavedConstraints] = useState(false);
   const [viewRoomAssignment, setViewRoomAssignment] = useState(false);
   const [viewCourseAssignment, setViewCourseAssignment] = useState(true);
   const [viewLevelTermAssignment, setViewLevelTermAssignment] = useState(false);
 
   const [rooms, setRooms] = useState([]);
-  const [showAssignmentCard, setShowAssignmentCard] = useState(true);
 
   const [courseRoom, setCourseRoom] = useState([]);
   const [uniqueNamedCourses, setUniqueNamedCourses] = useState([]);
   const [fixedRoomAllocation, setFixedRoomAllocation] = useState([]);
-  const [alreadySaved, setAlreadySaved] = useState(false);
+  const [alreadySaved, setAlreadySaved] = useState(true);
+
+  const selectedCourseRef = useRef(null);
+  const selectedRoomRef = useRef(null);
 
   useEffect(() => {
     let rooms_, courses_;
     const labs = getLabRooms().then((res) => {
-      rooms_ = res;
-      setRooms(res);
+      rooms_ = res.sort((a, b) => a.room.localeCompare(b.room));
+      setRooms(rooms_);
     });
     const courses = getLabCourses().then((res) => {
       courses_ = res;
@@ -41,8 +44,9 @@ export default function LabRoomAssign() {
       // Additional validation - ensure we have an array
       const scheduleData = Array.isArray(res) ? res : [];
       // Filter out any entries that don't have required fields
-      const validSchedules = scheduleData.filter(item =>
-        item && item.day && item.time && item.course_id && item.section
+      const validSchedules = scheduleData.filter(
+        (item) =>
+          item && item.day && item.time && item.course_id && item.section
       );
       setSessionalSchedule(validSchedules);
     });
@@ -50,13 +54,14 @@ export default function LabRoomAssign() {
     Promise.all([labs, courses]).then(() => {
       getRoomAssign().then((res) => {
         if (res.length > 0) {
-          setAlreadySaved(true);
           const labRooms = rooms_.map((room) => {
             const courses = res
-              .filter((obj) => obj.room === room.room)
+              .filter((obj) => obj.room && obj.room === room.room)
               .map((obj) => {
                 return courses_.find(
-                  (course) => course.course_id === obj.course_id && course.section === obj.section
+                  (course) =>
+                    course.course_id === obj.course_id &&
+                    course.section === obj.section
                 );
               });
             return {
@@ -66,8 +71,7 @@ export default function LabRoomAssign() {
             };
           });
           setFixedRoomAllocation(labRooms);
-          setSavedConstraints(true);
-        } else setAlreadySaved(false);
+        }
       });
     });
   }, []);
@@ -84,65 +88,15 @@ export default function LabRoomAssign() {
     setUniqueNamedCourses(uniqueCourses);
   }, [offeredCourse]);
 
-  const selectedCourseRef = useRef(null);
-  const selectedRoomRef = useRef(null);
-
-  // Custom styles to match SessionalSchedule
-  const cardStyle = {
-    borderRadius: "15px",
-    border: "none",
-    boxShadow: "0 6px 20px rgba(0,0,0,0.08), 0 0 0 1px rgba(194, 137, 248, 0.1)",
-    overflow: "hidden",
-    backgroundColor: "#ffffff",
-    marginBottom: "24px",
-    transition: "transform 0.2s ease, box-shadow 0.2s ease"
-  };
-
-  const cardHeaderStyle = {
-    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-    color: "white",
-    padding: "18px 24px",
-    fontWeight: "600",
-    borderBottom: "none",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px"
-  };
-
-  const cardBodyStyle = {
-    padding: "24px"
-  };
-
-  const tableStyle = {
-    borderCollapse: "separate",
-    borderSpacing: "0",
-    textAlign: "center",
-    backgroundColor: "#f8f9fa",
-    boxShadow: "0 5px 20px rgba(0,0,0,0.15), 0 0 0 1px rgba(194, 137, 248, 0.1)",
-    borderRadius: "10px",
-    overflow: "hidden",
-    width: "100%",
-    margin: "0 auto",
-    transition: "all 0.3s ease"
-  };
-
-  const tableHeaderStyle = {
-    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-    color: "white",
-    padding: "12px 16px",
-    fontWeight: "600",
-    borderBottom: "none"
-  };
-
   const levelTermAllocation = fixedRoomAllocation.reduce((map, room) => {
     room.courses.forEach((course) => {
+      if (!course) return; // <-- Fix: skip undefined/null
       const { level_term } = course;
       if (!map[level_term]) map[level_term] = new Set();
       map[level_term].add(room.room);
     });
     return map;
   }, {});
-
   const levelTermAllocationArray = Object.keys(levelTermAllocation)
     .map((level_term) => {
       return {
@@ -157,9 +111,9 @@ export default function LabRoomAssign() {
   const generateRoomAssignments = () => {
     // Initialize the roomBookings structure with a safer approach
     const roomBookings = {};
-    days.forEach(day => {
+    days.forEach((day) => {
       roomBookings[day] = {};
-      possibleLabTimes.forEach(time => {
+      possibleLabTimes.forEach((time) => {
         roomBookings[day][time] = [];
       });
     });
@@ -178,7 +132,7 @@ export default function LabRoomAssign() {
     const scheduledCourses = [];
 
     // Process each scheduled course
-    sessionalSchedule.forEach(schedule => {
+    sessionalSchedule.forEach((schedule) => {
       // Defensive programming - Handle cases where schedule might be malformed
       if (!schedule) {
         console.warn("Found undefined or null schedule entry");
@@ -188,25 +142,32 @@ export default function LabRoomAssign() {
       const { day, time, course_id, section } = schedule;
 
       // Skip if day or time is missing or not valid
-      if (!day || !time || !days.includes(day) || !possibleLabTimes.includes(Number(time))) {
+      if (
+        !day ||
+        !time ||
+        !days.includes(day) ||
+        !possibleLabTimes.includes(Number(time))
+      ) {
         console.warn(`Invalid day or time in schedule: ${day} - ${time}`);
         return;
       }
 
       // Find the matching course in offered courses
-      const course = offeredCourse.find(c =>
-        c.course_id === course_id && c.section === section
+      const course = offeredCourse.find(
+        (c) => c.course_id === course_id && c.section === section
       );
 
       if (!course) {
-        console.warn(`Course ${course_id} section ${section} not found in offered courses`);
+        console.warn(
+          `Course ${course_id} section ${section} not found in offered courses`
+        );
         return;
       }
 
       scheduledCourses.push({
         ...course,
         day,
-        time
+        time,
       });
     });
 
@@ -233,8 +194,8 @@ export default function LabRoomAssign() {
     const coursesWithFixedRooms = new Map();
 
     // Add fixed rooms from previous assignments
-    fixedRoomAllocation.forEach(room => {
-      room.courses.forEach(course => {
+    fixedRoomAllocation.forEach((room) => {
+      room.courses.forEach((course) => {
         const key = `${course.course_id}_${course.section}`;
         if (!coursesWithFixedRooms.has(key)) {
           coursesWithFixedRooms.set(key, []);
@@ -244,18 +205,20 @@ export default function LabRoomAssign() {
     });
 
     // Add fixed rooms from the "Must Use" selections
-    courseRoom.forEach(item => {
+    courseRoom.forEach((item) => {
       // For each course_id in courseRoom, apply the constraint to all sections
-      const matchingCourses = offeredCourse.filter(course => course.course_id === item.course_id);
+      const matchingCourses = offeredCourse.filter(
+        (course) => course.course_id === item.course_id
+      );
 
       if (matchingCourses.length > 0) {
-        matchingCourses.forEach(course => {
+        matchingCourses.forEach((course) => {
           const key = `${course.course_id}_${course.section}`;
           // Clear any existing assignments for this course+section
           coursesWithFixedRooms.set(key, []);
 
           // Add all specified rooms for this course
-          item.rooms.forEach(roomName => {
+          item.rooms.forEach((roomName) => {
             coursesWithFixedRooms.get(key).push(roomName);
           });
         });
@@ -263,15 +226,17 @@ export default function LabRoomAssign() {
     });
 
     // Process each scheduled course for assignment
-    scheduledCourses.forEach(course => {
+    scheduledCourses.forEach((course) => {
       const { course_id, section, day, time } = course;
       const courseKey = `${course_id}_${section}`;
 
       // Use our safe getter to avoid undefined errors
       // Check which rooms are available at this day and time
-      const bookedRoomsAtThisTime = safeGetRoomBooking(day, time).map(booking => booking.room);
-      const availableRoomsAtThisTime = availableRooms.filter(room =>
-        !bookedRoomsAtThisTime.includes(room.room)
+      const bookedRoomsAtThisTime = safeGetRoomBooking(day, time).map(
+        (booking) => booking.room
+      );
+      const availableRoomsAtThisTime = availableRooms.filter(
+        (room) => !bookedRoomsAtThisTime.includes(room.room)
       );
 
       let assignedRoom = null;
@@ -303,27 +268,31 @@ export default function LabRoomAssign() {
 
         roomBookings[day][time].push({
           room: assignedRoom,
-          course: course
+          course: course,
         });
 
         roomAssignments.push({
           course_id,
           section,
           batch: course.batch,
-          room: assignedRoom
+          room: assignedRoom,
         });
       } else {
-        console.warn(`Failed to assign room for ${course_id}-${section} on ${day} at ${time}`);
+        console.warn(
+          `Failed to assign room for ${course_id}-${section} on ${day} at ${time}`
+        );
       }
     });
 
     // Create room allocation in the format expected by the UI
-    const newRoomAllocation = rooms.map(room => {
+    const newRoomAllocation = rooms.map((room) => {
       const assignedCourses = roomAssignments
-        .filter(assignment => assignment.room === room.room)
-        .map(assignment => {
+        .filter((assignment) => assignment.room === room.room)
+        .map((assignment) => {
           return offeredCourse.find(
-            course => course.course_id === assignment.course_id && course.section === assignment.section
+            (course) =>
+              course.course_id === assignment.course_id &&
+              course.section === assignment.section
           );
         })
         .filter(Boolean); // Remove any undefined entries
@@ -331,11 +300,10 @@ export default function LabRoomAssign() {
       return {
         room: room.room,
         count: assignedCourses.length,
-        courses: assignedCourses
+        courses: assignedCourses,
       };
     });
 
-    setSavedConstraints(true);
     setFixedRoomAllocation(newRoomAllocation);
 
     return roomAssignments;
@@ -343,373 +311,537 @@ export default function LabRoomAssign() {
 
   // Function to update room assignment for a specific course
   const updateCourseRoomAssignment = (course, newRoomName) => {
-    // Create a deep copy of the current room allocations
-    const updatedAllocation = fixedRoomAllocation.map(roomAlloc => {
-      // First remove this course from any room allocations it might be in
-      const filteredCourses = roomAlloc.courses.filter(c =>
-        !(c.course_id === course.course_id && c.section === course.section)
+    if (newRoomName) {
+      const isScheduled = sessionalSchedule.some((sched) => {
+        return (
+          sched.course_id === course.course_id &&
+          sched.section === course.section
+        );
+      });
+
+      if (!isScheduled) {
+        toast.error(
+          `${course.course_id} for Section ${course.section} is not scheduled. Schedule before assigning rooms.`
+        );
+        return;
+      }
+
+      // determine course schedule from sessionalSchedule
+      const sched = sessionalSchedule.find(
+        (item) =>
+          item.course_id === course.course_id && item.section === course.section
+      );
+
+      const sameSlotCourses = sessionalSchedule
+        .filter((item) => item.day === sched.day && item.time === sched.time)
+        .map((item) => ({
+          course_id: item.course_id,
+          section: item.section,
+        }))
+        .filter(
+          (item) =>
+            item.course_id !== course.course_id ||
+            item.section !== course.section
+        );
+
+      const roomCourses = fixedRoomAllocation.find(
+        (roomAlloc) => roomAlloc.room === newRoomName
+      ).courses;
+
+      const conflictingCourses = roomCourses.filter((roomCourse) => {
+        return sameSlotCourses.some(
+          (slotCourse) =>
+            slotCourse.course_id === roomCourse.course_id &&
+            slotCourse.section === roomCourse.section
+        );
+      });
+
+      if (conflictingCourses.length > 0) {
+        toast.error(
+          `Cannot assign ${course.course_id} (${
+            course.section
+          }) to ${newRoomName}. Conflicts with: ${conflictingCourses
+            .map((c) => `${c.course_id} (${c.section})`)
+            .join(", ")}`
+        );
+        return;
+      }
+    }
+
+    // First remove this course from any room allocations it might be in
+    const updatedAllocation = fixedRoomAllocation.map((roomAlloc) => {
+      const filteredCourses = roomAlloc.courses.filter(
+        (c) =>
+          !(
+            c.course_id === course.course_id &&
+            c.level_term === course.level_term &&
+            c.section === course.section
+          )
       );
 
       // Return the room with updated courses
       return {
         ...roomAlloc,
         courses: filteredCourses,
-        count: filteredCourses.length
+        count: filteredCourses.length,
       };
     });
 
     // Now add the course to the newly selected room
-    const targetRoomIndex = updatedAllocation.findIndex(r => r.room === newRoomName);
+    const targetRoomIndex = updatedAllocation.findIndex(
+      (r) => r.room === newRoomName
+    );
 
     if (targetRoomIndex !== -1) {
       updatedAllocation[targetRoomIndex] = {
         ...updatedAllocation[targetRoomIndex],
-        courses: [
-          ...updatedAllocation[targetRoomIndex].courses,
-          course
-        ],
-        count: updatedAllocation[targetRoomIndex].count + 1
+        courses: [...updatedAllocation[targetRoomIndex].courses, course],
+        count: updatedAllocation[targetRoomIndex].count + 1,
       };
     }
 
     // Update the fixedRoomAllocation state
-    setFixedRoomAllocation(updatedAllocation);
+    setFixedRoomAllocation(() => updatedAllocation);
+    const data = [
+      {
+        course_id: course.course_id,
+        batch: course.batch,
+        section: course.section,
+        room: newRoomName,
+      },
+    ];
 
-    // Show success message
-    if (newRoomName) {
-      toast.success(`${course.course_id} (Section ${course.section}) assigned to ${newRoomName}`);
-    } else {
-      toast.error(`Room assignment cleared for ${course.course_id} (Section ${course.section})`);
-    }
+    setRoomAssign(data)
+      .then((res) => {
+        if (newRoomName) {
+          toast.success(
+            `${course.course_id} (Section ${course.section}) assigned to ${newRoomName}`
+          );
+        } else {
+          toast.error(
+            `Room assignment cleared for ${course.course_id} (Section ${course.section})`
+          );
+        }
+      })
+      .catch((error) => {
+        toast.error("Failed to update lab room assignment");
+      });
   };
 
-  // Define a shared style object for modal action buttons (copied from Teachers.js)
-  const modalButtonStyle = {
-    borderRadius: "6px",
-    padding: "7px 14px",
-    fontWeight: "500",
-    background: "rgba(154, 77, 226, 0.15)",
-    border: "1px solid rgba(154, 77, 226, 0.5)",
-    color: "rgb(154, 77, 226)",
-    transition: "all 0.3s ease",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    fontSize: "0.9rem"
-  };
+  // Block in-app route changes if there are unsaved changes
+  useEffect(() => {
+    if (alreadySaved) return;
+    const unblock = history.block((location, action) => {
+      return "You have unsaved changes. Are you sure you want to leave?";
+    });
+    return () => {
+      unblock();
+    };
+  }, [alreadySaved, history]);
 
   return (
     <div>
       {/* Modern Page Header */}
-      <div className="page-header" style={{
-        background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-        borderRadius: "16px",
-        padding: "1.5rem",
-        marginBottom: "2rem",
-        boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
-        color: "white"
-      }}>
-        <h3 className="page-title" style={{
-          fontSize: "1.8rem",
-          fontWeight: "700",
-          marginBottom: "0.5rem",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          color: "white"
-        }}>
-          <div style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            backgroundColor: "rgba(255, 255, 255, 0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
-          }}>
-            <Icon path={mdiLockCheck} size={1} color="white" />
+      <div className="page-header">
+        <h3 className="page-title">
+          <div className="page-title-icon-container">
+            <i className="mdi mdi-lock-check" />
           </div>
           Departmental Lab Room Assignment
         </h3>
       </div>
-      {!alreadySaved && showAssignmentCard && (
-        <div className="row mb-4">
-          <div className="col-12">
-            <div className="card" style={{
-              borderRadius: "16px",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-              border: "none",
-              transition: "all 0.3s ease",
-              background: "white"
-            }}>
-              <div className="card-body" style={{ padding: "2rem" }}>
-                <div style={{ borderBottom: "3px solid rgb(194, 137, 248)", paddingBottom: "16px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h4 className="card-title" style={{
-                    color: "rgb(174, 117, 228)",
-                    marginBottom: 0,
-                    fontWeight: "700",
-                    display: "flex",
-                    alignItems: "center",
-                    fontSize: "1.5rem",
-                    letterSpacing: "0.3px"
-                  }}>
-                    <i className="mdi mdi-domain mr-2"></i>Lab Room Assignment
-                  </h4>
-                </div>
-                {sessionalSchedule.length === 0 ? (
-                  <div className="alert mb-5" role="alert" style={{
-                    backgroundColor: "rgba(255, 193, 7, 0.1)",
-                    border: "1px solid rgba(255, 193, 7, 0.2)",
-                    borderRadius: "12px",
-                    padding: "22px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "18px",
-                    boxShadow: "0 8px 20px rgba(255, 193, 7, 0.08)",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}>
-                    <div style={{
-                      position: "absolute",
-                      top: 0,
-                      right: 0,
-                      width: "150px",
-                      height: "150px",
-                      background: "radial-gradient(circle at top right, rgba(255, 193, 7, 0.1), transparent 70%)",
-                      zIndex: 0
-                    }}></div>
-                    <div style={{
-                      minWidth: "45px",
-                      height: "45px",
-                      borderRadius: "12px",
-                      background: "linear-gradient(45deg, #FFC107, #FFDB58)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: "0 4px 12px rgba(255, 193, 7, 0.3)",
-                      zIndex: 1
-                    }}>
-                      <Icon path={mdiAlertCircleOutline} size={1} color="white" />
-                    </div>
-                    <div style={{ zIndex: 1 }}>
-                      <h5 style={{ margin: "0 0 5px 0", color: "#664d03", fontWeight: "600" }}>Schedule Not Found</h5>
-                      <span style={{ color: "#664d03", fontWeight: "400", opacity: 0.9 }}>Please create a sessional schedule before assigning lab rooms.</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="alert mb-5" role="alert" style={{
-                    backgroundColor: "rgba(13, 202, 240, 0.08)",
-                    border: "1px solid rgba(13, 202, 240, 0.2)",
-                    borderRadius: "12px",
-                    padding: "22px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "18px",
-                    boxShadow: "0 8px 20px rgba(13, 202, 240, 0.08)",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}>
-                    <div style={{
-                      minWidth: "45px",
-                      height: "45px",
-                      borderRadius: "12px",
-                      background: "linear-gradient(45deg, #0dcaf0, #79E2F2)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: "0 4px 12px rgba(13, 202, 240, 0.3)",
-                      zIndex: 1
-                    }}>
-                      <Icon path={mdiAlertCircleOutline} size={1} color="white" />
-                    </div>
-                    <div style={{ zIndex: 1 }}>
-                      <h5 style={{ margin: "0 0 5px 0", color: "#055160", fontWeight: "600" }}>Automatic Assignment</h5>
-                      <span style={{ color: "#055160", fontWeight: "400", opacity: 0.9 }}>The system will automatically assign lab rooms based on the sessional schedule. Fixed room constraints (added with "MUST USE" button) will be respected when possible.</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mb-4" style={{
-                  display: courseRoom.length > 0 ? 'block' : 'none',
-                  animation: courseRoom.length > 0 ? 'fadeIn 0.5s ease-out' : 'none'
-                }}>
-                  <div className="d-flex align-items-center mb-3">
-                    <div style={{
-                      width: "38px",
-                      height: "38px",
-                      borderRadius: "12px",
-                      background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: "0 6px 16px rgba(154, 77, 226, 0.2)",
-                      marginRight: "14px"
-                    }}>
-                      <i className="mdi mdi-lock-check" style={{ color: "white", fontSize: "20px" }}></i>
-                    </div>
-                    <h5 style={{
-                      margin: 0,
-                      fontWeight: "700",
-                      color: "#333",
-                      display: "flex",
-                      alignItems: "center",
-                      fontSize: "18px"
-                    }}>
-                      Fixed Room Constraints
-                      <span className="ms-2 badge" style={{
-                        backgroundColor: "rgba(194, 137, 248, 0.1)",
-                        color: "rgb(154, 77, 226)",
-                        fontSize: "0.7rem",
-                        padding: "5px 8px",
-                        borderRadius: "20px",
-                        fontWeight: "500"
-                      }}>
-                        {courseRoom.length} {courseRoom.length === 1 ? 'course' : 'courses'}
-                      </span>
-                    </h5>
-                  </div>
-
-                  <div className="rounded p-4" style={{
-                    backgroundColor: "rgba(194, 137, 248, 0.04)",
-                    border: "1px solid rgba(194, 137, 248, 0.15)",
-                    borderRadius: "14px",
-                    boxShadow: "0 6px 20px rgba(194, 137, 248, 0.08)"
-                  }}>
-                    <div className="d-flex flex-wrap">
-                      {courseRoom.map((item, index) => (
-                        <div
-                          className="m-2"
+      <div className="row mb-4">
+        <div className="col-12">
+          <div className="card">
+            <div className="card-view">
+              <div className="card-control-container">
+                <h4 className="card-name">
+                  <i className="card-icon mdi mdi-domain"></i>Lab Room
+                  Assignment
+                </h4>
+              </div>
+              <div
+                className="card-inner-table-container"
+                style={{ boxShadow: "none", backgroundColor: "transparent" }}
+              >
+                {courseRoom.length <= 0 ? (
+                  sessionalSchedule.length === 0 ? (
+                    <div
+                      className="alert"
+                      role="alert"
+                      style={{
+                        marginTop: "16px",
+                        backgroundColor: "rgba(255, 193, 7, 0.1)",
+                        border: "1px solid rgba(255, 193, 7, 0.2)",
+                        borderRadius: "12px",
+                        padding: "16px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "18px",
+                        boxShadow: "0 8px 20px rgba(255, 193, 7, 0.08)",
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          width: "150px",
+                          height: "150px",
+                          background:
+                            "radial-gradient(circle at top right, rgba(255, 193, 7, 0.1), transparent 70%)",
+                          zIndex: 0,
+                        }}
+                      ></div>
+                      <div
+                        style={{
+                          minWidth: "45px",
+                          height: "45px",
+                          borderRadius: "12px",
+                          background:
+                            "linear-gradient(45deg, #FFC107, #FFDB58)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 4px 12px rgba(255, 193, 7, 0.3)",
+                          zIndex: 1,
+                        }}
+                      >
+                        <Icon
+                          path={mdiAlertCircleOutline}
+                          size={1}
+                          color="white"
+                        />
+                      </div>
+                      <div style={{ zIndex: 1 }}>
+                        <h5
                           style={{
-                            backgroundColor: "#fff",
-                            borderRadius: "12px",
-                            boxShadow: "0 4px 15px rgba(194, 137, 248, 0.12)",
-                            border: "1px solid rgba(194, 137, 248, 0.1)",
-                            transition: "all 0.3s ease",
-                            padding: "12px 16px",
-                            position: "relative",
-                            overflow: "hidden"
+                            margin: "0 0 5px 0",
+                            color: "#664d03",
+                            fontWeight: "600",
                           }}
-                          key={index}
                         >
-                          <div style={{
-                            position: "absolute",
-                            top: 0,
-                            right: 0,
-                            width: "80px",
-                            height: "80px",
-                            background: "radial-gradient(circle at top right, rgba(194, 137, 248, 0.03), transparent 70%)"
-                          }}></div>
+                          Schedule Not Found
+                        </h5>
+                        <span
+                          style={{
+                            color: "#664d03",
+                            fontWeight: "400",
+                            opacity: 0.9,
+                          }}
+                        >
+                          Please create a sessional schedule before assigning
+                          lab rooms.
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="alert"
+                      role="alert"
+                      style={{
+                        marginTop: "16px",
+                        backgroundColor: "rgba(13, 202, 240, 0.08)",
+                        border: "1px solid rgba(13, 202, 240, 0.2)",
+                        borderRadius: "12px",
+                        padding: "16px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "16px",
+                        boxShadow: "0 8px 20px rgba(13, 202, 240, 0.08)",
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          minWidth: "45px",
+                          height: "45px",
+                          borderRadius: "12px",
+                          background:
+                            "linear-gradient(45deg, #0dcaf0, #79E2F2)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 4px 12px rgba(13, 202, 240, 0.3)",
+                          zIndex: 1,
+                        }}
+                      >
+                        <Icon
+                          path={mdiAlertCircleOutline}
+                          size={1}
+                          color="white"
+                        />
+                      </div>
+                      <div style={{ zIndex: 1 }}>
+                        <h5
+                          style={{
+                            margin: "0 0 5px 0",
+                            color: "#055160",
+                            fontWeight: "600",
+                            textAlign: "left",
+                          }}
+                        >
+                          Automatic Assignment
+                        </h5>
+                        <span
+                          style={{
+                            color: "#055160",
+                            fontWeight: "400",
+                            opacity: 0.9,
+                          }}
+                        >
+                          The system will automatically assign lab rooms based
+                          on the sessional schedule. Fixed room constraints
+                          (added with "MUST USE" button) will be respected when
+                          possible.
+                        </span>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  <div
+                    className="mb-4"
+                    style={{
+                      display: courseRoom.length > 0 ? "block" : "none",
+                      animation:
+                        courseRoom.length > 0 ? "fadeIn 0.5s ease-out" : "none",
+                    }}
+                  >
+                    <div
+                      className="p-4 mt-4"
+                      style={{
+                        backgroundColor: "rgba(194, 137, 248, 0.04)",
+                        border: "1px solid rgba(194, 137, 248, 0.15)",
+                        borderRadius: "15px",
+                        boxShadow: "0 6px 20px rgba(194, 137, 248, 0.08)",
+                      }}
+                    >
+                      <div className="d-flex align-items-center mb-3">
+                        <div
+                          style={{
+                            width: "38px",
+                            height: "38px",
+                            borderRadius: "12px",
+                            background:
+                              "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxShadow: "0 6px 16px rgba(154, 77, 226, 0.2)",
+                            marginRight: "14px",
+                          }}
+                        >
+                          <i
+                            className="mdi mdi-lock-check"
+                            style={{ color: "white", fontSize: "20px" }}
+                          ></i>
+                        </div>
+                        <h5
+                          style={{
+                            margin: 0,
+                            fontWeight: "700",
+                            color: "#333",
+                            display: "flex",
+                            alignItems: "center",
+                            fontSize: "18px",
+                          }}
+                        >
+                          Fixed Room Constraints
+                          <span
+                            className="ms-2 badge"
+                            style={{
+                              backgroundColor: "rgba(194, 137, 248, 0.1)",
+                              color: "rgb(154, 77, 226)",
+                              fontSize: "0.7rem",
+                              padding: "5px 8px",
+                              borderRadius: "20px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {courseRoom.length}{" "}
+                            {courseRoom.length === 1 ? "course" : "courses"}
+                          </span>
+                        </h5>
+                      </div>
+                      <div className="d-flex flex-wrap">
+                        {courseRoom.map((item, index) => (
+                          <div
+                            className="m-2"
+                            style={{
+                              backgroundColor: "#fff",
+                              borderRadius: "12px",
+                              boxShadow: "0 4px 15px rgba(194, 137, 248, 0.12)",
+                              border: "1px solid rgba(194, 137, 248, 0.1)",
+                              transition: "all 0.3s ease",
+                              padding: "12px 16px",
+                              position: "relative",
+                              overflow: "hidden",
+                            }}
+                            key={index}
+                          >
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                right: 0,
+                                width: "80px",
+                                height: "80px",
+                                background:
+                                  "radial-gradient(circle at top right, rgba(194, 137, 248, 0.03), transparent 70%)",
+                              }}
+                            ></div>
 
-                          <div className="d-flex flex-column">
-                            <div className="mb-2">
-                              <Badge bg="info" text="light" style={{
-                                fontSize: "0.95rem",
-                                padding: "7px 12px",
-                                borderRadius: "8px",
-                                background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                boxShadow: "0 3px 8px rgba(154, 77, 226, 0.2)",
-                                fontWeight: "600",
-                                letterSpacing: "0.3px"
-                              }}>
-                                {item.course_id}
-                              </Badge>
-                            </div>
+                            <div className="d-flex flex-column">
+                              <div className="mb-2">
+                                <Badge
+                                  bg="info"
+                                  text="light"
+                                  style={{
+                                    fontSize: "0.95rem",
+                                    padding: "7px 12px",
+                                    borderRadius: "8px",
+                                    background:
+                                      "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+                                    boxShadow:
+                                      "0 3px 8px rgba(154, 77, 226, 0.2)",
+                                    fontWeight: "600",
+                                    letterSpacing: "0.3px",
+                                  }}
+                                >
+                                  {item.course_id}
+                                </Badge>
+                              </div>
 
-                            <div className="mt-1">
-                              <small style={{
-                                color: "#555",
-                                fontWeight: "500",
-                                fontSize: "0.8rem",
-                                display: "block",
-                                marginBottom: "5px"
-                              }}>
-                                Must use rooms:
-                              </small>
-                              <div className="d-flex flex-wrap align-items-center" style={{ gap: "4px" }}>
-                                {item.rooms.map((room, roomIndex) => (
-                                  <span key={roomIndex} className="d-flex align-items-center">
-                                    <Badge bg="primary" text="light" style={{
-                                      fontSize: "0.85rem",
-                                      padding: "6px 10px",
-                                      borderRadius: "6px",
-                                      background: "#6c7ae0",
-                                      boxShadow: "0 2px 6px rgba(108, 122, 224, 0.2)",
-                                      border: "none",
-                                      fontWeight: "500"
-                                    }}>
-                                      {room}
-                                    </Badge>
-                                    <button
-                                      className="btn btn-sm p-0 ms-1"
-                                      style={{
-                                        borderRadius: "6px",
-                                        backgroundColor: "rgba(255, 92, 92, 0.08)",
-                                        border: "none",
-                                        color: "#ff5c5c",
-                                        transition: "all 0.2s ease",
-                                        marginLeft: "8px",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        width: "26px",
-                                        height: "26px"
-                                      }}
-                                      onClick={() => {
-                                        const updatedRoom = item.rooms.filter(
-                                          (r) => r !== room
-                                        );
-                                        if (updatedRoom.length === 0) {
-                                          setCourseRoom(
-                                            courseRoom.filter(
-                                              (course) =>
-                                                course.course_id !== item.course_id
-                                            )
-                                          );
-
-                                          setUniqueNamedCourses([
-                                            ...uniqueNamedCourses,
-                                            offeredCourse.find(
-                                              (course) =>
-                                                course.course_id === item.course_id
-                                            ),
-                                          ]);
-                                        } else {
-                                          const index = courseRoom.findIndex(
-                                            (course) =>
-                                              course.course_id === item.course_id
-                                          );
-                                          const updatedCourseRoom = [...courseRoom];
-                                          updatedCourseRoom[index].rooms = updatedRoom;
-                                          setCourseRoom(updatedCourseRoom);
-                                        }
-                                      }}
+                              <div className="mt-1">
+                                <small
+                                  style={{
+                                    color: "#555",
+                                    fontWeight: "500",
+                                    fontSize: "0.8rem",
+                                    display: "block",
+                                    marginBottom: "5px",
+                                  }}
+                                >
+                                  Must use rooms:
+                                </small>
+                                <div
+                                  className="d-flex flex-wrap align-items-center"
+                                  style={{ gap: "4px" }}
+                                >
+                                  {item.rooms.map((room, roomIndex) => (
+                                    <span
+                                      key={roomIndex}
+                                      className="d-flex align-items-center"
                                     >
-                                      <i className="mdi mdi-delete-outline" style={{ fontSize: "14px" }}></i>
-                                    </button>
-                                  </span>
-                                ))}
+                                      <Badge
+                                        bg="primary"
+                                        text="light"
+                                        style={{
+                                          fontSize: "0.85rem",
+                                          borderRadius: "6px",
+                                          background: "#6c7ae0",
+                                          boxShadow:
+                                            "0 2px 6px rgba(108, 122, 224, 0.2)",
+                                          border: "none",
+                                          fontWeight: "500",
+                                        }}
+                                      >
+                                        {room}
+                                        <button
+                                          style={{
+                                            borderRadius: "6px",
+                                            border: "none",
+                                            color: "red",
+                                            transition: "all 0.2s ease",
+                                            marginLeft: "8px",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            width: "26px",
+                                            height: "26px",
+                                          }}
+                                          onClick={() => {
+                                            const updatedRoom =
+                                              item.rooms.filter(
+                                                (r) => r !== room
+                                              );
+                                            if (updatedRoom.length === 0) {
+                                              setCourseRoom((prevCourseRoom) =>
+                                                prevCourseRoom.filter(
+                                                  (course) =>
+                                                    course.course_id !==
+                                                    item.course_id
+                                                )
+                                              );
+
+                                              setUniqueNamedCourses(
+                                                (prevCourses) => [
+                                                  ...prevCourses,
+                                                  offeredCourse.find(
+                                                    (course) =>
+                                                      course.course_id ===
+                                                      item.course_id
+                                                  ),
+                                                ]
+                                              );
+                                            } else {
+                                              setCourseRoom(
+                                                (prevCourseRoom) => {
+                                                  const index =
+                                                    prevCourseRoom.findIndex(
+                                                      (course) =>
+                                                        course.course_id ===
+                                                        item.course_id
+                                                    );
+                                                  const updatedCourseRoom = [
+                                                    ...prevCourseRoom,
+                                                  ];
+                                                  updatedCourseRoom[
+                                                    index
+                                                  ].rooms = updatedRoom;
+                                                  return updatedCourseRoom;
+                                                }
+                                              );
+                                            }
+                                            toast.success(
+                                              `Room ${room} removed from ${item.course_id}`
+                                            );
+                                          }}
+                                        >
+                                          <i
+                                            className="mdi mdi-delete-outline"
+                                            style={{ fontSize: "14px" }}
+                                          ></i>
+                                        </button>
+                                      </Badge>
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 <form className="mt-4">
                   <div className="row g-4">
                     {/* First Column */}
                     <div className="col-12 col-md-5">
-                      <div style={{
-                        backgroundColor: "rgba(194, 137, 248, 0.04)",
-                        borderRadius: "15px",
-                        padding: "24px",
-                        height: "100%",
-                        border: "1px solid rgba(194, 137, 248, 0.15)",
-                        boxShadow: "0 8px 25px rgba(0, 0, 0, 0.03)"
-                      }}>
+                      <div
+                        style={{
+                          backgroundColor: "rgba(194, 137, 248, 0.04)",
+                          borderRadius: "15px",
+                          padding: "24px",
+                          height: "100%",
+                          border: "1px solid rgba(194, 137, 248, 0.15)",
+                          boxShadow: "0 8px 25px rgba(0, 0, 0, 0.03)",
+                        }}
+                      >
                         <label
                           htmlFor="courseSelect"
                           className="form-label mb-3"
@@ -719,22 +851,43 @@ export default function LabRoomAssign() {
                             display: "flex",
                             alignItems: "center",
                             gap: "12px",
-                            fontSize: "16px"
+                            fontSize: "16px",
                           }}
                         >
-                          <div style={{
-                            background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                            width: "35px",
-                            height: "35px",
-                            borderRadius: "10px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)"
-                          }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 3L1 9L12 15L23 9L12 3Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              <path d="M5 11.5V17L12 21L19 17V11.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          <div
+                            style={{
+                              background:
+                                "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+                              width: "35px",
+                              height: "35px",
+                              borderRadius: "10px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
+                            }}
+                          >
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M12 3L1 9L12 15L23 9L12 3Z"
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M5 11.5V17L12 21L19 17V11.5"
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
                             </svg>
                           </div>
                           Fixed Room Constraints (Optional)
@@ -751,17 +904,23 @@ export default function LabRoomAssign() {
                             border: "1px solid rgba(194, 137, 248, 0.3)",
                             boxShadow: "0 8px 20px rgba(194, 137, 248, 0.08)",
                             padding: "12px",
-                            background: "linear-gradient(to bottom, #ffffff, #fdfaff)",
+                            background:
+                              "linear-gradient(to bottom, #ffffff, #fdfaff)",
                             transition: "all 0.3s ease",
                             fontWeight: "500",
                             color: "#333",
                             scrollbarWidth: "thin",
-                            scrollbarColor: "rgba(194, 137, 248, 0.3) rgba(194, 137, 248, 0.1)"
+                            scrollbarColor:
+                              "rgba(194, 137, 248, 0.3) rgba(194, 137, 248, 0.1)",
                           }}
                           ref={selectedCourseRef}
                         >
                           {uniqueNamedCourses.map((course, index) => (
-                            <option key={`${course.course_id}-${index}`} className="p-2" value={course.course_id}>
+                            <option
+                              key={`${course.course_id}-${index}`}
+                              className="p-2"
+                              value={course.course_id}
+                            >
                               {course.course_id} - {course.name}
                             </option>
                           ))}
@@ -771,53 +930,94 @@ export default function LabRoomAssign() {
 
                     {/* Middle Column */}
                     <div className="col-12 col-md-2 d-flex justify-content-center align-items-center">
-                      <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "100%",
-                        padding: "20px 0"
-                      }}>
-                        <Button
-                          style={modalButtonStyle}
-                          className="d-flex align-items-center justify-content-center"
-                          onMouseEnter={e => {
-                            e.target.style.background = "rgb(154, 77, 226)";
-                            e.target.style.color = "white";
-                            e.target.style.borderColor = "rgb(154, 77, 226)";
-                          }}
-                          onMouseLeave={e => {
-                            e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                            e.target.style.color = "rgb(154, 77, 226)";
-                            e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
-                          }}
-                          onClick={() => {
-                            setCourseRoom((prev) => [
-                              ...prev,
-                              {
-                                course_id: selectedCourseRef.current.value,
-                                rooms: Array.from(selectedRoomRef.current.selectedOptions).map((o) => o.value),
-                              },
-                            ]);
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          height: "100%",
+                          padding: "20px 0",
+                        }}
+                      >
+                        <button
+                          className="card-control-button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const courseId = selectedCourseRef.current.value;
+                            const newRooms = Array.from(
+                              selectedRoomRef.current.selectedOptions
+                            ).map((o) => o.value);
+
+                            if (!courseId || newRooms.length === 0) {
+                              toast.error(
+                                "Please select a course and at least one room."
+                              );
+                              return;
+                            }
+
+                            setCourseRoom((prev) => {
+                              const existing = prev.find(
+                                (item) => item.course_id === courseId
+                              );
+
+                              if (existing) {
+                                // Merge and deduplicate rooms
+                                const mergedRooms = Array.from(
+                                  new Set([...existing.rooms, ...newRooms])
+                                );
+                                return prev.map((item) =>
+                                  item.course_id === courseId
+                                    ? { ...item, rooms: mergedRooms }
+                                    : item
+                                );
+                              } else {
+                                return [
+                                  ...prev,
+                                  { course_id: courseId, rooms: newRooms },
+                                ];
+                              }
+                            });
+
+                            toast.success(
+                              `Fixed room constraints added for ${courseId}.`
+                            );
+                            selectedCourseRef.current.value = "";
+                            selectedRoomRef.current.selectedIndex = -1;
                           }}
                         >
-                          <Icon path={mdiLockCheck} size={0.9} style={{ marginRight: 6 }} />
+                          <i className="mdi mdi-lock-check" />
                           MUST USE
-                        </Button>
+                        </button>
+                        <button
+                          className="card-control-button"
+                          style={{ marginTop: "24px" }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCourseRoom(() => []);
+                            toast.success(
+                              "All constraints cleared successfully."
+                            );
+                          }}
+                        >
+                          <i className="mdi mdi-delete"></i>
+                          Clear All Constrains
+                        </button>
                       </div>
                     </div>
 
                     {/* Third Column */}
                     <div className="col-12 col-md-5">
-                      <div style={{
-                        backgroundColor: "rgba(194, 137, 248, 0.04)",
-                        borderRadius: "15px",
-                        padding: "24px",
-                        height: "100%",
-                        border: "1px solid rgba(194, 137, 248, 0.15)",
-                        boxShadow: "0 8px 25px rgba(0, 0, 0, 0.03)"
-                      }}>
+                      <div
+                        style={{
+                          backgroundColor: "rgba(194, 137, 248, 0.04)",
+                          borderRadius: "15px",
+                          padding: "24px",
+                          height: "100%",
+                          border: "1px solid rgba(194, 137, 248, 0.15)",
+                          boxShadow: "0 8px 25px rgba(0, 0, 0, 0.03)",
+                        }}
+                      >
                         <label
                           htmlFor="roomSelect"
                           className="form-label mb-3"
@@ -827,24 +1027,11 @@ export default function LabRoomAssign() {
                             display: "flex",
                             alignItems: "center",
                             gap: "12px",
-                            fontSize: "16px"
+                            fontSize: "16px",
                           }}
                         >
-                          <div style={{
-                            background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                            width: "35px",
-                            height: "35px",
-                            borderRadius: "10px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)"
-                          }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M21 4H3C1.89543 4 1 4.89543 1 6V18C1 19.1046 1.89543 20 3 20H21C22.1046 20 23 19.1046 23 18V6C23 4.89543 22.1046 4 21 4Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              <path d="M16 12L8 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              <path d="M12 8L12 16" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
+                          <div className="colored-icon-container">
+                            <i className="mdi mdi-door" />
                           </div>
                           Available Rooms
                         </label>
@@ -860,17 +1047,23 @@ export default function LabRoomAssign() {
                             border: "1px solid rgba(194, 137, 248, 0.3)",
                             boxShadow: "0 8px 20px rgba(194, 137, 248, 0.08)",
                             padding: "12px",
-                            background: "linear-gradient(to bottom, #ffffff, #fdfaff)",
+                            background:
+                              "linear-gradient(to bottom, #ffffff, #fdfaff)",
                             transition: "all 0.3s ease",
                             fontWeight: "500",
                             color: "#333",
                             scrollbarWidth: "thin",
-                            scrollbarColor: "rgba(194, 137, 248, 0.3) rgba(194, 137, 248, 0.1)"
+                            scrollbarColor:
+                              "rgba(194, 137, 248, 0.3) rgba(194, 137, 248, 0.1)",
                           }}
                           ref={selectedRoomRef}
                         >
                           {rooms.map((room, index) => (
-                            <option key={room.room || index} className="p-2" value={room.room}>
+                            <option
+                              key={room.room || index}
+                              className="p-2"
+                              value={room.room}
+                            >
                               {room.room}
                             </option>
                           ))}
@@ -879,624 +1072,411 @@ export default function LabRoomAssign() {
                     </div>
                   </div>
                 </form>
-                <hr className="my-5" style={{ opacity: "0.1", borderColor: "rgb(194, 137, 248)", margin: "35px 0" }} />
-                <div className="d-flex justify-content-center">
-                  <Button
-                    style={modalButtonStyle}
-                    className="d-flex align-items-center justify-content-center"
-                    onMouseEnter={e => {
-                      e.target.style.background = "rgb(154, 77, 226)";
-                      e.target.style.color = "white";
-                      e.target.style.borderColor = "rgb(154, 77, 226)";
-                    }}
-                    onMouseLeave={e => {
-                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                      e.target.style.color = "rgb(154, 77, 226)";
-                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
-                    }}
-                    onClick={() => {
-                      generateRoomAssignments();
-                      setShowAssignmentCard(false);
-                    }}
-                  >
-                    <Icon path={mdiRefresh} size={1.1} style={{ marginRight: 8 }} />
-                    Assign Lab Rooms
-                  </Button>
-                </div>
-
               </div>
+            </div>
+            <div
+              className="d-flex justify-content-center p-4"
+              style={{
+                borderTop: "1px solid rgba(194, 137, 248, 0.2)",
+                gap: "20px",
+              }}
+            >
+              <button
+                className="card-control-button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  generateRoomAssignments();
+                  setAlreadySaved(() => false);
+                  toast.success("Lab room assignments generated successfully.");
+                }}
+              >
+                <i className="mdi mdi-refresh"></i>
+                Generate Assignments
+              </button>
+
+              <button
+                className="card-control-button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setViewCourseAssignment(() => true);
+                  setViewLevelTermAssignment(() => false);
+                  setViewRoomAssignment(() => false);
+                  setAlreadySaved(() => false);
+                  // Clear all assignments
+                  setFixedRoomAllocation((prev) => {
+                    const newRoomAllocation = prev.map((room) => ({
+                      ...room,
+                      courses: [],
+                    }));
+                    toast.success(`All assignments cleared successfully.`);
+                    return newRoomAllocation;
+                  });
+                }}
+              >
+                <i className="mdi mdi-refresh"></i>
+                Clear Assignments
+              </button>
+              <button
+                className="card-control-button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  let data = [];
+                  fixedRoomAllocation.forEach((room) => {
+                    room.courses.forEach((course) => {
+                      data.push({
+                        course_id: course.course_id,
+                        batch: course.batch,
+                        section: course.section,
+                        room: room.room,
+                      });
+                    });
+                  });
+                  setRoomAssign(data).then((res) => {
+                    toast.success("Lab Room Assignment Saved Successfully");
+                    setAlreadySaved(() => true);
+                    setViewCourseAssignment(() => true);
+                    setViewLevelTermAssignment(() => false);
+                    setViewRoomAssignment(() => false);
+                  });
+                }}
+              >
+                <i className="mdi mdi-content-save"></i>
+                Save Assignment
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* "Edit Constraints" button removed as requested */}
-
-      {savedConstraints && (
-        <div className="row">
-          <div className="col-12 grid-margin">
-            <div className="card" style={cardStyle}>
-              <div className="card-header" style={{
-                ...cardHeaderStyle,
-                padding: "0",
-                overflow: "hidden"
-              }}>
-                <ul className="nav nav-tabs w-100" style={{
-                  margin: "0",
-                  borderBottom: "none"
-                }}>
-                  <li className="nav-item">
-                    <Button
-                      variant={viewCourseAssignment ? "primary" : "light"}
-                      className="rounded-0 border-0"
-                      style={{
-                        backgroundColor: viewCourseAssignment ?
-                          "rgba(255, 255, 255, 0.3)" : "transparent",
-                        boxShadow: viewCourseAssignment ?
-                          "0 -4px 0 rgba(255, 255, 255, 0.7) inset" : "none",
-                        color: "#fff",
-                        fontWeight: "600",
-                        padding: "20px 25px",
-                        borderRadius: "0",
-                        border: "none",
-                        height: "100%"
-                      }}
-                      onClick={() => {
-                        setViewCourseAssignment(true);
-                        setViewRoomAssignment(false);
-                        setViewLevelTermAssignment(false);
-                      }}
-                    >
-                      <i className="mdi mdi-book-open-variant me-2"></i>
-                      Course Assignment
-                    </Button>
-                  </li>
-                  <li className="nav-item">
-                    <Button
-                      variant={!viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment ? "primary" : "light"}
-                      className="rounded-0 border-0"
-                      style={{
-                        backgroundColor: !viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment ?
-                          "rgba(255, 255, 255, 0.3)" : "transparent",
-                        boxShadow: !viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment ?
-                          "0 -4px 0 rgba(255, 255, 255, 0.7) inset" : "none",
-                        color: "#fff",
-                        fontWeight: "600",
-                        padding: "20px 25px",
-                        borderRadius: "0",
-                        border: "none",
-                        height: "100%"
-                      }}
-                      onClick={() => {
-                        setViewCourseAssignment(false);
-                        setViewRoomAssignment(false);
-                        setViewLevelTermAssignment(false);
-                      }}
-                    >
-                      <i className="mdi mdi-chart-bar me-2"></i>
-                      Statistics
-                    </Button>
-                  </li>
-                  <li className="nav-item">
-                    <Button
-                      variant={viewRoomAssignment ? "primary" : "light"}
-                      className="rounded-0 border-0"
-                      style={{
-                        backgroundColor: viewRoomAssignment ?
-                          "rgba(255, 255, 255, 0.3)" : "transparent",
-                        boxShadow: viewRoomAssignment ?
-                          "0 -4px 0 rgba(255, 255, 255, 0.7) inset" : "none",
-                        color: "#fff",
-                        fontWeight: "600",
-                        padding: "20px 25px",
-                        borderRadius: "0",
-                        border: "none",
-                        height: "100%"
-                      }}
-                      onClick={() => {
-                        setViewRoomAssignment(true);
-                        setViewCourseAssignment(false);
-                        setViewLevelTermAssignment(false);
-                      }}
-                    >
-                      <i className="mdi mdi-door me-2"></i>
-                      Room Assignment
-                    </Button>
-                  </li>
-                  <li className="nav-item">
-                    <Button
-                      variant={viewLevelTermAssignment ? "primary" : "light"}
-                      className="rounded-0 border-0"
-                      style={{
-                        backgroundColor: viewLevelTermAssignment ?
-                          "rgba(255, 255, 255, 0.3)" : "transparent",
-                        boxShadow: viewLevelTermAssignment ?
-                          "0 -4px 0 rgba(255, 255, 255, 0.7) inset" : "none",
-                        color: "#fff",
-                        fontWeight: "600",
-                        padding: "20px 25px",
-                        borderRadius: "0",
-                        border: "none",
-                        height: "100%"
-                      }}
-                      onClick={() => {
-                        setViewLevelTermAssignment(true);
-                        setViewCourseAssignment(false);
-                        setViewRoomAssignment(false);
-                      }}
-                    >
-                      <i className="mdi mdi-school me-2"></i>
-                      Level-Term Assignment
-                    </Button>
-                  </li>
-                </ul>
+      <div className="card">
+        <div
+          className="card-header"
+          style={{
+            background:
+              "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+            color: "white",
+            padding: "0",
+          }}
+        >
+          <ul
+            className="nav nav-tabs w-100"
+            style={{
+              margin: "0",
+              borderBottom: "none",
+            }}
+          >
+            <li className="nav-item">
+              <button
+                className={`header-tab-button ${
+                  viewCourseAssignment ? "selected" : "unselected"
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setViewCourseAssignment(() => true);
+                  setViewRoomAssignment(() => false);
+                  setViewLevelTermAssignment(() => false);
+                }}
+              >
+                <i className="mdi mdi-book-open-variant mr-2"></i>
+                Course Assignment
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`header-tab-button ${
+                  !viewCourseAssignment &&
+                  !viewRoomAssignment &&
+                  !viewLevelTermAssignment
+                    ? "selected"
+                    : "unselected"
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setViewCourseAssignment(() => false);
+                  setViewRoomAssignment(() => false);
+                  setViewLevelTermAssignment(() => false);
+                }}
+              >
+                <i className="mdi mdi-chart-bar mr-2"></i>
+                Statistics
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`header-tab-button ${
+                  viewRoomAssignment ? "selected" : "unselected"
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setViewRoomAssignment(() => true);
+                  setViewCourseAssignment(() => false);
+                  setViewLevelTermAssignment(() => false);
+                }}
+              >
+                <i className="mdi mdi-door mr-2"></i>
+                Room Assignment
+              </button>
+            </li>
+            <li className="nav-item">
+              <button
+                className={`header-tab-button ${
+                  viewLevelTermAssignment ? "selected" : "unselected"
+                }`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setViewLevelTermAssignment(() => true);
+                  setViewCourseAssignment(() => false);
+                  setViewRoomAssignment(() => false);
+                }}
+              >
+                <i className="mdi mdi-school mr-2"></i>
+                Level-Term Assignment
+              </button>
+            </li>
+          </ul>
+        </div>
+        <div className="card-view">
+          <div className="card-inner-table-container table-responsive">
+            {fixedRoomAllocation.length === 0 ? (
+              <div className="text-center py-4">
+                <div className="mb-3">
+                  <i
+                    className="mdi mdi-flask-off-outline"
+                    style={{
+                      fontSize: "3rem",
+                      color: "#6c757d",
+                      opacity: 0.5,
+                    }}
+                  ></i>
+                </div>
+                <h6 className="text-muted mb-2">No Sessional Courses</h6>
+                <p className="text-muted mb-0" style={{ fontSize: "0.9rem" }}>
+                  No sessional courses have been distributed yet.
+                </p>
               </div>
-              <div className="card-body" style={{ ...cardBodyStyle, padding: "24px" }}>
+            ) : (
+              <>
                 {/* Statistics Tab */}
-                {!viewLevelTermAssignment && !viewRoomAssignment && !viewCourseAssignment && (
-                  <div className="tab-pane fade show active">
-                    <div className="table-responsive">
-                      <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
-                        <thead>
-                          <tr>
-                            <th style={tableHeaderStyle}> Lab Room </th>
-                            <th style={tableHeaderStyle}> Number of courses </th>
-                          </tr>
-                        </thead>
-                        <style>
-                          {`
-                              .stats-row {
-                                transition: all 0.2s ease;
-                              }
-                              .stats-row:hover {
-                                background-color: rgba(194, 137, 248, 0.05) !important;
-                              }
-                            `}
-                        </style>
-                        <tbody>
-                          {fixedRoomAllocation.map((room, index) => (
-                            <tr key={index} className="stats-row">
-                              <td style={{
-                                padding: "16px",
-                                verticalAlign: "middle",
-                                textAlign: "center"
-                              }}>
+                {!viewLevelTermAssignment &&
+                  !viewRoomAssignment &&
+                  !viewCourseAssignment && (
+                    <table className="card-inner-table table">
+                      <thead className="card-inner-tabale-header">
+                        <tr>
+                          <th> Lab Room </th>
+                          <th> Number of courses </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fixedRoomAllocation
+                          .sort((a, b) => a.room.localeCompare(b.room))
+                          .map((room, index) => (
+                            <tr key={index}>
+                              <td>
                                 <div className="d-flex flex-column align-items-center">
-                                  <div style={{
-                                    width: "45px",
-                                    height: "45px",
-                                    borderRadius: "12px",
-                                    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
-                                    marginBottom: "10px"
-                                  }}>
-                                    <i className="mdi mdi-door" style={{ fontSize: "20px", color: "white" }}></i>
+                                  <div className="colored-icon-container">
+                                    <i className="mdi mdi-door"></i>
                                   </div>
-                                  <span style={{ fontSize: "1.05rem", fontWeight: "600", color: "#333" }}>{room.room}</span>
+                                  <span className="bold-text">{room.room}</span>
                                 </div>
                               </td>
-                              <td style={{
-                                padding: "16px",
-                                verticalAlign: "middle",
-                                textAlign: "center"
-                              }}>
-                                <div style={{
-                                  width: "60px",
-                                  height: "60px",
-                                  backgroundColor: room.count > 0 ? "rgba(40, 167, 69, 0.1)" : "rgba(108, 117, 125, 0.1)",
-                                  color: room.count > 0 ? "#28a745" : "#6c757d",
-                                  borderRadius: "50%",
-                                  border: `2px solid ${room.count > 0 ? "rgba(40, 167, 69, 0.5)" : "rgba(108, 117, 125, 0.5)"}`,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  margin: "0 auto",
-                                  fontSize: "1.25rem",
-                                  fontWeight: "600",
-                                  boxShadow: room.count > 0 ? "0 4px 8px rgba(40, 167, 69, 0.15)" : "0 4px 8px rgba(108, 117, 125, 0.15)"
-                                }}>
+                              <td>
+                                <div
+                                  className={`status-container ${
+                                    room.count > 0 ? "green" : "gray"
+                                  }`}
+                                >
                                   {room.count}
                                 </div>
-                                <div style={{
-                                  marginTop: "8px",
-                                  fontSize: "0.85rem",
-                                  color: "#666",
-                                  fontWeight: "500"
-                                }}>
-                                  {room.count === 1 ? 'course' : 'courses'}
+                                <div className="dimmed-text">
+                                  {room.count === 1 ? "course" : "courses"}
                                 </div>
                               </td>
                             </tr>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                      </tbody>
+                    </table>
+                  )}
 
                 {/* Room Assignment Tab */}
-                {!viewLevelTermAssignment && viewRoomAssignment && !viewCourseAssignment && (
-                  <div className="tab-pane fade show active">
-                    <div className="table-responsive">
-                      <table className="table" style={tableStyle}>
-                        <thead>
-                          <tr>
-                            <th style={tableHeaderStyle}> Lab Room </th>
-                            <th style={tableHeaderStyle}> Assigned Courses </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {fixedRoomAllocation.map((room, index) => (
-                            <tr key={index}>
-                              <td style={{
-                                padding: "16px",
-                                fontWeight: "600",
-                                verticalAlign: "middle",
-                                borderRight: "1px solid rgba(194, 137, 248, 0.1)",
-                                textAlign: "center"
-                              }}>
-                                <div className="d-flex flex-column align-items-center">
-                                  <div style={{
-                                    width: "45px",
-                                    height: "45px",
-                                    borderRadius: "12px",
-                                    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
-                                    marginBottom: "10px",
-                                    transition: "transform 0.2s ease"
-                                  }}>
-                                    <i className="mdi mdi-door" style={{ fontSize: "20px", color: "white" }}></i>
-                                  </div>
-                                  <span style={{ fontSize: "1.05rem", fontWeight: "600", color: "#333", marginBottom: "4px" }}>{room.room}</span>
-                                  <div style={{
-                                    backgroundColor: "rgba(194, 137, 248, 0.08)",
-                                    padding: "3px 10px",
-                                    borderRadius: "12px",
-                                    fontSize: "0.8rem",
-                                    color: "rgb(106, 27, 154)",
-                                    fontWeight: "500"
-                                  }}>
-                                    {room.count} {room.count === 1 ? 'course' : 'courses'}
-                                  </div>
+                {!viewLevelTermAssignment &&
+                  viewRoomAssignment &&
+                  !viewCourseAssignment && (
+                    <table className="card-inner-table table">
+                      <thead className="card-inner-tabale-header">
+                        <tr>
+                          <th> Lab Room </th>
+                          <th> Assigned Courses </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fixedRoomAllocation.map((room, index) => (
+                          <tr key={index}>
+                            <td>
+                              <div className="d-flex flex-column align-items-center">
+                                <div className="colored-icon-container">
+                                  <i className="mdi mdi-door"></i>
+                                </div>
+                                <span className="bold-text">{room.room}</span>
+                                <div className="colored-badge-light">
+                                  {room.count}{" "}
+                                  {room.count === 1 ? "course" : "courses"}
+                                </div>
+                              </div>
+                            </td>
+                            {room.courses.length === 0 ? (
+                              <td>
+                                <div className="dotted-border-div">
+                                  <i
+                                    className="mdi mdi-information-outline"
+                                    style={{ color: "rgb(174, 117, 228)" }}
+                                  ></i>
+                                  No courses assigned
                                 </div>
                               </td>
-                              {room.courses.length === 0 ? (
-                                <td style={{ padding: "20px", textAlign: "center", verticalAlign: "middle" }}>
-                                  <div style={{
-                                    padding: "20px",
-                                    backgroundColor: "rgba(194, 137, 248, 0.05)",
-                                    borderRadius: "12px",
-                                    color: "#888",
-                                    border: "1px dashed rgba(194, 137, 248, 0.3)",
-                                    fontStyle: "italic"
-                                  }}>
-                                    <i className="mdi mdi-information-outline me-2" style={{ color: "rgb(174, 117, 228)" }}></i>
-                                    No courses assigned
-                                  </div>
-                                </td>
-                              ) : (
-                                <td style={{ padding: "16px", textAlign: "center", verticalAlign: "middle" }}>
-                                  <div className="d-flex flex-column align-items-center gap-3">
-                                    {room.courses.map((course, index) => (
-                                      <div
-                                        key={index}
-                                        className="course-item"
-                                        style={{
-                                          padding: "12px 16px",
-                                          borderRadius: "10px",
-                                          backgroundColor: "rgba(194, 137, 248, 0.05)",
-                                          border: "1px solid rgba(194, 137, 248, 0.12)",
-                                          width: "100%",
-                                          maxWidth: "400px",
-                                          boxShadow: "0 3px 8px rgba(0,0,0,0.03)",
-                                          transition: "transform 0.2s ease, box-shadow 0.2s ease"
-                                        }}
-                                        onMouseEnter={(e) => {
-                                          e.currentTarget.style.transform = "translateY(-2px)";
-                                          e.currentTarget.style.boxShadow = "0 5px 12px rgba(0,0,0,0.06)";
-                                        }}
-                                        onMouseLeave={(e) => {
-                                          e.currentTarget.style.transform = "translateY(0)";
-                                          e.currentTarget.style.boxShadow = "0 3px 8px rgba(0,0,0,0.03)";
-                                        }}
-                                      >
-                                        <div className="d-flex align-items-center justify-content-center gap-2 flex-wrap">
-                                          <Badge style={{
-                                            background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                            padding: "5px 10px",
-                                            borderRadius: "6px",
-                                            fontSize: "0.85rem",
-                                            fontWeight: "600",
-                                            boxShadow: "0 2px 4px rgba(174, 117, 228, 0.2)"
-                                          }}>
-                                            {course.course_id}
-                                          </Badge>
-                                          <span style={{ fontWeight: "500" }}>
-                                            {course.name}
-                                          </span>
-                                          <Badge bg="secondary" style={{
-                                            backgroundColor: "#f0f0f0",
-                                            color: "#444",
-                                            padding: "3px 8px",
-                                            borderRadius: "4px",
-                                            fontSize: "0.75rem"
-                                          }}>
-                                            Section {course.section}
-                                          </Badge>
-                                        </div>
+                            ) : (
+                              <td>
+                                <div className="d-flex flex-column align-items-center gap-4">
+                                  {room.courses.map((course, index) => (
+                                    <div key={index} className="animated-div">
+                                      <div className="d-flex align-items-center justify-content-center gap-4 flex-column">
+                                        <Badge className="colored-badge-dark">
+                                          {course.course_id}
+                                        </Badge>
+                                        <span
+                                          style={{
+                                            fontWeight: "500",
+                                            padding: "8px",
+                                          }}
+                                        >
+                                          {course.name}
+                                        </span>
+                                        <Badge bg="secondary">
+                                          Section {course.section}
+                                        </Badge>
                                       </div>
-                                    ))}
-                                  </div>
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
 
                 {/* Course Assignment Tab */}
-                {!viewLevelTermAssignment && viewCourseAssignment && !viewRoomAssignment && (
-                  <div className="tab-pane fade show active">
-                    <div className="table-responsive">
-                      <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
-                        <thead>
-                          <tr>
-                            <th style={tableHeaderStyle}> Course ID </th>
-                            <th style={tableHeaderStyle}> Course Name </th>
-                            <th style={tableHeaderStyle}> Level-Term </th>
-                            <th style={tableHeaderStyle}> Section </th>
-                            <th style={tableHeaderStyle}> Assigned Room </th>
-                          </tr>
-                        </thead>
-                        <style>
-                          {`
-                              .table tbody tr {
-                                transition: all 0.2s ease;
-                              }
-                              .table tbody tr:hover {
-                                background-color: rgba(194, 137, 248, 0.05) !important;
-                              }
-                              .form-select:focus {
-                                border-color: rgba(194, 137, 248, 0.8) !important;
-                                box-shadow: 0 0 0 0.25rem rgba(194, 137, 248, 0.25) !important;
-                              }
-                            `}
-                        </style>
-                        <tbody>
-                          {offeredCourse.map((course, index) => {
-                            // Find the current room assignment for this course
-                            const currentRoom = fixedRoomAllocation.find(room =>
-                              room.courses.some(c =>
-                                c.course_id === course.course_id && c.section === course.section
-                              )
-                            );
-                            return (
-                              <tr key={index}>
-                                <td>{course.course_id}</td>
-                                <td>{course.name}</td>
-                                <td>{course.level_term}</td>
-                                <td>{course.section}</td>
-                                <td>
-                                  <select
-                                    className="form-select form-select-sm"
-                                    value={currentRoom ? currentRoom.room : ''}
-                                    onChange={(e) => updateCourseRoomAssignment(course, e.target.value)}
-                                    style={{
-                                      borderRadius: '8px',
-                                      borderColor: 'rgba(194, 137, 248, 0.5)',
-                                      background: currentRoom ? 'rgba(194, 137, 248, 0.1)' : '#fff',
-                                      color: currentRoom ? '#6b38a6' : '#6c757d',
-                                      padding: '0.4rem 0.75rem',
-                                      fontSize: '0.9rem',
-                                      boxShadow: currentRoom ? '0 0 0 0.2rem rgba(194, 137, 248, 0.15)' : 'none',
-                                      transition: 'all 0.2s ease'
-                                    }}
-                                  >
-                                    <option value="">Select a room</option>
-                                    {rooms.map((room) => (
-                                      <option key={room.room} value={room.room}>
-                                        {room.room}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                {!viewLevelTermAssignment &&
+                  viewCourseAssignment &&
+                  !viewRoomAssignment && (
+                    <table className="card-inner-table table">
+                      <thead className="card-inner-tabale-header">
+                        <tr>
+                          <th> Course ID </th>
+                          <th> Course Name </th>
+                          <th> Level-Term </th>
+                          <th> Section </th>
+                          <th> Assigned Room </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {offeredCourse.map((course, index) => {
+                          // Find the current room assignment for this course
+                          const currentRoom = fixedRoomAllocation.find((room) =>
+                            room.courses.some(
+                              (c) =>
+                                c.course_id === course.course_id &&
+                                c.section === course.section
+                            )
+                          );
+                          return (
+                            <tr key={index}>
+                              <td>{course.course_id}</td>
+                              <td>{course.name}</td>
+                              <td>{course.level_term}</td>
+                              <td>{course.section}</td>
+                              <td>
+                                <select
+                                  className="form-select"
+                                  value={currentRoom ? currentRoom.room : ""}
+                                  onChange={(e) =>
+                                    updateCourseRoomAssignment(
+                                      course,
+                                      e.target.value
+                                    )
+                                  }
+                                >
+                                  <option value="">Select a room</option>
+                                  {rooms.map((room) => (
+                                    <option key={room.room} value={room.room}>
+                                      {room.room}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
 
                 {/* Level-Term Assignment Tab */}
                 {viewLevelTermAssignment && (
-                  <div className="tab-pane fade show active">
-                    <div className="table-responsive">
-                      <table className="table" style={{ ...tableStyle, transition: 'all 0.3s ease' }}>
-                        <thead>
-                          <tr>
-                            <th style={tableHeaderStyle}> Level-Term </th>
-                            <th style={tableHeaderStyle}> Used Labs </th>
-                          </tr>
-                        </thead>
-                        <style>
-                          {`
-                              .level-term-row {
-                                transition: all 0.2s ease;
-                              }
-                              .level-term-row:hover {
-                                background-color: rgba(194, 137, 248, 0.05) !important;
-                              }
-                              .badge-room {
-                                background-color: rgba(194, 137, 248, 0.1);
-                                color: rgb(106, 27, 154);
-                                border: 1px solid rgba(194, 137, 248, 0.2);
-                                padding: 6px 12px;
-                                margin: 3px;
-                                border-radius: 8px;
-                                display: inline-block;
-                                font-weight: 500;
-                                font-size: 0.9rem;
-                                transition: all 0.2s ease;
-                              }
-                              .badge-room:hover {
-                                background-color: rgba(194, 137, 248, 0.15);
-                                transform: translateY(-1px);
-                                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-                              }
-                            `}
-                        </style>
-                        <tbody>
-                          {levelTermAllocationArray.map((lt, index) => (
-                            <tr key={index} className="level-term-row">
-                              <td style={{
-                                verticalAlign: "middle",
-                                textAlign: "center",
-                                fontWeight: "600",
-                                fontSize: "1.05rem",
-                                color: "#333"
-                              }}>
-                                <div className="d-flex flex-column align-items-center">
-                                  <div style={{
-                                    width: "45px",
-                                    height: "45px",
-                                    borderRadius: "12px",
-                                    background: "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    boxShadow: "0 4px 10px rgba(174, 117, 228, 0.2)",
-                                    marginBottom: "10px"
-                                  }}>
-                                    <i className="mdi mdi-school" style={{ fontSize: "20px", color: "white" }}></i>
-                                  </div>
-                                  {lt.level_term}
-                                </div>
-                              </td>
-                              {lt.rooms.length === 0 ? (
-                                <td style={{
-                                  padding: "20px",
-                                  textAlign: "center",
-                                  verticalAlign: "middle"
-                                }}>
-                                  <div style={{
-                                    padding: "20px",
-                                    backgroundColor: "rgba(194, 137, 248, 0.05)",
-                                    borderRadius: "12px",
-                                    color: "#888",
-                                    border: "1px dashed rgba(194, 137, 248, 0.3)",
-                                    fontStyle: "italic"
-                                  }}>
-                                    <i className="mdi mdi-information-outline me-2" style={{ color: "rgb(174, 117, 228)" }}></i>
-                                    No rooms assigned
-                                  </div>
-                                </td>
-                              ) : (
-                                <td style={{
-                                  padding: "16px",
-                                  textAlign: "center",
-                                  verticalAlign: "middle"
-                                }}>
-                                  <div className="d-flex flex-wrap justify-content-center">
-                                    {lt.rooms.map((room, index) => (
-                                      <span key={index} className="badge-room">
-                                        <i className="mdi mdi-door me-2"></i>
-                                        {room}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </td>
-                              )}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                  <table className="card-inner-table table">
+                    <thead className="card-inner-tabale-header">
+                      <tr>
+                        <th> Level-Term </th>
+                        <th> Used Labs </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {levelTermAllocationArray.map((lt, index) => (
+                        <tr key={index}>
+                          <td>
+                            <div className="d-flex flex-column align-items-center">
+                              <div className="colored-icon-container">
+                                <i className="mdi mdi-school"></i>
+                              </div>
+                              {lt.level_term}
+                            </div>
+                          </td>
+                          {lt.rooms.length === 0 ? (
+                            <td>
+                              <div className="dotted-border-div">
+                                <i
+                                  className="mdi mdi-information-outline"
+                                  style={{ color: "rgb(174, 117, 228)" }}
+                                ></i>
+                                No rooms assigned
+                              </div>
+                            </td>
+                          ) : (
+                            <td>
+                              <div className="d-flex flex-wrap justify-content-center">
+                                {lt.rooms.map((room, index) => (
+                                  <span
+                                    key={index}
+                                    className="colored-badge-light"
+                                  >
+                                    <i className="mdi mdi-door"></i>
+                                    {room}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
-              </div>
-
-              {/* Footer with buttons */}
-              {!alreadySaved && (
-                <div className="d-flex justify-content-end p-4" style={{
-                  borderTop: "1px solid rgba(194, 137, 248, 0.2)",
-                  gap: "20px"
-                }}>
-                  <Button
-                    onClick={() => {
-                      // Initialize all states
-                      setSavedConstraints(false);
-                      setViewRoomAssignment(false);
-                      setViewCourseAssignment(false);
-                      setFixedRoomAllocation([]);
-                      setShowAssignmentCard(true); // Show the assignment card again
-                    }}
-                    style={modalButtonStyle}
-                    className="d-flex align-items-center justify-content-center"
-                    onMouseEnter={e => {
-                      e.target.style.background = "rgb(154, 77, 226)";
-                      e.target.style.color = "white";
-                      e.target.style.borderColor = "rgb(154, 77, 226)";
-                    }}
-                    onMouseLeave={e => {
-                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                      e.target.style.color = "rgb(154, 77, 226)";
-                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
-                    }}
-                  >
-                    <i className="mdi mdi-refresh me-2"></i>
-                    Clear Assignments
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      let data = [];
-                      fixedRoomAllocation.forEach((room) => {
-                        room.courses.forEach((course) => {
-                          data.push({
-                            course_id: course.course_id,
-                            batch: course.batch,
-                            section: course.section,
-                            room: room.room,
-                          });
-                        });
-                      });
-                      setRoomAssign(data).then((res) => {
-                        toast.success("Lab Room Assignment Saved Successfully");
-                        setAlreadySaved(true);
-                      });
-                    }}
-                    style={modalButtonStyle}
-                    className="d-flex align-items-center justify-content-center"
-                    onMouseEnter={e => {
-                      e.target.style.background = "rgb(154, 77, 226)";
-                      e.target.style.color = "white";
-                      e.target.style.borderColor = "rgb(154, 77, 226)";
-                    }}
-                    onMouseLeave={e => {
-                      e.target.style.background = "rgba(154, 77, 226, 0.15)";
-                      e.target.style.color = "rgb(154, 77, 226)";
-                      e.target.style.borderColor = "rgba(154, 77, 226, 0.5)";
-                    }}
-                  >
-                    <i className="mdi mdi-content-save me-2"></i>
-                    Save Assignment
-                  </Button>
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

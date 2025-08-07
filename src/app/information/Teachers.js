@@ -297,14 +297,6 @@ export default function Teachers() {
                         Active
                       </th>
                       <th>
-                        <i className="mdi mdi-book-open-variant"></i>
-                        Theory
-                      </th>
-                      <th>
-                        <i className="mdi mdi-laptop"></i>
-                        Sessional
-                      </th>
-                      <th>
                         <i className="mdi mdi-account-tie"></i>
                         Designation
                       </th>
@@ -495,72 +487,6 @@ export default function Teachers() {
                                 });
                             }}
                           ></div>
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="form-input"
-                            value={teacher.theory_courses}
-                            onChange={(e) => {
-                              const newTeachers = [...teachers];
-                              newTeachers[idx].theory_courses = Number(
-                                e.target.value
-                              );
-                              setTeachers(newTeachers);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                updateTeacher(
-                                  teacher.prev_initial || teacher.initial,
-                                  {
-                                    ...teacher,
-                                    theory_courses: Number(e.target.value),
-                                  }
-                                )
-                                  .then(() =>
-                                    toast.success(
-                                      "Teacher updated successfully"
-                                    )
-                                  )
-                                  .catch((error) => {
-                                    toast.error("Failed to update teacher");
-                                  });
-                              }
-                            }}
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            className="form-input"
-                            value={teacher.sessional_courses}
-                            onChange={(e) => {
-                              const newTeachers = [...teachers];
-                              newTeachers[idx].sessional_courses = Number(
-                                e.target.value
-                              );
-                              setTeachers(newTeachers);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                updateTeacher(
-                                  teacher.prev_initial || teacher.initial,
-                                  {
-                                    ...teacher,
-                                    sessional_courses: Number(e.target.value),
-                                  }
-                                )
-                                  .then(() =>
-                                    toast.success(
-                                      "Teacher updated successfully"
-                                    )
-                                  )
-                                  .catch((error) => {
-                                    toast.error("Failed to update teacher");
-                                  });
-                              }
-                            }}
-                          />
                         </td>
                         <td>
                           <CreatableSelect
@@ -782,7 +708,7 @@ export default function Teachers() {
         show={showMapCredit}
         onHide={() => setShowMapCredit(false)}
         centered
-        contentClassName="border-0 shadow add-term-modal-content"
+        contentClassName="modal-content"
         backdrop="static"
       >
         <Modal.Header className="modeal-header">
@@ -1045,50 +971,6 @@ export default function Teachers() {
                             ...selectedTeacher,
                             teacher_credits_offered:
                               Number(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </FormGroup>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col md={6} className="px-2 py-1">
-                    <FormGroup>
-                      <Form.Label className="form-label">
-                        Theory Courses
-                      </Form.Label>
-                      <FormControl
-                        type="text"
-                        className="form-control"
-                        placeholder="Enter Number Theory Courses to take"
-                        value={selectedTeacher.theory_courses}
-                        onChange={(e) =>
-                          setSelectedTeacher({
-                            ...selectedTeacher,
-                            theory_courses: Number.parseInt(
-                              e.target.value || "0"
-                            ),
-                          })
-                        }
-                      />
-                    </FormGroup>
-                  </Col>
-                  <Col className="px-2 py-1">
-                    <FormGroup>
-                      <Form.Label className="form-label">
-                        Sessional Courses
-                      </Form.Label>
-                      <FormControl
-                        type="text"
-                        className="form-control"
-                        placeholder="Enter Number Sessional Courses to take"
-                        value={selectedTeacher.sessional_courses}
-                        onChange={(e) =>
-                          setSelectedTeacher({
-                            ...selectedTeacher,
-                            sessional_courses: Number.parseInt(
-                              e.target.value || "0"
-                            ),
                           })
                         }
                       />
