@@ -495,6 +495,7 @@ export default function ShowSessionalDistribution() {
 
       const schedules = {
         course_id: "None",
+        prev_course_id: courseToRemove.course_id,
         day: courseToRemove.day,
         time: courseToRemove.time,
         batch: courseToRemove.batch,
@@ -579,6 +580,7 @@ export default function ShowSessionalDistribution() {
         schedule.time === time &&
         schedule.batch === course.batch &&
         schedule.section === course.section &&
+        !schedule.section.includes('+') && // Exclude optional sections
         schedule.department === course.department
       );
 
@@ -648,7 +650,6 @@ export default function ShowSessionalDistribution() {
 
       // Check for teacher schedule conflicts
       try {
-        const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
         const contradictions = await teacherContradiction(course.batch, course.section, course.course_id);
 
         // Check if any assigned teacher has a schedule conflict
