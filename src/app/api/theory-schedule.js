@@ -30,3 +30,6 @@ export const getCourseAllSchedule = (initial, course_id) =>
 
 export const getCourseSectionalSchedule = (course_id, section) =>
     axios.get(api_url(`/schedule/get/sessional/${course_id}/${section}`)).then((res) => res.data);
+
+export const getTimeContradictionForTeacher = (initial, day, time) =>
+    axios.get(api_url(`/schedule/contradiction/time/${initial}/${day}/${time}`)).then((res) => res.data);
