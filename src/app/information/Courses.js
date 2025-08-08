@@ -34,8 +34,8 @@ const validateCourse = (course) => {
   if (course.class_per_week <= 0) {
     return "Credit must be a positive number";
   }
-  if (course.level === "") {
-    return "Level cannot be empty";
+  if (course.level_term === "") {
+    return "Level-Term cannot be empty";
   }
   if (course.from === "") {
     return "From cannot be empty";
@@ -45,6 +45,10 @@ const validateCourse = (course) => {
   }
   if (course.from !== "CSE" && course.to !== "CSE") {
     return "Offering or Host Department must be CSE";
+  }
+  // Optional field validation (0 or 1)
+  if (course.optional !== 0 && course.optional !== 1) {
+    return "Course category must be either General (0) or Elective (1)";
   }
   return null;
 };
@@ -113,16 +117,12 @@ export default function Courses() {
       "Cancel",
       async () => {
         try {
-          deleteCourse(course_id).then((res) => {
-            toast.success("Course deleted successfully");
-            setCourses((prevCourses) =>
-              prevCourses.filter((c) => c.course_id !== course_id)
-            );
-            // Update displayed courses after deletion
-            updateDisplayedCourses();
-          });
+          await deleteCourse(course_id);
+          toast.success("Course deleted successfully");
+          // Reload all course data from server after successful deletion
+          await reloadCourseData();
         } catch (error) {
-          console.error("Error deleting level term:", error);
+          console.error("Error deleting course:", error);
           toast.error(`Failed to delete ${course_id}`);
         }
       },
@@ -163,27 +163,38 @@ export default function Courses() {
     setShowActiveOnly(showActive);
   };
 
+  // Centralized function to reload all course data
+  const reloadCourseData = async () => {
+    try {
+      console.log('Reloading course data...');
+      
+      // Fetch all courses (from all_courses table) - this is the main dataset
+      const coursesRes = await getCourses();
+      console.log('All courses fetched:', coursesRes);
+      setCourses(coursesRes);
+      
+      // Fetch active course IDs (from courses table) for filtering
+      const activeCoursesRes = await getActiveCourseIds();
+      console.log('Active course IDs fetched:', activeCoursesRes);
+      const activeIds = new Set(activeCoursesRes.map(course => course.course_id));
+      console.log('Active IDs set:', Array.from(activeIds));
+      setActiveCourseIds(activeIds);
+      
+      console.log('Course data reloaded successfully');
+    } catch (error) {
+      console.error('Error reloading course data:', error);
+      toast.error('Failed to reload course data');
+    }
+  };
+
   // Update displayed courses when courses, activeCourseIds, or showActiveOnly changes
   useEffect(() => {
     updateDisplayedCourses();
   }, [courses, activeCourseIds, showActiveOnly]);
 
   useEffect(() => {
-    // Fetch all courses (from all_courses table) - this is the main dataset
-    getCourses().then((res) => {
-      console.log('All courses fetched:', res);
-      setCourses(res);
-    });
-    
-    // Fetch active course IDs (from courses table) for filtering
-    getActiveCourseIds().then((res) => {
-      console.log('Active course IDs fetched:', res);
-      const activeIds = new Set(res.map(course => course.course_id));
-      console.log('Active IDs set:', Array.from(activeIds));
-      setActiveCourseIds(activeIds);
-    }).catch(error => {
-      console.error('Error fetching active course IDs:', error);
-    });
+    // Initial data loading
+    reloadCourseData();
     
     getHostedDepartments().then((res) => {
       setAllHostedDepartments(res);
@@ -284,6 +295,7 @@ export default function Courses() {
                         to: "",
                         teacher_credit: 0,
                         level_term: "",
+                        optional: 0,
                         assignedSections: [],
                       });
                     }}
@@ -325,6 +337,10 @@ export default function Courses() {
                         Credit
                       </th>
                       <th>
+                        <i className="mdi mdi-star-outline"></i>
+                        Category
+                      </th>
+                      <th>
                         <i className="mdi mdi-cog"></i>
                         Actions
                       </th>
@@ -350,6 +366,11 @@ export default function Courses() {
                         <td style={{ textAlign: "center" }}> {course.to} </td>
                         <td style={{ textAlign: "center" }}>
                           {course.class_per_week}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          <span className={`badge ${course.optional === 1 ? 'bg-warning' : 'bg-success'}`}>
+                            {course.optional === 1 ? 'Elective' : 'General'}
+                          </span>
                         </td>
                         <td>
                           <div className="d-flex">
@@ -427,14 +448,15 @@ export default function Courses() {
                     <FormGroup>
                       <Form.Label className="form-label">Credit</Form.Label>
                       <FormControl
-                        type="text"
+                        type="number"
+                        step="0.1"
                         className="form-control"
                         placeholder="e.g. 1.5"
                         value={selectedCourse.class_per_week}
                         onChange={(e) => {
                           setSelectedCourse({
                             ...selectedCourse,
-                            class_per_week: Number.parseInt(
+                            class_per_week: Number.parseFloat(
                               e.target.value || "0"
                             ),
                           });
@@ -512,6 +534,24 @@ export default function Courses() {
                   </Col>
                 </Row>
                 <Row>
+                  <Col md={6} className="px-2 py-1">
+                    <FormGroup>
+                      <Form.Label className="form-label">Course Category</Form.Label>
+                      <Form.Select
+                        className="form-select"
+                        value={selectedCourse.optional || 0}
+                        onChange={(e) =>
+                          setSelectedCourse({
+                            ...selectedCourse,
+                            optional: parseInt(e.target.value),
+                          })
+                        }
+                      >
+                        <option value={0}>General Course</option>
+                        <option value={1}>Elective Course</option>
+                      </Form.Select>
+                    </FormGroup>
+                  </Col>
                   <Col className="px-2 py-1">
                     <FormGroup>
                       <Form.Label className="form-label">
@@ -627,52 +667,44 @@ export default function Courses() {
             </button>
             <button
               className="card-control-button mdi mdi-content-save"
-              onClick={() => {
+              onClick={async () => {
                 const result = validateCourse(selectedCourse);
                 if (result === null) {
-                  if (addNewCourse) {
-                    console.log('DEBUG Frontend: Adding course data:', selectedCourse);
-                    addCourse(selectedCourse)
-                      .then((res) => {
-                        if (
-                          res.message &&
-                          res.message.includes("Successfully Saved")
-                        ) {
-                          getCourses().then((res) => {
-                            setCourses(res);
-                            setSelectedCourse(null);
-                            toast.success("Course added successfully");
-                          });
-                        } else {
-                          setSelectedCourse(null);
-                          toast.error("Failed to add course: " + res.message);
-                        }
-                      })
-                      .catch(console.log);
-                  } else {
-                    console.log("In edit course.");
-                    editCourse(selectedCourse.course_id, selectedCourse)
-                      .then((res) => {
-                        if (
-                          res.message &&
-                          res.message.includes("Successfully Updated")
-                        ) {
-                          getCourses().then((res) => {
-                            setCourses(res);
-                            setSelectedCourse(null);
-                            toast.success("Course updated successfully");
-                          });
-                        } else {
-                          setSelectedCourse(null);
-                          toast.error(
-                            "Failed to update course: " + res.message
-                          );
-                        }
-                      })
-                      .catch(console.log);
+                  try {
+                    if (addNewCourse) {
+                      console.log('DEBUG Frontend: Adding course data:', selectedCourse);
+                      const res = await addCourse(selectedCourse);
+                      if (res.message && res.message.includes("Successfully Saved")) {
+                        toast.success("Course added successfully");
+                        setSelectedCourse(null);
+                        setAddNewCourse(false);
+                        // Reload all course data after successful addition
+                        await reloadCourseData();
+                      } else {
+                        setSelectedCourse(null);
+                        toast.error("Failed to add course: " + res.message);
+                      }
+                    } else {
+                      console.log("DEBUG Frontend: Editing course data:", selectedCourse);
+                      const res = await editCourse(selectedCourse.course_id, selectedCourse);
+                      if (res.message && res.message.includes("Successfully Updated")) {
+                        toast.success("Course updated successfully");
+                        setSelectedCourse(null);
+                        // Reload all course data after successful update
+                        await reloadCourseData();
+                      } else {
+                        setSelectedCourse(null);
+                        toast.error("Failed to update course: " + res.message);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error saving course:', error);
+                    setSelectedCourse(null);
+                    toast.error("An error occurred while saving the course");
                   }
-                  setSelectedCourse(null);
-                } else toast.error(result);
+                } else {
+                  toast.error(result);
+                }
               }}
             >
               Save
