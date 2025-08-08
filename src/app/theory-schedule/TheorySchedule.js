@@ -7,7 +7,11 @@ import {
   getTheorySectionsByDeptAndLevelTerm,
   getTheoryCoursesByDeptLevelTerm,
 } from "../api/db-crud";
-import { setSchedules, getSchedules } from "../api/theory-schedule";
+import {
+  setSchedules,
+  getSchedules,
+  getTimeContradictionForTeacher,
+} from "../api/theory-schedule";
 import { toast } from "react-hot-toast";
 import {
   mdiSchoolOutline,
@@ -20,6 +24,11 @@ import { useHistory } from "react-router-dom";
 import { useConfig } from "../shared/ConfigContext";
 
 export default function TheorySchedule(props) {
+  const [selectedSection, setSelectedSection] = useState("");
+  const [showCoursesModal, setShowCoursesModal] = useState(false);
+  const [selectedCell, setSelectedCell] = useState(null);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedLevelTermBatch, setSelectedLevelTermBatch] = useState("");
   const [allDepartments, setAllDepartments] = useState([]);
@@ -33,7 +42,17 @@ export default function TheorySchedule(props) {
     {}
   );
   const history = useHistory();
-  const { times } = useConfig();
+  const { days, times } = useConfig();
+
+  const overlayStyle = {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 999,
+  };
 
   // Load departments on mount
   useEffect(() => {
@@ -90,8 +109,10 @@ export default function TheorySchedule(props) {
           ? selectedLevelTermBatch.level_term
           : selectedLevelTermBatch;
       getTheoryCoursesByDeptLevelTerm(selectedDepartment, levelTermValue)
-        .then((res) =>
+        .then((res) =>{
+          console.log(res.data)
           setAllTheoryCourses(Array.isArray(res.data) ? res.data : [])
+        }
         )
         .catch(() => setAllTheoryCourses([]));
     } else {
@@ -131,7 +152,7 @@ export default function TheorySchedule(props) {
   };
 
   // Handler to update schedule for a section, with cross-section cell warning
-  const handleTheoryCellChange = (sectionKey) => (day, time, courseIds) => {
+  const handleTheoryCellChange = (sectionKey, day, time, courseIds) => {
     // If this is a no-op call (from the forced re-render), just return
     if (day === null && time === null) {
       return;
@@ -248,9 +269,10 @@ export default function TheorySchedule(props) {
 
   // Helper to determine if a course_id is sessional (even)
   const isSessionalCourse = (course_id) => {
-    // Consider course_id as string, check if last char is even digit
     if (!course_id) return false;
-    const lastDigit = course_id.match(/\d+/g)?.pop()?.slice(-1);
+    // Ensure course_id is a string
+    const idStr = typeof course_id === "string" ? course_id : String(course_id);
+    const lastDigit = idStr.match(/\d+/g)?.pop()?.slice(-1);
     return lastDigit && parseInt(lastDigit) % 2 === 0;
   };
 
@@ -310,7 +332,7 @@ export default function TheorySchedule(props) {
           : null;
       allTheorySections.forEach((section) => {
         // Use a consistent format for section key
-        const sectionKey = `${selectedDepartment} ${section.batch} ${section.section}`;
+        const sectionKey = `${section.section}`;
         const batchInt = parseInt(batchValue, 10); // Use batch from level-term selector
         if (!isNaN(batchInt)) {
           getSchedules(selectedDepartment, batchInt, section.section).then(
@@ -326,14 +348,7 @@ export default function TheorySchedule(props) {
               const cellMap = {};
               // Pre-initialize all possible day-time slots
               times.forEach((time) => {
-                [
-                  "Saturday",
-                  "Sunday",
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                ].forEach((day) => {
+                days.forEach((day) => {
                   const key = `${day} ${time}`;
                   cellMap[key] = { course_ids: [] };
                 });
@@ -368,6 +383,7 @@ export default function TheorySchedule(props) {
               // Make sure to use function form of setState to ensure we're using the latest state
               setTheorySchedulesBySection((prev) => {
                 const updated = { ...prev };
+                console.log("Updating section:", updated, sectionKey, cellMapClone);
                 updated[sectionKey] = cellMapClone; // This ensures the exact same reference
                 return updated;
               });
@@ -436,9 +452,11 @@ export default function TheorySchedule(props) {
     setIsLoading(true);
     const savingToast = toast.loading("Saving all schedules...");
     const savePromises = allTheorySections.map((section) => {
-      const sectionKey = `${selectedDepartment} ${section.batch} ${section.section}`;
+      const sectionKey = `${section.section}`;
       const current = theorySchedulesBySection[sectionKey] || {};
       const original = originalSchedulesBySection[sectionKey] || {};
+      // console.log("courrent", current);
+      // console.log("original", original);
       // Find changed slots only
       const changedSlots = [];
       // Check all slots in current
@@ -848,36 +866,7 @@ export default function TheorySchedule(props) {
           </div>
         ) : (
           allTheorySections.map((section) => {
-            const sectionKey = `${selectedDepartment} ${section.batch} ${section.section}`;
-            // Helper to get the schedule for this section in the format expected by setSchedules
-            const getSectionSchedules = () => {
-              const scheduleObj = theorySchedulesBySection[sectionKey] || {};
-              // Map: { 'Saturday 8': {course_ids: ['CSE101', 'CSE102']}, ... } => { course_id: [ {day, time}, ... ] }
-              const courseSlotMap = {};
-
-              Object.entries(scheduleObj).forEach(([slot, val]) => {
-                // Handle both course_id and course_ids formats
-                const courseIds =
-                  val.course_ids || (val.course_id ? [val.course_id] : []);
-
-                if (!courseIds.length) return;
-
-                const [day, time] = slot.split(" ");
-
-                // For each course ID in this slot
-                courseIds.forEach((courseId) => {
-                  if (!courseId) return; // Skip empty values
-
-                  if (!courseSlotMap[courseId]) {
-                    courseSlotMap[courseId] = [];
-                  }
-
-                  courseSlotMap[courseId].push({ day, time });
-                });
-              });
-
-              return courseSlotMap;
-            };
+            const sectionKey = `${section.section}`;
 
             return (
               <div className="row mb-4" key={sectionKey}>
@@ -927,6 +916,7 @@ export default function TheorySchedule(props) {
                         </h4>
                       </div>
                       {(() => {
+                        console.log(theorySchedulesBySection)
                         const sectionData =
                           theorySchedulesBySection[sectionKey] || {};
                         return (
@@ -934,10 +924,17 @@ export default function TheorySchedule(props) {
                             {...props}
                             allTheoryCourses={allTheoryCourses}
                             theorySchedules={sectionData}
-                            onChange={handleTheoryCellChange(sectionKey)}
                             isDisabledTimeSlot={(day, time) =>
                               isDisabledTimeSlot(sectionKey, day, time)
                             }
+                            sectionName={section.section}
+                            setSelectedCell={setSelectedCell}
+                            setShowCoursesModal={setShowCoursesModal}
+                            setSelectedCourse={setSelectedCourse}
+                            setShowDeleteConfirmation={
+                              setShowDeleteConfirmation
+                            }
+                            setSelectedSection={setSelectedSection}
                           />
                         );
                       })()}
@@ -965,7 +962,615 @@ export default function TheorySchedule(props) {
           background: linear-gradient(to bottom, #ffffff, #fdfaff) !important;
           color: #6b38a6 !important;
         }
+        @media (max-width: 900px) {
+          .page-header {
+            padding: 1rem !important;
+            border-radius: 12px !important;
+          }
+          .page-title {
+            font-size: 1.2rem !important;
+          }
+          .card-body {
+            padding: 1rem !important;
+          }
+        }
+        @media (max-width: 600px) {
+          .page-header {
+            padding: 0.7rem !important;
+            border-radius: 10px !important;
+          }
+          .page-title {
+            font-size: 1rem !important;
+          }
+          .card-body {
+            padding: 0.7rem !important;
+          }
+          .row.mb-4,
+          .row {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+          }
+          .save-button {
+            width: 100% !important;
+            min-width: 0 !important;
+            font-size: 0.98rem !important;
+            padding: 10px 0 !important;
+            margin-top: 10px !important;
+          }
+          .form-label,
+          .form-control {
+            font-size: 0.95rem !important;
+          }
+        }
+        @media (max-width: 420px) {
+          .page-header {
+            padding: 0.4rem !important;
+            border-radius: 8px !important;
+          }
+          .page-title {
+            font-size: 0.85rem !important;
+          }
+          .card-body {
+            padding: 0.4rem !important;
+          }
+          .save-button {
+            font-size: 0.85rem !important;
+            padding: 8px 0 !important;
+          }
+        }
       `}</style>
+
+      {/* Course Selection Modal - SessionalDistribution Style */}
+      {showCoursesModal && selectedCell && (
+        <>
+          <div
+            style={overlayStyle}
+            onClick={() => {
+              setShowCoursesModal(false);
+              setSelectedCell(null);
+            }}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "white",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+              border: "none",
+              padding: "0",
+              zIndex: 1000,
+              maxWidth: "520px",
+              maxHeight: "900px",
+              overflowY: "auto",
+              minWidth: "480px",
+            }}
+          >
+            {/* Modern Modal Header - Fixed */}
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+                background:
+                  "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+                borderRadius: "16px 16px 0 0",
+                color: "white",
+                padding: "1.2rem 1.5rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                boxShadow: "0 4px 10px rgba(174, 117, 228, 0.10)",
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "12px" }}
+              >
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    backgroundColor: "rgba(255, 255, 255, 0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                  }}
+                >
+                  <i
+                    className="mdi mdi-plus-circle-outline"
+                    style={{ fontSize: "1.5rem", color: "white" }}
+                  ></i>
+                </div>
+                <div>
+                  <span
+                    style={{
+                      fontWeight: "700",
+                      fontSize: "1.2rem",
+                      display: "block",
+                    }}
+                  >
+                    Add Theory Course
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.9rem",
+                      opacity: 0.9,
+                      fontWeight: "500",
+                    }}
+                  >
+                    {selectedCell.day} {selectedCell.time}:00
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCoursesModal(false);
+                  setSelectedCell(null);
+                }}
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  width: "36px",
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  transition: "all 0.2s",
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = "rgb(154, 77, 226)";
+                  e.currentTarget.style.color = "white";
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+                  e.currentTarget.style.color = "white";
+                }}
+              >
+                <i className="mdi mdi-close"></i>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div
+              style={{
+                padding: "1.5rem",
+                background: "white",
+                borderRadius: "0 0 16px 16px",
+              }}
+            >
+              {allTheoryCourses.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "2rem",
+                    color: "#718096",
+                    fontSize: "1rem",
+                  }}
+                >
+                  No Theory courses available for this department and
+                  level-term.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "16px",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(220px, 1fr))",
+                  }}
+                >
+                  {[
+                    {
+                      course_id: "CT",
+                      name: "Class Test",
+                      class_per_week: 3,
+                      section: selectedSection,
+                      level_term: selectedLevelTermBatch.level_term,
+                      teachers: [],
+                      to: selectedDepartment,
+                    },
+                    ...allTheoryCourses.filter(
+                      (course) => course.section === selectedSection
+                    ),
+                  ]
+                    .filter((course) => {
+                      // Filter out courses that are already scheduled in the selected cell
+                      console.log("all", course);
+                      const sectionKey = `${course.section}`;
+                      const currentSchedules =
+                        theorySchedulesBySection[sectionKey] || {};
+                      const newSlot = `${selectedCell.day} ${selectedCell.time}`;
+                      return (
+                        !currentSchedules[newSlot] ||
+                        !currentSchedules[newSlot].course_ids ||
+                        !currentSchedules[newSlot].course_ids.includes(
+                          course.course_id
+                        )
+                      );
+                    })
+                    .map((course) => {
+                      // Determine how many course cards to show based on class_per_week
+                      const sectionKey = `${selectedSection}`;
+                      const alreadyAssignedHrs = Object.entries(
+                        theorySchedulesBySection[sectionKey] || {}
+                      ).reduce((count, [slot, val]) => {
+                        if (
+                          val.course_ids &&
+                          val.course_ids.includes(course.course_id)
+                        ) {
+                          return count + 1; // Increment for each matching course_id
+                        }
+                        return count;
+                      }, 0);
+                      console.log(alreadyAssignedHrs);
+
+                      const courseCards = [];
+                      courseCards.push({
+                        scheduledCompleted:
+                          alreadyAssignedHrs + 1 > course.class_per_week,
+                      });
+
+                      return courseCards.map((cardInfo) => (
+                        <div
+                          key={`${course.course_id || course.id}-${
+                            cardInfo.section
+                          }`}
+                          disabled={cardInfo.scheduledCompleted}
+                          style={{
+                            padding: "16px",
+                            borderRadius: "12px",
+                            border: cardInfo.scheduledCompleted
+                              ? "2px solid rgba(220, 53, 69, 0.3)"
+                              : "2px solid rgba(194, 137, 248, 0.2)",
+                            backgroundColor: cardInfo.scheduledCompleted
+                              ? "rgba(220, 53, 69, 0.05)"
+                              : "rgba(255, 255, 255, 0.9)",
+                            cursor: cardInfo.scheduledCompleted
+                              ? "not-allowed"
+                              : "pointer",
+                            transition: "all 0.2s ease",
+                            position: "relative",
+                            opacity: cardInfo.scheduledCompleted ? 0.6 : 1,
+                          }}
+                          onClick={async () => {
+                            if (!cardInfo.scheduledCompleted) {
+                              // Check for time conflicts with teacher's schedule
+                              const conflictResults = await Promise.all(
+                                course.teachers.map((teacher) =>
+                                  getTimeContradictionForTeacher(
+                                    teacher,
+                                    selectedCell.day,
+                                    selectedCell.time
+                                  )
+                                )
+                              );
+                              const conflicts = conflictResults
+                                .flat()
+                                .filter(Boolean);
+                              if (conflicts.length > 0) {
+                                conflicts.map((r) => {
+                                  toast.error(
+                                    `Teacher ${r.initial} has a conflict on ${r.day} at ${r.time}: ${r.course_id}- ${r.section}`
+                                  );
+                                });
+                                // return;
+                              }
+
+                              // Determine all the courses in the selected cell
+                              const sectionKey = `${selectedSection}`;
+                              const currentSchedules =
+                                theorySchedulesBySection[sectionKey] || {};
+
+                              console.log(currentSchedules);
+                              const newSlot = `${selectedCell.day} ${selectedCell.time}`;
+                              const existingCourses =
+                                currentSchedules[newSlot]?.course_ids || [];
+
+                              const updatedCourses = [];
+                              existingCourses.forEach((existingCourse) => {
+                                updatedCourses.push(existingCourse);
+                              });
+                              updatedCourses.push(course.course_id);
+
+                              handleTheoryCellChange(
+                                sectionKey,
+                                selectedCell.day,
+                                selectedCell.time,
+                                updatedCourses
+                              );
+
+                              setShowCoursesModal(false);
+                              setSelectedSection(null);
+                              setSelectedCell(null);
+
+                              toast.success(
+                                `Course ${course.course_id} added to ${selectedCell.day} ${selectedCell.time}`
+                              );
+                            } else {
+                              toast.error(
+                                `This course is already fully scheduled for this section.`
+                              );
+                            }
+                          }}
+                          onMouseOver={(e) => {
+                            if (!cardInfo.scheduledCompleted) {
+                              e.currentTarget.style.transform =
+                                "translateY(-2px)";
+                              e.currentTarget.style.boxShadow =
+                                "0 8px 25px rgba(174, 117, 228, 0.15)";
+                              e.currentTarget.style.borderColor =
+                                "rgba(194, 137, 248, 0.4)";
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!cardInfo.scheduledCompleted) {
+                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.boxShadow = "none";
+                              e.currentTarget.style.borderColor =
+                                "rgba(194, 137, 248, 0.2)";
+                            }
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: "700",
+                              fontSize: "1rem",
+                              color: cardInfo.scheduledCompleted
+                                ? "#6c757d"
+                                : "#2d3748",
+                              marginBottom: "8px",
+                              lineHeight: "1.2",
+                            }}
+                          >
+                            {course.course_id}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.85rem",
+                              color: cardInfo.scheduledCompleted
+                                ? "#6c757d"
+                                : "#718096",
+                              marginBottom: "8px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {course.name}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.8rem",
+                              color: cardInfo.scheduledCompleted
+                                ? "#6c757d"
+                                : "#a0aec0",
+                              fontWeight: "600",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            {course.teachers && course.teachers.length > 0
+                              ? "[" + course.teachers.join(", ") + "]"
+                              : "No Teachers Assigned"}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.75rem",
+                              backgroundColor: "rgba(194, 137, 248, 0.1)",
+                              color: "rgb(154, 77, 226)",
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontWeight: "600",
+                              textAlign: "center",
+                            }}
+                          >
+                            {alreadyAssignedHrs}/{course.class_per_week} hours
+                          </div>
+                        </div>
+                      ));
+                    })
+                    .flat()}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Confirmation Modal for Course Removal */}
+      {showDeleteConfirmation && selectedCourse && (
+        <>
+          <div
+            style={overlayStyle}
+            onClick={() => setShowDeleteConfirmation(false)}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "white",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+              border: "none",
+              padding: "0",
+              zIndex: 1000,
+              maxWidth: "480px",
+              minWidth: "400px",
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
+                borderRadius: "16px 16px 0 0",
+                color: "white",
+                padding: "1.2rem 1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                boxShadow: "0 4px 10px rgba(220, 53, 69, 0.15)",
+              }}
+            >
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  backgroundColor: "rgba(255, 255, 255, 0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                }}
+              >
+                <i
+                  className="mdi mdi-alert-circle-outline"
+                  style={{ fontSize: "1.5rem", color: "white" }}
+                ></i>
+              </div>
+              <div>
+                <span
+                  style={{
+                    fontWeight: "700",
+                    fontSize: "1.2rem",
+                    display: "block",
+                  }}
+                >
+                  Confirm Removal
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.9rem",
+                    opacity: 0.9,
+                    fontWeight: "500",
+                  }}
+                >
+                  Remove course from schedule
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div
+              style={{
+                padding: "1.5rem",
+                background: "white",
+                borderRadius: "0 0 16px 16px",
+                textAlign: "center",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "1rem",
+                  color: "#495057",
+                  marginBottom: "1.5rem",
+                  lineHeight: "1.5",
+                }}
+              >
+                Are you sure you want to remove this course from the schedule?
+                <br />
+                <strong style={{ color: "#dc3545" }}>
+                  {selectedCourse.course_id}({selectedSection}) -{" "}
+                  {selectedCourse.day} {selectedCourse.time}:00
+                </strong>
+              </p>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                  onClick={() => setShowDeleteConfirmation(false)}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid #6c757d",
+                    backgroundColor: "white",
+                    color: "#6c757d",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = "#6c757d";
+                    e.currentTarget.style.color = "white";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = "white";
+                    e.currentTarget.style.color = "#6c757d";
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const sectionKey = `${selectedSection}`;
+                    const currentSchedules =
+                      theorySchedulesBySection[sectionKey] || {};
+
+                    const newSlot = `${selectedCourse.day} ${selectedCourse.time}`;
+                    const existingCourses =
+                      currentSchedules[newSlot]?.course_ids || [];
+
+                    const updatedCourses = [];
+                    existingCourses.forEach((existingCourse) => {
+                      if (existingCourse === selectedCourse.course_id) {
+                        return; // Skip the course being removed
+                      }
+                      updatedCourses.push(existingCourse);
+                    });
+
+                    handleTheoryCellChange(
+                      sectionKey,
+                      selectedCourse.day,
+                      selectedCourse.time,
+                      updatedCourses
+                    );
+                    setShowDeleteConfirmation(false);
+                    setSelectedCourse(null);
+                    setSelectedSection(null);
+                    toast.success(
+                      `Course ${selectedCourse.course_id} removed from ${selectedCourse.day} ${selectedCourse.time}`
+                    );
+                  }}
+                  style={{
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid #dc3545",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = "#c82333";
+                    e.currentTarget.style.borderColor = "#c82333";
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = "#dc3545";
+                    e.currentTarget.style.borderColor = "#dc3545";
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
