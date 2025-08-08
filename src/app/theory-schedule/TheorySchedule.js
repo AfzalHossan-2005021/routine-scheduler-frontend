@@ -109,8 +109,10 @@ export default function TheorySchedule(props) {
           ? selectedLevelTermBatch.level_term
           : selectedLevelTermBatch;
       getTheoryCoursesByDeptLevelTerm(selectedDepartment, levelTermValue)
-        .then((res) =>
+        .then((res) =>{
+          console.log(res.data)
           setAllTheoryCourses(Array.isArray(res.data) ? res.data : [])
+        }
         )
         .catch(() => setAllTheoryCourses([]));
     } else {
@@ -381,6 +383,7 @@ export default function TheorySchedule(props) {
               // Make sure to use function form of setState to ensure we're using the latest state
               setTheorySchedulesBySection((prev) => {
                 const updated = { ...prev };
+                console.log("Updating section:", updated, sectionKey, cellMapClone);
                 updated[sectionKey] = cellMapClone; // This ensures the exact same reference
                 return updated;
               });
@@ -913,6 +916,7 @@ export default function TheorySchedule(props) {
                         </h4>
                       </div>
                       {(() => {
+                        console.log(theorySchedulesBySection)
                         const sectionData =
                           theorySchedulesBySection[sectionKey] || {};
                         return (

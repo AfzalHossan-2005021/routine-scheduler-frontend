@@ -137,16 +137,13 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
                   >
                     {isDisabled.isDisabled ? (
                       <div className="sessional-assignment">
-                        <div
-                          style={{ fontWeight: "bold", marginBottom: "2px" }}
-                        >
-                          {isDisabled.sessionalAssignment[0]}
-                        </div>
-                        <div
-                          style={{ fontWeight: "bold", marginBottom: "2px" }}
-                        >
-                          {isDisabled.sessionalAssignment[1]}
-                        </div>
+                        {isDisabled.sessionalAssignment.map((assignment) => (
+                          <div
+                            style={{ fontWeight: "bold", marginBottom: "2px" }}
+                          >
+                            {assignment}
+                          </div>
+                        ))}
                         <div style={{ fontSize: "0.7rem", opacity: 0.8 }}>
                           <i className="mdi mdi-flask"></i> Lab
                         </div>
