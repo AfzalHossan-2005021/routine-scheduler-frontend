@@ -83,8 +83,6 @@
   border: none;
   transition: all 0.3s ease;
   background: white;
-  max-height: 750px;
-  overflow: auto;
 }
 
 .card-view {
@@ -119,6 +117,25 @@
   gap: 12px;
 }
 
+@media (max-width: 768px) {
+  .card-control-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+  .card-control-button-container {
+    width: 100%;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-control-button-container {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+}
 .card-control-button {
   border-radius: 6px;
   padding: 7px 14px;
@@ -398,7 +415,6 @@
 }
 .modal-divider {
   border-top: 1px solid #e1e5e9;
-  margin: 0 -2rem 1.5rem -2rem;
 }
 .modal-footer {
   border-top: none;
@@ -527,7 +543,7 @@
   border-radius: 6px;
   margin-top: 2px;
   background: #fff;
-  z-index: 10;
+  z-index: 100;
   width: 77%;
 }
 .suggestion-item {
@@ -709,4 +725,152 @@
   justify-content: center;
   height: 100%;
   position: relative;
+}
+.table-scroll-x {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+.table-scroll-x::-webkit-scrollbar {
+  height: 8px;
+}
+.table-scroll-x::-webkit-scrollbar-thumb {
+  background: rgba(194, 137, 248, 0.18);
+  border-radius: 4px;
+}
+
+.schedule-table {
+  width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  background-color: #f8f9fa;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid rgb(194, 137, 248);
+}
+
+.schedule-table th {
+  max-width: 40px;
+  text-align: center;
+  font-weight: 600;
+  padding: 12px 8px;
+  background: linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%);
+  color: white;
+  border: none;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+  text-shadow: 0px 1px 1px rgba(0, 0, 0, 0.1);
+  vertical-align: middle;
+}
+
+.schedule-table td {
+  width: 10%;
+  height: 130px;
+  border: 1px solid rgb(194, 137, 248);
+  padding: 8px;
+  font-size: 0.85rem;
+  vertical-align: middle;
+  background-color: #f8f9fa;
+  position: relative;
+}
+.schedule-table td:hover {
+  background-color: #f0e9ff;
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(154, 77, 226, 0.2);
+  z-index: 3;
+  border: 2px solid rgb(154, 77, 226);
+}
+.schedule-table td.blocked-cell:hover,
+.schedule-table td.blocked-cell:focus,
+.schedule-table td.blocked-cell:active {
+  border: 1px solid rgb(194, 137, 248);
+  background-color: #f8f9fa;
+  transform: none !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+.schedule-table td .item {
+  padding: 10px;
+  margin: 4px 0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  background: linear-gradient(135deg, rgba(195, 134, 252, 0.18) 0%, rgba(174, 117, 228, 0.1) 100%);
+  border: 2px solid rgb(194, 137, 248);
+  color: rgba(133, 47, 214, 1);
+}
+.schedule-table td .item:hover {
+  background-color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(154, 77, 226, 0.15);
+}
+.schedule-table td .item span {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+  width: 100%;
+  text-align: center;
+}
+.schedule-table td .item i {
+  position: absolute;
+  left: 8px;
+  cursor: pointer;
+  z-index: 2;
+  color: #dc3545;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+.schedule-table td .item i:hover {
+  color: #c82333;
+  transform: scale(1.25);
+}
+
+
+.cell-edit-button-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: none; /* Prevents blocking cell interactions */
+}
+.cell-edit-button {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 2;
+  cursor: pointer;
+  background: white;
+  border-radius: 50%;
+  padding: 2px;
+  box-shadow: 0 1px 4px rgba(194,137,248,0.08);
+  transition: background 0.2s;
+}
+.cell-edit-button i {
+  color: rgb(194, 137, 248);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+  border-radius: 50%;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;  
+}
+
+.cell-edit-button i:hover {
+  background-color: rgb(194, 137, 248);
+  color: white;
+  transform: scale(1.25);
 }

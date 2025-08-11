@@ -14,10 +14,11 @@ import {
   getSessionalSchedules,
   setSessionalSchedules,
 } from "../api/sessional-schedule";
-import { getSchedules } from "../api";
+import { getSchedules } from "../api/theory-schedule";
 import { mdiContentSave, mdiAccountGroupOutline } from "@mdi/js";
 import Icon from "@mdi/react";
 import { useHistory } from "react-router-dom";
+import { all } from "axios";
 
 /**
  * Helper function to format section display for 0.75 credit courses
@@ -27,11 +28,247 @@ import { useHistory } from "react-router-dom";
  */
 function formatSectionDisplay(section, classPerWeek) {
   // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
-  if (classPerWeek === 0.75) {
+  if (classPerWeek === 0.75 && !section.includes("+")) {
     return `${section}1/${section}2`;
   }
   // For other courses, show the section as is
   return section;
+}
+
+/**
+ * Helper function to check if a lab time slot conflicts with theory courses
+ * @param {Object} theorySchedules - Theory schedules object
+ * @param {string} mainSection - Main section (A, B, C)
+ * @param {string} day - Day of the week
+ * @param {number} labTime - Lab time slot (8, 11, 2)
+ * @returns {Array} - Array of conflicting course IDs, empty if no conflict
+ */
+function hasTheoryConflict(theorySchedules, mainSection, day, labTime) {
+  // Check for theory conflicts based on lab time slots
+  // Lab at 8:00 conflicts with theory at 8, 9, or 10
+  // Lab at 11:00 conflicts with theory at 11, 12, or 1
+  // Lab at 2:00 conflicts with theory at 2, 3, or 4
+
+  let conflictingTheoryTimes = [
+    labTime % 12,
+    (labTime + 1) % 12,
+    (labTime + 2) % 12,
+  ];
+  if (labTime === 8) {
+    conflictingTheoryTimes = [8, 9, 10];
+  } else if (labTime === 11) {
+    conflictingTheoryTimes = [11, 12, 1];
+  } else if (labTime === 2) {
+    conflictingTheoryTimes = [2, 3, 4];
+  }
+
+  const conflictingCourses = [];
+
+  // Debug logging
+  // console.log(`Checking conflict for ${mainSection} ${day} ${labTime}:`, {
+  //   theorySchedules,
+  //   conflictingTheoryTimes,
+  // });
+
+  // Check all theory sections that could affect this main section
+  for (const [sectionKey, scheduleData] of Object.entries(theorySchedules)) {
+    if (!scheduleData) continue;
+
+    // Check if this section belongs to our main section or combined sections
+    let shouldCheck = false;
+    
+    if (mainSection.includes('+')) {
+      // For combined sections like A+B, check if any individual section matches
+      const individualSections = mainSection.split('+');
+      const sectionMainLetter = sectionKey.charAt(0);
+      shouldCheck = individualSections.includes(sectionMainLetter);
+    } else {
+      // For traditional sections, check if section belongs to main section (e.g., A1, A2 belong to A)
+      const sectionMainLetter = sectionKey.charAt(0);
+      shouldCheck = sectionMainLetter === mainSection;
+    }
+    
+    if (!shouldCheck) continue;
+
+    // Check mainSection schedules if they exist
+    if (scheduleData.mainSection && Array.isArray(scheduleData.mainSection)) {
+      scheduleData.mainSection.forEach((slot) => {
+        if (
+          slot.day === day &&
+          conflictingTheoryTimes.includes(slot.time) &&
+          slot.type === 0 && // Only consider theory courses (type = 0)
+          slot.course_id
+        ) {
+          conflictingCourses.push(slot.course_id);
+        }
+      });
+    }
+
+    // Check subsections schedules if they exist
+    if (
+      scheduleData.subsections &&
+      typeof scheduleData.subsections === "object"
+    ) {
+      for (const [subsectionKey, subsectionSchedules] of Object.entries(
+        scheduleData.subsections
+      )) {
+        if (Array.isArray(subsectionSchedules)) {
+          subsectionSchedules.forEach((slot) => {
+            if (
+              slot.day === day &&
+              conflictingTheoryTimes.includes(slot.time) &&
+              slot.type === 0 && // Only consider theory courses (type = 0)
+              slot.course_id
+            ) {
+              conflictingCourses.push(slot.course_id);
+            }
+          });
+        }
+      }
+    }
+
+    // Also check if scheduleData is directly an array (fallback)
+    if (Array.isArray(scheduleData)) {
+      scheduleData.forEach((slot) => {
+        if (
+          slot.day === day &&
+          conflictingTheoryTimes.includes(slot.time) &&
+          slot.type === 0 && // Only consider theory courses (type = 0)
+          slot.course_id
+        ) {
+          conflictingCourses.push(slot.course_id);
+        }
+      });
+    }
+  }
+
+  // Return unique course IDs sorted in lexicographical order
+  return [...new Set(conflictingCourses)].sort();
+}
+
+/**
+ * Helper function to check if a course is already assigned elsewhere in the SAME section
+ * @param {Object} labSchedulesBySection - All lab schedules by section
+ * @param {string} courseId - Course ID to check
+ * @param {string} currentSectionKey - Current section key being checked
+ * @param {string} currentDay - Current day
+ * @param {number} currentTime - Current time
+ * @returns {boolean} - True if the course is already assigned elsewhere in the same section
+ */
+function isCourseAlreadyAssigned(
+  labSchedulesBySection,
+  courseId,
+  currentSectionKey,
+  currentDay,
+  currentTime
+) {
+  // Only check within the same section (not across different subsections)
+  const schedules = labSchedulesBySection[currentSectionKey];
+  if (!Array.isArray(schedules)) return false;
+
+  // Check if this course is assigned in any other slot within this section
+  const hasAssignment = schedules.some(
+    (slot) =>
+      slot.course_id === courseId &&
+      !(slot.day === currentDay && slot.time === currentTime)
+  );
+
+  return hasAssignment;
+}
+
+/**
+ * Helper function to check for sessional course conflicts - students can't attend multiple courses at the same time
+ * @param {Object} labSchedulesBySection - All lab schedules by section
+ * @param {string} targetSectionKey - Section key where we want to add a course
+ * @param {string} day - Day of the week
+ * @param {number} time - Time slot
+ * @param {string} selectedDepartment - Department
+ * @param {Object} selectedLevelTermBatch - Level term batch object
+ * @returns {boolean} - True if there's a conflict (slot is already occupied)
+ */
+function hasSessionalConflict(
+  labSchedulesBySection,
+  targetSectionKey,
+  day,
+  time,
+  selectedDepartment,
+  selectedLevelTermBatch
+) {
+  if (!selectedDepartment || !selectedLevelTermBatch?.batch) return false;
+
+  // Parse the target section to get main section and subsection info
+  const sectionParts = targetSectionKey.split(" ");
+  const targetSection = sectionParts[sectionParts.length - 1]; // e.g., 'A1', 'A2', 'A', 'A+B'
+  
+  const sectionsToCheck = [];
+
+  // Always check the exact target section
+  sectionsToCheck.push(targetSectionKey);
+
+  // For combined sections (A+B, A+B+C), check all individual sections involved
+  if (targetSection.includes('+')) {
+    const individualSections = targetSection.split('+');
+    individualSections.forEach(section => {
+      const individualSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${section}`;
+      sectionsToCheck.push(individualSectionKey);
+      
+      // Also check traditional subsections for each individual section (A1, A2, B1, B2, etc.)
+      sectionsToCheck.push(`${individualSectionKey}1`);
+      sectionsToCheck.push(`${individualSectionKey}2`);
+      sectionsToCheck.push(`${individualSectionKey}3`);
+    });
+  } else {
+    // For traditional sections
+    const mainSection = targetSection.charAt(0); // e.g., 'A', 'B', 'C'
+    
+    if (targetSection.length === 1) {
+      // Target is main section (A, B, C) - check all possible subsections
+      const allSectionKeys = Object.keys(labSchedulesBySection);
+      allSectionKeys.forEach(key => {
+        const keyParts = key.split(" ");
+        const keySection = keyParts[keyParts.length - 1];
+        if (keySection.startsWith(targetSection)) {
+          sectionsToCheck.push(key);
+        }
+      });
+    } else {
+      // Target is traditional subsection (A1, A2) - check main section and related sections
+      const mainSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${mainSection}`;
+      sectionsToCheck.push(mainSectionKey);
+      
+      // Check for combined sections that include this main section
+      const allSectionKeys = Object.keys(labSchedulesBySection);
+      allSectionKeys.forEach(key => {
+        const keyParts = key.split(" ");
+        const keySection = keyParts[keyParts.length - 1];
+        if (keySection.includes('+') && keySection.includes(mainSection)) {
+          sectionsToCheck.push(key);
+        }
+      });
+    }
+  }
+
+  // Remove duplicates
+  const uniqueSectionsToCheck = [...new Set(sectionsToCheck)];
+
+  // Check if any of these sections already have a course at this time slot
+  for (const sectionKey of uniqueSectionsToCheck) {
+    const schedules = labSchedulesBySection[sectionKey];
+    if (Array.isArray(schedules)) {
+      const hasConflict = schedules.some(
+        (slot) =>
+          slot.day === day &&
+          slot.time === time &&
+          slot.course_id &&
+          slot.course_id.trim() !== ""
+      );
+      if (hasConflict) {
+        return true; // Conflict found
+      }
+    }
+  }
+
+  return false; // No conflict
 }
 
 export default function SessionalSchedule() {
@@ -55,7 +292,6 @@ export default function SessionalSchedule() {
 
   // Schedule state
   const [labSchedulesBySection, setLabSchedulesBySection] = useState({});
-  const [labTimes, setLabTimes] = useState([]);
 
   // UI state
   const [isChanged, setIsChanged] = useState(false);
@@ -80,93 +316,96 @@ export default function SessionalSchedule() {
   // Schedule table styles (similar to SessionalDistribution)
   const scheduleTableStyle = {
     table: {
-      width: '100%',
-      margin: '0 auto',
-      textAlign: 'center',
-      backgroundColor: '#f8f9fa',
-      boxShadow: '0 3px 12px rgba(0,0,0,0.1)',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      borderCollapse: 'separate',
+      width: "100%",
+      margin: "0 auto",
+      textAlign: "center",
+      backgroundColor: "#f8f9fa",
+      boxShadow: "0 3px 12px rgba(0,0,0,0.1)",
+      borderRadius: "8px",
+      overflow: "hidden",
+      borderCollapse: "separate",
       borderSpacing: 0,
-      border: '1px solid rgb(194, 137, 248)'
+      border: "1px solid rgb(194, 137, 248)",
     },
     headerCell: {
-      width: '200px',
-      textAlign: 'center',
-      fontWeight: '600',
-      padding: '12px 8px',
-      background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
-      color: 'white',
-      border: 'none',
-      fontSize: '0.9rem',
+      width: "200px",
+      textAlign: "center",
+      fontWeight: "600",
+      padding: "12px 8px",
+      background:
+        "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+      color: "white",
+      border: "none",
+      fontSize: "0.9rem",
     },
     dayCell: {
-      fontWeight: '600',
-      background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
-      color: 'white',
-      width: '80px',
-      border: 'none',
-      padding: '12px 8px',
-      fontSize: '0.9rem',
-      verticalAlign: 'middle',
+      fontWeight: "600",
+      background:
+        "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+      color: "white",
+      width: "80px",
+      border: "none",
+      padding: "12px 8px",
+      fontSize: "0.9rem",
+      verticalAlign: "middle",
     },
     courseCell: {
-      height: '100px',
-      border: '1px solid rgb(194, 137, 248)',
-      padding: '8px',
-      fontSize: '0.85rem',
-      verticalAlign: 'top',
-      backgroundColor: 'white',
-      width: '200px',
-      minWidth: '200px',
+      height: "100px",
+      border: "1px solid rgb(194, 137, 248)",
+      padding: "8px",
+      fontSize: "0.85rem",
+      verticalAlign: "top",
+      backgroundColor: "white",
+      width: "200px",
+      minWidth: "200px",
     },
     courseItem: {
-      padding: '10px',
-      margin: '4px 0',
-      borderRadius: '8px',
-      transition: 'all 0.2s ease',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      position: 'relative',
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+      padding: "10px",
+      margin: "4px 0",
+      borderRadius: "8px",
+      transition: "all 0.2s ease",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      position: "relative",
+      backgroundColor: "rgba(255, 255, 255, 0.9)",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
     },
     alreadyScheduledCourseItem: {
-      background: 'linear-gradient(135deg, rgba(195, 134, 252, 0.18) 0%, rgba(174, 117, 228, 0.1) 100%)',
-      border: '2px solid rgb(194, 137, 248)',
-      color: 'rgba(133, 47, 214, 1)',
+      background:
+        "linear-gradient(135deg, rgba(195, 134, 252, 0.18) 0%, rgba(174, 117, 228, 0.1) 100%)",
+      border: "2px solid rgb(194, 137, 248)",
+      color: "rgba(133, 47, 214, 1)",
     },
     courseTitle: {
-      fontWeight: '600',
-      fontSize: '0.9rem',
-      marginBottom: '4px',
-      width: '100%',
-      textAlign: 'center',
+      fontWeight: "600",
+      fontSize: "0.9rem",
+      marginBottom: "4px",
+      width: "100%",
+      textAlign: "center",
     },
     sectionBadge: {
-      backgroundColor: 'rgba(229, 200, 255, 1)',
-      padding: '4px 8px',
-      fontSize: '0.8rem',
-      fontWeight: '600',
-      borderRadius: '4px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: '4px',
-      minWidth: '100px',
+      backgroundColor: "rgba(229, 200, 255, 1)",
+      padding: "4px 8px",
+      fontSize: "0.8rem",
+      fontWeight: "600",
+      borderRadius: "4px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: "4px",
+      minWidth: "100px",
     },
   };
 
   // Modal styles for overlay
   const overlayStyle = {
-    position: 'fixed',
+    position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     zIndex: 999,
   };
 
@@ -250,6 +489,7 @@ export default function SessionalSchedule() {
                 schedules: scheduleData,
               };
             })
+            // console.log(schedulesResults, "All theory schedule loaded")
           );
 
           // Create a mapping object where keys are section identifiers and values are schedules
@@ -260,6 +500,9 @@ export default function SessionalSchedule() {
 
           // Set the theory schedules state with the flattened array for compatibility with existing code
           setTheorySchedules(schedulesMap);
+
+          // Debug: Log the theory schedules structure
+          console.log("Theory schedules loaded:", schedulesMap);
 
           toast.dismiss(loadingToast);
         } catch (error) {
@@ -282,16 +525,10 @@ export default function SessionalSchedule() {
 
     const groups = {};
     allSessionalSections.forEach((section) => {
-      // Extract main section letter and subsection identifier
-      // The first character is the main section (e.g., 'A' from 'A1')
-      const mainSection = section.section.charAt(0); // A, B, C
-      // The rest of the characters form the subsection identifier (could be '1', '2', '3', etc.)
-      const subSection = section.section.substring(1);
-
-      if (!groups[mainSection]) {
-        groups[mainSection] = { subsections: {} };
-      }
-
+      // Handle different section formats:
+      // Traditional: A1, A2, B1, B2, etc. (main section + numeric subsection)
+      // Combined: A+B, A+B+C, B+C, etc. (combined sections with + delimiter)
+      
       // Create a proper sectionKey with batch, section, and department
       let sectionKey;
       if (
@@ -307,10 +544,33 @@ export default function SessionalSchedule() {
         sectionKey = section.section;
       }
 
-      groups[mainSection].subsections[subSection] = {
-        ...section,
-        sectionKey: sectionKey,
-      };
+      if (section.section.includes('+')) {
+        // Combined sections like A+B, A+B+C, B+C
+        // For combined sections, add them as subsections under ALL individual sections
+        const individualSections = section.section.split('+');
+        individualSections.forEach((mainSection) => {
+          if (!groups[mainSection]) {
+            groups[mainSection] = { subsections: {} };
+          }
+          
+          groups[mainSection].subsections[section.section] = {
+            ...section,
+            sectionKey: sectionKey,
+          };
+        });
+      } else {
+        // Traditional sections like A1, A2, B1, B2
+        const mainSection = section.section.charAt(0); // A, B, C
+        
+        if (!groups[mainSection]) {
+          groups[mainSection] = { subsections: {} };
+        }
+
+        groups[mainSection].subsections[section.section] = {
+          ...section,
+          sectionKey: sectionKey,
+        };
+      }
     });
 
     return groups;
@@ -325,7 +585,7 @@ export default function SessionalSchedule() {
       if (selectedDepartment && selectedLevelTermBatch?.batch) {
         keys.push(mainSectionKey);
       }
-      
+
       // Add subsection keys for other courses (e.g., "Department Batch A1", "Department Batch A2")
       Object.keys(groupedSections[mainSection].subsections).forEach(
         (subSection) => {
@@ -337,25 +597,6 @@ export default function SessionalSchedule() {
     });
     return keys;
   }, [groupedSections, selectedDepartment, selectedLevelTermBatch]);
-
-  // Since we don't need to check theory schedules, simplify lab times computation
-  const computedLabTimes = useMemo(() => {
-    const result = [];
-    days.forEach((day) => {
-      possibleLabTimes.forEach((time) => {
-        // Include all possible lab times without theory schedule constraints
-        result.push(`${day} ${time}`);
-      });
-    });
-
-    // Add any special lab time slots if needed
-    return result;
-  }, []);
-
-  // Set lab times only once when computed lab times change
-  useEffect(() => {
-    setLabTimes(computedLabTimes);
-  }, [computedLabTimes]);
 
   // Load schedules when sections, department or level term changes
   useEffect(() => {
@@ -380,6 +621,7 @@ export default function SessionalSchedule() {
       const loadScheduleForSection = async (section) => {
         // Create a proper section key
         const sectionKey = `${department} ${batch} ${section.section}`;
+        console.log(sectionKey);
 
         // Validate the section key
         if (!validateSectionKey(sectionKey)) {
@@ -443,12 +685,24 @@ export default function SessionalSchedule() {
       };
 
       // Get unique main sections from allSessionalSections
-      const mainSections = [...new Set(allSessionalSections.map(s => s.section.charAt(0)))];
+      const mainSectionsSet = new Set();
+      allSessionalSections.forEach((s) => {
+        if (s.section.includes('+')) {
+          // For combined sections like A+B, A+B+C, add all individual sections
+          s.section.split('+').forEach(section => {
+            mainSectionsSet.add(section);
+          });
+        } else {
+          // For traditional sections like A1, A2, add the main section letter
+          mainSectionsSet.add(s.section.charAt(0));
+        }
+      });
+      const mainSections = [...mainSectionsSet];
 
       // Execute all schedule loading operations in parallel
       const schedulePromises = [
         ...allSessionalSections.map(loadScheduleForSection),
-        ...mainSections.map(loadScheduleForMainSection)
+        ...mainSections.map(loadScheduleForMainSection),
       ];
 
       Promise.all(schedulePromises)
@@ -491,16 +745,6 @@ export default function SessionalSchedule() {
     allSessionalSections,
     selectedDepartment,
   ]);
-
-  const getSelectedCourseSlots = useCallback(
-    (sectionKey) => {
-      if (!labSchedulesBySection[sectionKey]) return [];
-      return labSchedulesBySection[sectionKey]
-        .filter((slot) => slot.course_id === selectedCourse?.course_id)
-        .map((slot) => `${slot.day} ${slot.time}`);
-    },
-    [labSchedulesBySection, selectedCourse]
-  );
 
   // Handle slot changes efficiently
   const handleSlotChange = useCallback(
@@ -595,8 +839,9 @@ export default function SessionalSchedule() {
       const { day, time, sectionKey } = courseToRemove;
       const updatedSchedules = { ...labSchedulesBySection };
       if (updatedSchedules[sectionKey]) {
-        updatedSchedules[sectionKey] = updatedSchedules[sectionKey]
-          .filter(slot => !(slot.day === day && slot.time === time));
+        updatedSchedules[sectionKey] = updatedSchedules[sectionKey].filter(
+          (slot) => !(slot.day === day && slot.time === time)
+        );
       }
       setLabSchedulesBySection(updatedSchedules);
       setIsChanged(true);
@@ -653,23 +898,30 @@ export default function SessionalSchedule() {
       // Also check for slots that existed before but are now missing (deleted)
       Object.keys(original).forEach((slot) => {
         if (!(slot in current)) {
-          changedSlots.push({ slot, course_id: "" });
+          changedSlots.push({
+            slot,
+            course_id: "",
+            prev_course_id: original[slot].course_id,
+          });
         }
       });
       // For each changed slot, send a setSessionalSchedules call
-      const saveSectionTasks = changedSlots.map(async ({ slot, course_id }) => {
-        const [day, time] = slot.split(" ");
-        try {
-          await setSessionalSchedules(batch, section, department, {
-            day,
-            time,
-            course_id: course_id == "" ? "None" : course_id,
-          });
-          return { success: true, section, slot };
-        } catch {
-          return { success: false, section, slot };
+      const saveSectionTasks = changedSlots.map(
+        async ({ slot, course_id, prev_course_id }) => {
+          const [day, time] = slot.split(" ");
+          try {
+            await setSessionalSchedules(batch, section, department, {
+              day,
+              time,
+              course_id: course_id == "" ? "None" : course_id,
+              prev_course_id: prev_course_id || "",
+            });
+            return { success: true, section, slot };
+          } catch {
+            return { success: false, section, slot };
+          }
         }
-      });
+      );
       return Promise.all(saveSectionTasks);
     });
     Promise.all(savePromises)
@@ -1257,221 +1509,360 @@ export default function SessionalSchedule() {
                       </div>
 
                       {/* Custom schedule table styled like SessionalDistribution */}
-                      <div style={{ marginTop: '20px' }}>
-                        <div className="table-responsive" style={{ overflowX: 'auto', maxHeight: '80vh' }}>
-                          <table style={{
-                            ...scheduleTableStyle.table,
-                            minWidth: `${possibleLabTimes.length * 200 + 100}px`
-                          }}>
+                      <div style={{ marginTop: "20px" }}>
+                        <div
+                          className="table-responsive"
+                          style={{ overflowX: "auto", maxHeight: "80vh" }}
+                        >
+                          <table
+                            style={{
+                              ...scheduleTableStyle.table,
+                              minWidth: `${
+                                possibleLabTimes.length * 200 + 100
+                              }px`,
+                            }}
+                          >
                             <thead>
                               <tr>
-                                <th style={scheduleTableStyle.headerCell}>Day / Time</th>
-                                {possibleLabTimes.map(time => (
-                                  <th key={time} style={{
-                                    ...scheduleTableStyle.headerCell,
-                                    width: '200px',
-                                    minWidth: '200px'
-                                  }}>{time}:00</th>
+                                <th style={scheduleTableStyle.headerCell}>
+                                  Day / Time
+                                </th>
+                                {possibleLabTimes.map((time) => (
+                                  <th
+                                    key={time}
+                                    style={{
+                                      ...scheduleTableStyle.headerCell,
+                                      width: "200px",
+                                      minWidth: "200px",
+                                    }}
+                                  >
+                                    {time}:00
+                                  </th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
                               {days.map((day) => (
                                 <tr key={day}>
-                                  <td style={scheduleTableStyle.dayCell}>{day}</td>
+                                  <td style={scheduleTableStyle.dayCell}>
+                                    {day}
+                                  </td>
                                   {possibleLabTimes.map((time) => {
-                                    // Safely check for theory slots
-                                    let isTheorySlot = false;
-                                    if (hasTheorySchedules(theorySchedules, mainSection)) {
-                                      isTheorySlot = theorySchedules[mainSection].some(slot => 
-                                        slot.day === day && slot.time === time
+                                    // Check for theory conflicts
+                                    const conflictingCourses =
+                                      hasTheoryConflict(
+                                        theorySchedules,
+                                        mainSection,
+                                        day,
+                                        time
                                       );
-                                    }
-                                    
+                                    const hasConflict =
+                                      conflictingCourses.length > 0;
+
                                     // Ensure subsectionNames is an array
-                                    const subsections = Array.isArray(subsectionNames) ? subsectionNames : [];
-                                    
+                                    const subsections = Array.isArray(
+                                      subsectionNames
+                                    )
+                                      ? subsectionNames
+                                      : [];
+
                                     // Get all scheduled courses for this slot across all subsections
-                                    const scheduledCourses = subsections.map(subsection => {
-                                      if (!selectedDepartment || !selectedLevelTermBatch || !selectedLevelTermBatch.batch) {
-                                        return null;
+                                    const scheduledCourses = [];
+
+                                    // Check individual subsections (A1, A2, B1, B2, etc.)
+                                    subsections.forEach((subsection) => {
+                                      if (
+                                        !selectedDepartment ||
+                                        !selectedLevelTermBatch ||
+                                        !selectedLevelTermBatch.batch
+                                      ) {
+                                        return;
                                       }
-                                      
+
                                       const sectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
-                                      const schedule = labSchedulesBySection[sectionKey] || [];
-                                      const slotData = schedule.find(slot => slot.day === day && slot.time === time);
+                                      const schedule =
+                                        labSchedulesBySection[sectionKey] || [];
                                       
-                                      if (slotData && slotData.course_id) {
-                                        const course = allSessionalCourses.find(c => 
-                                          c.id === slotData.course_id || c.course_id === slotData.course_id
+                                      // Find all courses in this time slot for this subsection
+                                      const slotsInTime = schedule.filter(
+                                        (slot) =>
+                                          slot.day === day &&
+                                          slot.time === time &&
+                                          slot.course_id &&
+                                          slot.course_id.trim() !== ""
+                                      );
+
+                                      slotsInTime.forEach((slotData) => {
+                                        const course = allSessionalCourses.find(
+                                          (c) =>
+                                            c.id === slotData.course_id ||
+                                            c.course_id === slotData.course_id
                                         );
-                                        return {
+                                        
+                                        scheduledCourses.push({
                                           course,
                                           subsection,
                                           sectionKey,
-                                          courseId: slotData.course_id
-                                        };
-                                      }
-                                      return null;
-                                    }).filter(Boolean);
+                                          courseId: slotData.course_id,
+                                        });
+                                      });
+                                    });
 
                                     // Also check for courses scheduled in the main section (for 0.75 credit courses)
                                     const mainSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${mainSection}`;
-                                    const mainSectionSchedule = labSchedulesBySection[mainSectionKey] || [];
-                                    const mainSectionSlotData = mainSectionSchedule.find(slot => slot.day === day && slot.time === time);
+                                    const mainSectionSchedule =
+                                      labSchedulesBySection[mainSectionKey] || [];
                                     
-                                    if (mainSectionSlotData && mainSectionSlotData.course_id) {
-                                      const course = allSessionalCourses.find(c => 
-                                        c.id === mainSectionSlotData.course_id || c.course_id === mainSectionSlotData.course_id
+                                    // Find all courses in this time slot for the main section
+                                    const mainSectionSlotsInTime = mainSectionSchedule.filter(
+                                      (slot) =>
+                                        slot.day === day && 
+                                        slot.time === time &&
+                                        slot.course_id &&
+                                        slot.course_id.trim() !== ""
+                                    );
+
+                                    mainSectionSlotsInTime.forEach((slotData) => {
+                                      const course = allSessionalCourses.find(
+                                        (c) =>
+                                          c.id === slotData.course_id ||
+                                          c.course_id === slotData.course_id
                                       );
+                                      
                                       scheduledCourses.push({
                                         course,
                                         subsection: mainSection, // Show as main section (A, B, C)
                                         sectionKey: mainSectionKey,
-                                        courseId: mainSectionSlotData.course_id
+                                        courseId: slotData.course_id,
                                       });
-                                    }
-                                    
+                                    });
+
                                     return (
-                                      <td 
-                                        key={time} 
+                                      <td
+                                        key={time}
                                         style={{
                                           ...scheduleTableStyle.courseCell,
-                                          backgroundColor: isTheorySlot ? '#f8f9fa' : 'white',
-                                          position: 'relative'
+                                          backgroundColor: hasConflict
+                                            ? "#ffebee"
+                                            : "white",
+                                          position: "relative",
                                         }}
                                       >
-                                        {/* Edit icon in top-right corner */}
-                                        {!isTheorySlot && (
-                                          <div style={{
-                                            position: 'absolute',
-                                            top: '8px',
-                                            right: '8px',
-                                            zIndex: 2
-                                          }}>
+                                        {/* Edit icon in top-right corner - only show if no conflicts */}
+                                        {!hasConflict && (
+                                          <div
+                                            style={{
+                                              position: "absolute",
+                                              top: "8px",
+                                              right: "8px",
+                                              zIndex: 2,
+                                            }}
+                                          >
                                             <i
                                               className="mdi mdi-pencil"
                                               style={{
-                                                color: '#667eea',
-                                                cursor: 'pointer',
-                                                fontSize: '1rem',
-                                                padding: '4px',
-                                                borderRadius: '50%',
-                                                backgroundColor: 'white',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                                transition: 'all 0.2s ease',
+                                                color: "#667eea",
+                                                cursor: "pointer",
+                                                fontSize: "1rem",
+                                                padding: "4px",
+                                                borderRadius: "50%",
+                                                backgroundColor: "white",
+                                                boxShadow:
+                                                  "0 2px 4px rgba(0,0,0,0.1)",
+                                                transition: "all 0.2s ease",
                                               }}
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 // For edit, choose first available subsection or existing one
-                                                let targetSubsection = subsections[0];
+                                                let targetSubsection =
+                                                  subsections[0];
                                                 let currentCourseId = null;
-                                                
+
                                                 // Check if there's already a course scheduled
                                                 for (const subsection of subsections) {
                                                   const sectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
-                                                  const schedule = labSchedulesBySection[sectionKey] || [];
-                                                  const existingSlot = schedule.find(slot => slot.day === day && slot.time === time);
-                                                  if (existingSlot && existingSlot.course_id) {
-                                                    targetSubsection = subsection;
-                                                    currentCourseId = existingSlot.course_id;
+                                                  const schedule =
+                                                    labSchedulesBySection[
+                                                      sectionKey
+                                                    ] || [];
+                                                  const existingSlot =
+                                                    schedule.find(
+                                                      (slot) =>
+                                                        slot.day === day &&
+                                                        slot.time === time
+                                                    );
+                                                  if (
+                                                    existingSlot &&
+                                                    existingSlot.course_id
+                                                  ) {
+                                                    targetSubsection =
+                                                      subsection;
+                                                    currentCourseId =
+                                                      existingSlot.course_id;
                                                     break;
                                                   }
                                                 }
-                                                
+
                                                 if (subsections.length > 0) {
                                                   setSelectedCell({
                                                     day,
                                                     time,
                                                     sectionKey: `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSubsection}`,
-                                                    subsection: targetSubsection,
-                                                    currentCourseId
+                                                    subsection:
+                                                      targetSubsection,
+                                                    mainSection: mainSection, // Add the main section (A, B, C)
+                                                    currentCourseId,
                                                   });
                                                   setShowLabCoursesModal(true);
                                                 }
                                               }}
                                               onMouseOver={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#667eea';
-                                                e.currentTarget.style.color = 'white';
-                                                e.currentTarget.style.transform = 'scale(1.1)';
+                                                e.currentTarget.style.backgroundColor =
+                                                  "#667eea";
+                                                e.currentTarget.style.color =
+                                                  "white";
+                                                e.currentTarget.style.transform =
+                                                  "scale(1.1)";
                                               }}
                                               onMouseOut={(e) => {
-                                                e.currentTarget.style.backgroundColor = 'white';
-                                                e.currentTarget.style.color = '#667eea';
-                                                e.currentTarget.style.transform = 'scale(1)';
+                                                e.currentTarget.style.backgroundColor =
+                                                  "white";
+                                                e.currentTarget.style.color =
+                                                  "#667eea";
+                                                e.currentTarget.style.transform =
+                                                  "scale(1)";
                                               }}
                                             />
                                           </div>
                                         )}
-                                        
-                                        {isTheorySlot ? (
-                                          <div style={{
-                                            padding: '8px',
-                                            backgroundColor: '#e9ecef',
-                                            borderRadius: '4px',
-                                            fontSize: '0.8rem',
-                                            color: '#6c757d',
-                                            textAlign: 'center'
-                                          }}>
-                                            Theory Class
+
+                                        {hasConflict ? (
+                                          <div
+                                            style={{
+                                              padding: "8px",
+                                              backgroundColor: "#ffcdd2",
+                                              borderRadius: "4px",
+                                              fontSize: "0.8rem",
+                                              color: "#d32f2f",
+                                              textAlign: "center",
+                                              fontWeight: "600",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              height: "100%",
+                                              minHeight: "60px",
+                                              flexDirection: "column",
+                                              gap: "2px",
+                                            }}
+                                          >
+                                            {conflictingCourses.map(
+                                              (courseId, index) => (
+                                                <div
+                                                  key={index}
+                                                  style={{
+                                                    fontSize: "0.85rem",
+                                                    fontWeight: "700",
+                                                  }}
+                                                >
+                                                  {courseId}
+                                                </div>
+                                              )
+                                            )}
                                           </div>
                                         ) : (
                                           <>
-                                            {scheduledCourses.map(({ course, subsection, sectionKey, courseId }, index) => (
-                                              <div 
-                                                key={`${subsection}-${index}`}
-                                                style={{
-                                                  ...scheduleTableStyle.courseItem,
-                                                  ...scheduleTableStyle.alreadyScheduledCourseItem,
-                                                  cursor: 'pointer',
-                                                  margin: '2px 0',
-                                                  position: 'relative'
-                                                }}
-                                              >
-                                                <div style={scheduleTableStyle.courseTitle}>
-                                                  {course && (course.course_id || course.course_code)
-                                                    ? (course.course_id || course.course_code)
-                                                    : `Course ${courseId || 'Unknown'}`
-                                                  }
-                                                </div>
-                                                <div style={scheduleTableStyle.sectionBadge}>
-                                                  {formatSectionDisplay(subsection, course?.class_per_week || 1)}
-                                                </div>
-                                                {/* Close icon for removing course */}
+                                            {scheduledCourses.map(
+                                              (
+                                                {
+                                                  course,
+                                                  subsection,
+                                                  sectionKey,
+                                                  courseId,
+                                                },
+                                                index
+                                              ) => (
                                                 <div
+                                                  key={`${subsection}-${courseId}-${index}`}
                                                   style={{
-                                                    position: 'absolute',
-                                                    right: '8px',
-                                                    top: '50%',
-                                                    transform: 'translateY(-50%)',
-                                                    cursor: 'pointer',
-                                                    zIndex: 2
-                                                  }}
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    // Show confirmation modal before removing course
-                                                    handleCourseRemoval(day, time, sectionKey, courseId);
+                                                    ...scheduleTableStyle.courseItem,
+                                                    ...scheduleTableStyle.alreadyScheduledCourseItem,
+                                                    cursor: "pointer",
+                                                    margin: "2px 0",
+                                                    position: "relative",
                                                   }}
                                                 >
-                                                  <i
-                                                    className="mdi mdi-close-circle"
+                                                  <div
+                                                    style={
+                                                      scheduleTableStyle.courseTitle
+                                                    }
+                                                  >
+                                                    {course &&
+                                                    (course.course_id ||
+                                                      course.course_code)
+                                                      ? course.course_id ||
+                                                        course.course_code
+                                                      : `Course ${
+                                                          courseId || "Unknown"
+                                                        }`}
+                                                  </div>
+                                                  <div
+                                                    style={
+                                                      scheduleTableStyle.sectionBadge
+                                                    }
+                                                  >
+                                                    {formatSectionDisplay(
+                                                      subsection,
+                                                      course?.class_per_week ||
+                                                        1
+                                                    )}
+                                                  </div>
+                                                  {/* Close icon for removing course */}
+                                                  <div
                                                     style={{
-                                                      color: '#dc3545',
-                                                      fontSize: '1.2rem',
-                                                      transition: 'all 0.2s ease'
+                                                      position: "absolute",
+                                                      right: "8px",
+                                                      top: "50%",
+                                                      transform:
+                                                        "translateY(-50%)",
+                                                      cursor: "pointer",
+                                                      zIndex: 2,
                                                     }}
-                                                    onMouseOver={(e) => {
-                                                      e.currentTarget.style.color = '#c82333';
-                                                      e.currentTarget.style.transform = 'scale(1.1)';
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      // Show confirmation modal before removing course
+                                                      handleCourseRemoval(
+                                                        day,
+                                                        time,
+                                                        sectionKey,
+                                                        courseId
+                                                      );
                                                     }}
-                                                    onMouseOut={(e) => {
-                                                      e.currentTarget.style.color = '#dc3545';
-                                                      e.currentTarget.style.transform = 'scale(1)';
-                                                    }}
-                                                  />
+                                                  >
+                                                    <i
+                                                      className="mdi mdi-close-circle"
+                                                      style={{
+                                                        color: "#dc3545",
+                                                        fontSize: "1.2rem",
+                                                        transition:
+                                                          "all 0.2s ease",
+                                                      }}
+                                                      onMouseOver={(e) => {
+                                                        e.currentTarget.style.color =
+                                                          "#c82333";
+                                                        e.currentTarget.style.transform =
+                                                          "scale(1.1)";
+                                                      }}
+                                                      onMouseOut={(e) => {
+                                                        e.currentTarget.style.color =
+                                                          "#dc3545";
+                                                        e.currentTarget.style.transform =
+                                                          "scale(1)";
+                                                      }}
+                                                    />
+                                                  </div>
                                                 </div>
-                                              </div>
-                                            ))}
+                                              )
+                                            )}
                                           </>
                                         )}
                                       </td>
@@ -1564,251 +1955,434 @@ export default function SessionalSchedule() {
           }
         }
       `}</style>
-      
+
       {/* Course Selection Modal - SessionalDistribution Style */}
       {showLabCoursesModal && selectedCell && (
         <>
-          <div style={overlayStyle} onClick={() => setShowLabCoursesModal(false)} />
-          <div style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 8px 32px rgba(174, 117, 228, 0.15)',
-            border: 'none',
-            padding: '0',
-            zIndex: 1000,
-            maxWidth: '520px',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            minWidth: '480px'
-          }}>
+          <div
+            style={overlayStyle}
+            onClick={() => setShowLabCoursesModal(false)}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "white",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+              border: "none",
+              padding: "0",
+              zIndex: 1000,
+              maxWidth: "520px",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              minWidth: "480px",
+            }}
+          >
             {/* Modern Modal Header - Fixed */}
-            <div style={{
-              position: 'sticky',
-              top: 0,
-              zIndex: 10,
-              background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)',
-              borderRadius: '16px 16px 0 0',
-              color: 'white',
-              padding: '1.2rem 1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              boxShadow: '0 4px 10px rgba(174, 117, 228, 0.10)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.15)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
-                }}>
-                  <i className="mdi mdi-plus-circle-outline" style={{ fontSize: '1.5rem', color: 'white' }}></i>
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+                background:
+                  "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(154, 77, 226) 100%)",
+                borderRadius: "16px 16px 0 0",
+                color: "white",
+                padding: "1.2rem 1.5rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                boxShadow: "0 4px 10px rgba(174, 117, 228, 0.10)",
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "12px" }}
+              >
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    backgroundColor: "rgba(255, 255, 255, 0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                  }}
+                >
+                  <i
+                    className="mdi mdi-plus-circle-outline"
+                    style={{ fontSize: "1.5rem", color: "white" }}
+                  ></i>
                 </div>
                 <div>
-                  <span style={{ fontWeight: '700', fontSize: '1.2rem', display: 'block' }}>Add Sessional Course</span>
-                  <span style={{ fontSize: '0.9rem', opacity: 0.9, fontWeight: '500' }}>
-                    {selectedCell.subsection} - {selectedCell.day} {selectedCell.time}:00
+                  <span
+                    style={{
+                      fontWeight: "700",
+                      fontSize: "1.2rem",
+                      display: "block",
+                    }}
+                  >
+                    Add Sessional Course
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.9rem",
+                      opacity: 0.9,
+                      fontWeight: "500",
+                    }}
+                  >
+                    {selectedCell.subsection} - {selectedCell.day}{" "}
+                    {selectedCell.time}:00
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => setShowLabCoursesModal(false)}
                 style={{
-                  background: 'rgba(255,255,255,0.15)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '10px',
-                  width: '36px',
-                  height: '36px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  fontSize: '1.2rem',
-                  fontWeight: 'bold',
-                  transition: 'all 0.2s',
+                  background: "rgba(255,255,255,0.15)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "10px",
+                  width: "36px",
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                  transition: "all 0.2s",
                 }}
-                onMouseOver={e => {
-                  e.currentTarget.style.background = 'rgb(154, 77, 226)';
-                  e.currentTarget.style.color = 'white';
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = "rgb(154, 77, 226)";
+                  e.currentTarget.style.color = "white";
                 }}
-                onMouseOut={e => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                  e.currentTarget.style.color = 'white';
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+                  e.currentTarget.style.color = "white";
                 }}
               >
                 <i className="mdi mdi-close"></i>
               </button>
             </div>
-            
+
             {/* Modal Content */}
-            <div style={{
-              padding: '1.5rem',
-              background: 'white',
-              borderRadius: '0 0 16px 16px',
-            }}>
+            <div
+              style={{
+                padding: "1.5rem",
+                background: "white",
+                borderRadius: "0 0 16px 16px",
+              }}
+            >
               {allSessionalCourses.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '2rem',
-                  color: '#718096',
-                  fontSize: '1rem'
-                }}>
-                  No sessional courses available for this department and level-term.
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "2rem",
+                    color: "#718096",
+                    fontSize: "1rem",
+                  }}
+                >
+                  No sessional courses available for this department and
+                  level-term.
                 </div>
               ) : (
-                <div style={{
-                  display: 'grid',
-                  gap: '16px',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-                }}>
-                  {allSessionalCourses.map((course) => {
-                    // Extract main section from the first subsection (e.g., "A" from "A1")
-                    const mainSection = selectedCell.subsection.charAt(0);
-                    
-                    // Determine how many course cards to show based on class_per_week
-                    const courseCards = [];
-                    
-                    if (course.class_per_week === 0.75) {
-                      // For 0.75 credit courses, show one card with main section only
-                      const targetSection = mainSection;
-                      const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}`;
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "16px",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(220px, 1fr))",
+                  }}
+                >
+                  {allSessionalCourses
+                    .flatMap((course) => {
+                      const courseCards = [];
                       
-                      // Check if already scheduled for this section
-                      const isAlreadyScheduled = labSchedulesBySection[targetSectionKey]?.some(slot => 
-                        slot.day === selectedCell.day && 
-                        slot.time === selectedCell.time && 
-                        slot.course_id === (course.course_id || course.id)
-                      ) || false;
+                      // Get the main section from the table that was clicked (A, B, C)
+                      const currentMainSection = selectedCell.mainSection;
                       
-                      courseCards.push({
-                        section: targetSection,
-                        sectionKey: targetSectionKey,
-                        isAlreadyScheduled,
-                        displayText: `Section ${targetSection}`,
-                        courseId: course.course_id || course.id
-                      });
-                    } else {
-                      // For other courses, show cards for both subsections (A1, A2 or B1, B2, etc.)
-                      const subsections = [`${mainSection}1`, `${mainSection}2`];
-                      
-                      subsections.forEach(subsection => {
-                        const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
+                      if (course.optional) {
+                        // Optional courses: Create combined section with all available main sections
+                        const allMainSections = Object.keys(groupedSections).sort();
+                        const combinedSection = allMainSections.join('+');
                         
-                        const isAlreadyScheduled = labSchedulesBySection[targetSectionKey]?.some(slot => 
-                          slot.day === selectedCell.day && 
-                          slot.time === selectedCell.time && 
-                          slot.course_id === (course.course_id || course.id)
-                        ) || false;
+                        const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${combinedSection}`;
                         
+                        // Check conflicts and assignments
+                        const isSlotOccupied =
+                          labSchedulesBySection[targetSectionKey]?.some(
+                            (slot) =>
+                              slot.day === selectedCell.day &&
+                              slot.time === selectedCell.time &&
+                              slot.course_id === (course.course_id || course.id)
+                          ) || false;
+
+                        const isCourseAssigned = isCourseAlreadyAssigned(
+                          labSchedulesBySection,
+                          course.course_id || course.id,
+                          targetSectionKey,
+                          selectedCell.day,
+                          selectedCell.time
+                        );
+
+                        const hasSessionalTimeConflict = hasSessionalConflict(
+                          labSchedulesBySection,
+                          targetSectionKey,
+                          selectedCell.day,
+                          selectedCell.time,
+                          selectedDepartment,
+                          selectedLevelTermBatch
+                        );
+
+                        const isAlreadyScheduled =
+                          isSlotOccupied ||
+                          isCourseAssigned ||
+                          hasSessionalTimeConflict;
+
                         courseCards.push({
-                          section: subsection,
+                          section: combinedSection,
                           sectionKey: targetSectionKey,
                           isAlreadyScheduled,
-                          displayText: `Section ${subsection}`,
-                          courseId: course.course_id || course.id
+                          isSlotOccupied,
+                          isCourseAssigned,
+                          hasSessionalTimeConflict,
+                          displayText: `Section ${combinedSection}`,
+                          courseId: course.course_id || course.id,
+                          course: course,
                         });
-                      });
-                    }
-                    
-                    return courseCards.map((cardInfo, cardIndex) => (
-                      <div
-                        key={`${course.course_id || course.id}-${cardInfo.section}`}
-                        style={{
-                          padding: '16px',
-                          borderRadius: '12px',
-                          border: cardInfo.isAlreadyScheduled ? '2px solid rgba(220, 53, 69, 0.3)' : '2px solid rgba(194, 137, 248, 0.2)',
-                          backgroundColor: cardInfo.isAlreadyScheduled ? 'rgba(220, 53, 69, 0.05)' : 'rgba(255, 255, 255, 0.9)',
-                          cursor: cardInfo.isAlreadyScheduled ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.2s ease',
-                          position: 'relative',
-                          opacity: cardInfo.isAlreadyScheduled ? 0.6 : 1,
-                        }}
-                        onClick={() => {
-                          if (!cardInfo.isAlreadyScheduled) {
-                            // Add course to the specific section for this card
-                            handleSlotChange(selectedCell.day, selectedCell.time, cardInfo.courseId, cardInfo.sectionKey);
-                            setShowLabCoursesModal(false);
+                        
+                      } else {
+                        // Non-optional courses: Use the current main section from the table
+                        if (course.class_per_week === 0.75) {
+                          // 0.75 credit courses get main section only (A, B, C)
+                          const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${currentMainSection}`;
+                          
+                          const isSlotOccupied =
+                            labSchedulesBySection[targetSectionKey]?.some(
+                              (slot) =>
+                                slot.day === selectedCell.day &&
+                                slot.time === selectedCell.time &&
+                                slot.course_id === (course.course_id || course.id)
+                            ) || false;
+
+                          const isCourseAssigned = isCourseAlreadyAssigned(
+                            labSchedulesBySection,
+                            course.course_id || course.id,
+                            targetSectionKey,
+                            selectedCell.day,
+                            selectedCell.time
+                          );
+
+                          const hasSessionalTimeConflict = hasSessionalConflict(
+                            labSchedulesBySection,
+                            targetSectionKey,
+                            selectedCell.day,
+                            selectedCell.time,
+                            selectedDepartment,
+                            selectedLevelTermBatch
+                          );
+
+                          const isAlreadyScheduled =
+                            isSlotOccupied ||
+                            isCourseAssigned ||
+                            hasSessionalTimeConflict;
+
+                          courseCards.push({
+                            section: currentMainSection,
+                            sectionKey: targetSectionKey,
+                            isAlreadyScheduled,
+                            isSlotOccupied,
+                            isCourseAssigned,
+                            hasSessionalTimeConflict,
+                            displayText: `Section ${currentMainSection}`,
+                            courseId: course.course_id || course.id,
+                            course: course,
+                          });
+                          
+                        } else if (course.class_per_week === 1.5) {
+                          // 1.5 credit courses get two subsection cards (A1, A2 or B1, B2, etc.)
+                          for (let i = 1; i <= 2; i++) {
+                            const subsection = `${currentMainSection}${i}`;
+                            const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
+                            
+                            const isSlotOccupied =
+                              labSchedulesBySection[targetSectionKey]?.some(
+                                (slot) =>
+                                  slot.day === selectedCell.day &&
+                                  slot.time === selectedCell.time &&
+                                  slot.course_id === (course.course_id || course.id)
+                              ) || false;
+
+                            const isCourseAssigned = isCourseAlreadyAssigned(
+                              labSchedulesBySection,
+                              course.course_id || course.id,
+                              targetSectionKey,
+                              selectedCell.day,
+                              selectedCell.time
+                            );
+
+                            const hasSessionalTimeConflict = hasSessionalConflict(
+                              labSchedulesBySection,
+                              targetSectionKey,
+                              selectedCell.day,
+                              selectedCell.time,
+                              selectedDepartment,
+                              selectedLevelTermBatch
+                            );
+
+                            const isAlreadyScheduled =
+                              isSlotOccupied ||
+                              isCourseAssigned ||
+                              hasSessionalTimeConflict;
+
+                            courseCards.push({
+                              section: subsection,
+                              sectionKey: targetSectionKey,
+                              isAlreadyScheduled,
+                              isSlotOccupied,
+                              isCourseAssigned,
+                              hasSessionalTimeConflict,
+                              displayText: `Section ${subsection}`,
+                              courseId: course.course_id || course.id,
+                              course: course,
+                            });
                           }
-                        }}
-                        onMouseOver={e => {
-                          if (!cardInfo.isAlreadyScheduled) {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 8px 25px rgba(174, 117, 228, 0.15)';
-                            e.currentTarget.style.borderColor = 'rgba(194, 137, 248, 0.4)';
-                          }
-                        }}
-                        onMouseOut={e => {
-                          if (!cardInfo.isAlreadyScheduled) {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                            e.currentTarget.style.borderColor = 'rgba(194, 137, 248, 0.2)';
-                          }
-                        }}
-                      >
-                        <div style={{
-                          fontWeight: '700',
-                          fontSize: '1rem',
-                          color: cardInfo.isAlreadyScheduled ? '#6c757d' : '#2d3748',
-                          marginBottom: '8px',
-                          lineHeight: '1.2'
-                        }}>
-                          {course.course_id || course.course_code}
-                        </div>
-                        <div style={{
-                          fontSize: '0.85rem',
-                          color: cardInfo.isAlreadyScheduled ? '#6c757d' : '#718096',
-                          marginBottom: '8px',
-                          fontWeight: '500'
-                        }}>
-                          {course.course_title}
-                        </div>
-                        <div style={{
-                          fontSize: '0.8rem',
-                          color: cardInfo.isAlreadyScheduled ? '#6c757d' : '#a0aec0',
-                          fontWeight: '600',
-                          marginBottom: '8px'
-                        }}>
-                          {course.class_per_week} hours/week
-                        </div>
-                        <div style={{
-                          fontSize: '0.75rem',
-                          backgroundColor: 'rgba(194, 137, 248, 0.1)',
-                          color: 'rgb(154, 77, 226)',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          fontWeight: '600',
-                          textAlign: 'center'
-                        }}>
-                          {cardInfo.displayText}
-                        </div>
-                        {cardInfo.isAlreadyScheduled && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '8px',
-                            right: '8px',
-                            fontSize: '0.7rem',
-                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                            color: '#dc3545',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontWeight: '600'
-                          }}>
-                            Already Scheduled
+                        }
+                      }
+                      
+                      return courseCards;
+                    })
+                    .map((cardInfo, cardIndex) => (
+                        <div
+                          key={`${cardInfo.course.course_id || cardInfo.course.id}-${
+                            cardInfo.section
+                          }`}
+                          style={{
+                            padding: "16px",
+                            borderRadius: "12px",
+                            border: cardInfo.isAlreadyScheduled
+                              ? "2px solid rgba(220, 53, 69, 0.3)"
+                              : "2px solid rgba(194, 137, 248, 0.2)",
+                            backgroundColor: cardInfo.isAlreadyScheduled
+                              ? "rgba(220, 53, 69, 0.05)"
+                              : "rgba(255, 255, 255, 0.9)",
+                            cursor: cardInfo.isAlreadyScheduled
+                              ? "not-allowed"
+                              : "pointer",
+                            transition: "all 0.2s ease",
+                            position: "relative",
+                            opacity: cardInfo.isAlreadyScheduled ? 0.6 : 1,
+                          }}
+                          onClick={() => {
+                            if (!cardInfo.isAlreadyScheduled) {
+                              // Add course to the specific section for this card
+                              handleSlotChange(
+                                selectedCell.day,
+                                selectedCell.time,
+                                cardInfo.courseId,
+                                cardInfo.sectionKey
+                              );
+                              setShowLabCoursesModal(false);
+                            }
+                          }}
+                          onMouseOver={(e) => {
+                            if (!cardInfo.isAlreadyScheduled) {
+                              e.currentTarget.style.transform =
+                                "translateY(-2px)";
+                              e.currentTarget.style.boxShadow =
+                                "0 8px 25px rgba(174, 117, 228, 0.15)";
+                              e.currentTarget.style.borderColor =
+                                "rgba(194, 137, 248, 0.4)";
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!cardInfo.isAlreadyScheduled) {
+                              e.currentTarget.style.transform = "translateY(0)";
+                              e.currentTarget.style.boxShadow = "none";
+                              e.currentTarget.style.borderColor =
+                                "rgba(194, 137, 248, 0.2)";
+                            }
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: "700",
+                              fontSize: "1rem",
+                              color: cardInfo.isAlreadyScheduled
+                                ? "#6c757d"
+                                : "#2d3748",
+                              marginBottom: "8px",
+                              lineHeight: "1.2",
+                            }}
+                          >
+                            {cardInfo.course.course_id || cardInfo.course.course_code}
                           </div>
-                        )}
-                      </div>
-                    ));
-                  }).flat()}
+                          <div
+                            style={{
+                              fontSize: "0.85rem",
+                              color: cardInfo.isAlreadyScheduled
+                                ? "#6c757d"
+                                : "#718096",
+                              marginBottom: "8px",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {cardInfo.course.course_title}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.8rem",
+                              color: cardInfo.isAlreadyScheduled
+                                ? "#6c757d"
+                                : "#a0aec0",
+                              fontWeight: "600",
+                              marginBottom: "8px",
+                            }}
+                          >
+                            {cardInfo.course.class_per_week} hours/week
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "0.75rem",
+                              backgroundColor: "rgba(194, 137, 248, 0.1)",
+                              color: "rgb(154, 77, 226)",
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontWeight: "600",
+                              textAlign: "center",
+                            }}
+                          >
+                            {cardInfo.displayText}
+                          </div>
+                          {cardInfo.isAlreadyScheduled && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "8px",
+                                right: "8px",
+                                fontSize: "0.7rem",
+                                backgroundColor: "rgba(220, 53, 69, 0.1)",
+                                color: "#dc3545",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontWeight: "600",
+                              }}
+                            >
+                              {cardInfo.hasSessionalTimeConflict
+                                ? "Time Conflict"
+                                : cardInfo.isCourseAssigned
+                                ? "Course Assigned"
+                                : "Slot Occupied"}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                 </div>
               )}
             </div>
@@ -1819,92 +2393,128 @@ export default function SessionalSchedule() {
       {/* Confirmation Modal for Course Removal */}
       {showConfirmation && courseToRemove && (
         <>
-          <div style={overlayStyle} onClick={() => setShowConfirmation(false)} />
-          <div style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            boxShadow: '0 8px 32px rgba(174, 117, 228, 0.15)',
-            border: 'none',
-            padding: '0',
-            zIndex: 1000,
-            maxWidth: '480px',
-            minWidth: '400px'
-          }}>
+          <div
+            style={overlayStyle}
+            onClick={() => setShowConfirmation(false)}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "white",
+              borderRadius: "16px",
+              boxShadow: "0 8px 32px rgba(174, 117, 228, 0.15)",
+              border: "none",
+              padding: "0",
+              zIndex: 1000,
+              maxWidth: "480px",
+              minWidth: "400px",
+            }}
+          >
             {/* Modal Header */}
-            <div style={{
-              background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)',
-              borderRadius: '16px 16px 0 0',
-              color: 'white',
-              padding: '1.2rem 1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 10px rgba(220, 53, 69, 0.15)',
-            }}>
-              <div style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                backgroundColor: "rgba(255, 255, 255, 0.15)",
+            <div
+              style={{
+                background: "linear-gradient(135deg, #dc3545 0%, #c82333 100%)",
+                borderRadius: "16px 16px 0 0",
+                color: "white",
+                padding: "1.2rem 1.5rem",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)"
-              }}>
-                <i className="mdi mdi-alert-circle-outline" style={{ fontSize: '1.5rem', color: 'white' }}></i>
+                gap: "12px",
+                boxShadow: "0 4px 10px rgba(220, 53, 69, 0.15)",
+              }}
+            >
+              <div
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  backgroundColor: "rgba(255, 255, 255, 0.15)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                }}
+              >
+                <i
+                  className="mdi mdi-alert-circle-outline"
+                  style={{ fontSize: "1.5rem", color: "white" }}
+                ></i>
               </div>
               <div>
-                <span style={{ fontWeight: '700', fontSize: '1.2rem', display: 'block' }}>Confirm Removal</span>
-                <span style={{ fontSize: '0.9rem', opacity: 0.9, fontWeight: '500' }}>
+                <span
+                  style={{
+                    fontWeight: "700",
+                    fontSize: "1.2rem",
+                    display: "block",
+                  }}
+                >
+                  Confirm Removal
+                </span>
+                <span
+                  style={{
+                    fontSize: "0.9rem",
+                    opacity: 0.9,
+                    fontWeight: "500",
+                  }}
+                >
                   Remove course from schedule
                 </span>
               </div>
             </div>
-            
+
             {/* Modal Content */}
-            <div style={{
-              padding: '1.5rem',
-              background: 'white',
-              borderRadius: '0 0 16px 16px',
-              textAlign: 'center'
-            }}>
-              <p style={{
-                fontSize: '1rem',
-                color: '#495057',
-                marginBottom: '1.5rem',
-                lineHeight: '1.5'
-              }}>
+            <div
+              style={{
+                padding: "1.5rem",
+                background: "white",
+                borderRadius: "0 0 16px 16px",
+                textAlign: "center",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "1rem",
+                  color: "#495057",
+                  marginBottom: "1.5rem",
+                  lineHeight: "1.5",
+                }}
+              >
                 Are you sure you want to remove this course from the schedule?
                 <br />
-                <strong style={{ color: '#dc3545' }}>
+                <strong style={{ color: "#dc3545" }}>
                   {courseToRemove.day} {courseToRemove.time}:00
                 </strong>
               </p>
-              
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "center",
+                }}
+              >
                 <button
                   onClick={() => setShowConfirmation(false)}
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    border: '1px solid #6c757d',
-                    backgroundColor: 'white',
-                    color: '#6c757d',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease',
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid #6c757d",
+                    backgroundColor: "white",
+                    color: "#6c757d",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    transition: "all 0.2s ease",
                   }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.backgroundColor = '#6c757d';
-                    e.currentTarget.style.color = 'white';
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = "#6c757d";
+                    e.currentTarget.style.color = "white";
                   }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.backgroundColor = 'white';
-                    e.currentTarget.style.color = '#6c757d';
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = "white";
+                    e.currentTarget.style.color = "#6c757d";
                   }}
                 >
                   Cancel
@@ -1912,22 +2522,22 @@ export default function SessionalSchedule() {
                 <button
                   onClick={executeCourseRemoval}
                   style={{
-                    padding: '10px 20px',
-                    borderRadius: '8px',
-                    border: '1px solid #dc3545',
-                    backgroundColor: '#dc3545',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    transition: 'all 0.2s ease',
+                    padding: "10px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid #dc3545",
+                    backgroundColor: "#dc3545",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    transition: "all 0.2s ease",
                   }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.backgroundColor = '#c82333';
-                    e.currentTarget.style.borderColor = '#c82333';
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = "#c82333";
+                    e.currentTarget.style.borderColor = "#c82333";
                   }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.backgroundColor = '#dc3545';
-                    e.currentTarget.style.borderColor = '#dc3545';
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = "#dc3545";
+                    e.currentTarget.style.borderColor = "#dc3545";
                   }}
                 >
                   Remove Course

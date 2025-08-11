@@ -11,11 +11,12 @@ function Navbar() {
     <nav
       className="navbar default-layout-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row navbar-sessional-consistent"
       style={{
-        boxShadow: '0 10px 30px rgba(194, 137, 248, 0.18)',
-        border: 'none',
-        background: 'linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)',
-        minHeight: '64px',
-        zIndex: 1050
+        boxShadow: "0 10px 30px rgba(194, 137, 248, 0.18)",
+        border: "none",
+        background:
+          "linear-gradient(135deg, rgb(194, 137, 248) 0%, rgb(174, 117, 228) 100%)",
+        minHeight: "64px",
+        zIndex: 1050,
       }}
     >
       <style>{`
@@ -68,6 +69,8 @@ function Navbar() {
           color: #fff;
           border-radius: 12px;
           transition: background 0.25s ease;
+          display: block !important;
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .navbar-toggler:hover {
           background: rgba(194, 137, 248, 0.4);
@@ -114,6 +117,28 @@ function Navbar() {
           box-shadow: 0 2px 8px rgba(154, 77, 226, 0.15);
           margin-left: 4px;
         }
+        .navbar-menu-wrapper {
+          flex: 1;
+        }
+        @media (max-width: 991px) {
+          .navbar-brand-wrapper {
+            display: none;
+          }
+          .navbar-menu-wrapper {
+            justify-content: flex-start !important;
+          }
+          .navbar-toggler {
+            margin-left: 15px;
+          }
+          .navbar-nav-right {
+            margin-left: auto;
+          }
+        }
+        @media (max-width: 575px) {
+          .navbar-toggler {
+            margin-left: 10px;
+          }
+        }
       `}</style>
       <div className="text-center navbar-brand-wrapper d-flex align-items-center justify-content-center">
         <Link className="navbar-brand brand-logo" to="/">
@@ -133,21 +158,42 @@ function Navbar() {
         <button
           className="navbar-toggler navbar-toggler align-self-center"
           type="button"
-          onClick={() => document.body.classList.toggle("sidebar-icon-only")}
-          style={{ color: '#fff' }}
+          onClick={() => {
+            const sidebar = document.querySelector("#sidebar");
+            const body = document.body;
+
+            // For mobile and tablet screens, toggle sidebar active class
+            if (window.innerWidth <= 991) {
+              if (sidebar) {
+                sidebar.classList.toggle("active");
+              }
+            }
+
+            // For all screen sizes, toggle sidebar-icon-only for desktop collapse behavior
+            body.classList.toggle("sidebar-icon-only");
+          }}
+          style={{ color: "#fff" }}
         >
           <span className="mdi mdi-menu"></span>
         </button>
-        <ul className="navbar-nav navbar-nav-right" style={{ alignItems: 'center' }}>
+        <ul
+          className="navbar-nav navbar-nav-right"
+          style={{ alignItems: "center" }}
+        >
           <li className="nav-item nav-profile">
             <Dropdown align="end">
               <Dropdown.Toggle className="nav-link">
                 <div className="nav-profile-img d-flex align-items-center justify-content-center">
-                  <i className="mdi mdi-account-circle" style={{ fontSize: 32, color: '#fff' }}></i>
+                  <i
+                    className="mdi mdi-account-circle"
+                    style={{ fontSize: 32, color: "#fff" }}
+                  ></i>
                   <span className="availability-status online"></span>
                 </div>
                 <div className="nav-profile-text">
-                  <p className="mb-1 text-black"><b>{name}</b></p>
+                  <p className="mb-1 text-black">
+                    <b>{name}</b>
+                  </p>
                 </div>
               </Dropdown.Toggle>
               <Dropdown.Menu className="navbar-dropdown">
