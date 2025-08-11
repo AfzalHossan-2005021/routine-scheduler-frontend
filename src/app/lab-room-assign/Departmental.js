@@ -37,8 +37,12 @@ export default function LabRoomAssign() {
       setRooms(rooms_);
     });
     const courses = getLabCourses().then((res) => {
-      courses_ = res;
-      setOfferedCourse(res);
+      // Filter out Thesis courses (class_per_week = 3 and name includes "Thesis")
+      const filteredCourses = res.filter((course) => {
+        return !(course.class_per_week === 3 && course.name && course.name.toLowerCase().includes('thesis'));
+      });
+      courses_ = filteredCourses;
+      setOfferedCourse(filteredCourses);
     });
     getAllSchedule().then((res) => {
       // Additional validation - ensure we have an array
@@ -79,6 +83,11 @@ export default function LabRoomAssign() {
   useEffect(() => {
     const uniqueNames = {};
     const uniqueCourses = offeredCourse.filter((obj) => {
+      // Skip Thesis courses (already filtered in the initial load, but double-check)
+      if (obj.class_per_week === 3 && obj.name && obj.name.toLowerCase().includes('thesis')) {
+        return false;
+      }
+      
       if (!uniqueNames[obj.name]) {
         uniqueNames[obj.name] = true;
         return true;
@@ -229,6 +238,12 @@ export default function LabRoomAssign() {
     scheduledCourses.forEach((course) => {
       const { course_id, section, day, time } = course;
       const courseKey = `${course_id}_${section}`;
+
+      // Skip room assignment for Thesis courses (class_per_week = 3 and name includes "Thesis")
+      if (course.class_per_week === 3 && course.name && course.name.toLowerCase().includes('thesis')) {
+        console.log(`Skipping room assignment for Thesis course: ${course_id}-${section} (${course.name})`);
+        return; // Skip this course
+      }
 
       // Use our safe getter to avoid undefined errors
       // Check which rooms are available at this day and time

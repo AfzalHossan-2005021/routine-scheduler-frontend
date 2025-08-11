@@ -74,9 +74,21 @@ function hasTheoryConflict(theorySchedules, mainSection, day, labTime) {
   for (const [sectionKey, scheduleData] of Object.entries(theorySchedules)) {
     if (!scheduleData) continue;
 
-    // Check if this section belongs to our main section (e.g., A1, A2 belong to A)
-    const sectionMainLetter = sectionKey.charAt(0);
-    if (sectionMainLetter !== mainSection) continue;
+    // Check if this section belongs to our main section or combined sections
+    let shouldCheck = false;
+    
+    if (mainSection.includes('+')) {
+      // For combined sections like A+B, check if any individual section matches
+      const individualSections = mainSection.split('+');
+      const sectionMainLetter = sectionKey.charAt(0);
+      shouldCheck = individualSections.includes(sectionMainLetter);
+    } else {
+      // For traditional sections, check if section belongs to main section (e.g., A1, A2 belong to A)
+      const sectionMainLetter = sectionKey.charAt(0);
+      shouldCheck = sectionMainLetter === mainSection;
+    }
+    
+    if (!shouldCheck) continue;
 
     // Check mainSection schedules if they exist
     if (scheduleData.mainSection && Array.isArray(scheduleData.mainSection)) {
@@ -186,37 +198,61 @@ function hasSessionalConflict(
 
   // Parse the target section to get main section and subsection info
   const sectionParts = targetSectionKey.split(" ");
-  const targetSection = sectionParts[sectionParts.length - 1]; // e.g., 'A1', 'A2', 'A'
-  const mainSection = targetSection.charAt(0); // e.g., 'A', 'B', 'C'
-
-  // Check for conflicts with:
-  // 1. Same section (A1 with A1)
-  // 2. Main section (A1 with A, A2 with A)
-  // 3. Other subsections if target is main section (A with A1, A with A2)
-
+  const targetSection = sectionParts[sectionParts.length - 1]; // e.g., 'A1', 'A2', 'A', 'A+B'
+  
   const sectionsToCheck = [];
 
-  if (targetSection.length === 1) {
-    // Target is main section (A, B, C) - check main section and all subsections
-    sectionsToCheck.push(
-      `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}`
-    ); // Main section
-    sectionsToCheck.push(
-      `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}1`
-    ); // Subsection 1
-    sectionsToCheck.push(
-      `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}2`
-    ); // Subsection 2
+  // Always check the exact target section
+  sectionsToCheck.push(targetSectionKey);
+
+  // For combined sections (A+B, A+B+C), check all individual sections involved
+  if (targetSection.includes('+')) {
+    const individualSections = targetSection.split('+');
+    individualSections.forEach(section => {
+      const individualSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${section}`;
+      sectionsToCheck.push(individualSectionKey);
+      
+      // Also check traditional subsections for each individual section (A1, A2, B1, B2, etc.)
+      sectionsToCheck.push(`${individualSectionKey}1`);
+      sectionsToCheck.push(`${individualSectionKey}2`);
+      sectionsToCheck.push(`${individualSectionKey}3`);
+    });
   } else {
-    // Target is subsection (A1, A2) - check same subsection and main section
-    sectionsToCheck.push(targetSectionKey); // Same subsection
-    sectionsToCheck.push(
-      `${selectedDepartment} ${selectedLevelTermBatch.batch} ${mainSection}`
-    ); // Main section
+    // For traditional sections
+    const mainSection = targetSection.charAt(0); // e.g., 'A', 'B', 'C'
+    
+    if (targetSection.length === 1) {
+      // Target is main section (A, B, C) - check all possible subsections
+      const allSectionKeys = Object.keys(labSchedulesBySection);
+      allSectionKeys.forEach(key => {
+        const keyParts = key.split(" ");
+        const keySection = keyParts[keyParts.length - 1];
+        if (keySection.startsWith(targetSection)) {
+          sectionsToCheck.push(key);
+        }
+      });
+    } else {
+      // Target is traditional subsection (A1, A2) - check main section and related sections
+      const mainSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${mainSection}`;
+      sectionsToCheck.push(mainSectionKey);
+      
+      // Check for combined sections that include this main section
+      const allSectionKeys = Object.keys(labSchedulesBySection);
+      allSectionKeys.forEach(key => {
+        const keyParts = key.split(" ");
+        const keySection = keyParts[keyParts.length - 1];
+        if (keySection.includes('+') && keySection.includes(mainSection)) {
+          sectionsToCheck.push(key);
+        }
+      });
+    }
   }
 
+  // Remove duplicates
+  const uniqueSectionsToCheck = [...new Set(sectionsToCheck)];
+
   // Check if any of these sections already have a course at this time slot
-  for (const sectionKey of sectionsToCheck) {
+  for (const sectionKey of uniqueSectionsToCheck) {
     const schedules = labSchedulesBySection[sectionKey];
     if (Array.isArray(schedules)) {
       const hasConflict = schedules.some(
@@ -489,16 +525,10 @@ export default function SessionalSchedule() {
 
     const groups = {};
     allSessionalSections.forEach((section) => {
-      // Extract main section letter and subsection identifier
-      // The first character is the main section (e.g., 'A' from 'A1')
-      const mainSection = section.section.charAt(0); // A, B, C
-      // The rest of the characters form the subsection identifier (could be '1', '2', '3', etc.)
-      const subSection = section.section.substring(1);
-
-      if (!groups[mainSection]) {
-        groups[mainSection] = { subsections: {} };
-      }
-
+      // Handle different section formats:
+      // Traditional: A1, A2, B1, B2, etc. (main section + numeric subsection)
+      // Combined: A+B, A+B+C, B+C, etc. (combined sections with + delimiter)
+      
       // Create a proper sectionKey with batch, section, and department
       let sectionKey;
       if (
@@ -514,10 +544,33 @@ export default function SessionalSchedule() {
         sectionKey = section.section;
       }
 
-      groups[mainSection].subsections[subSection] = {
-        ...section,
-        sectionKey: sectionKey,
-      };
+      if (section.section.includes('+')) {
+        // Combined sections like A+B, A+B+C, B+C
+        // For combined sections, add them as subsections under ALL individual sections
+        const individualSections = section.section.split('+');
+        individualSections.forEach((mainSection) => {
+          if (!groups[mainSection]) {
+            groups[mainSection] = { subsections: {} };
+          }
+          
+          groups[mainSection].subsections[section.section] = {
+            ...section,
+            sectionKey: sectionKey,
+          };
+        });
+      } else {
+        // Traditional sections like A1, A2, B1, B2
+        const mainSection = section.section.charAt(0); // A, B, C
+        
+        if (!groups[mainSection]) {
+          groups[mainSection] = { subsections: {} };
+        }
+
+        groups[mainSection].subsections[section.section] = {
+          ...section,
+          sectionKey: sectionKey,
+        };
+      }
     });
 
     return groups;
@@ -568,6 +621,7 @@ export default function SessionalSchedule() {
       const loadScheduleForSection = async (section) => {
         // Create a proper section key
         const sectionKey = `${department} ${batch} ${section.section}`;
+        console.log(sectionKey);
 
         // Validate the section key
         if (!validateSectionKey(sectionKey)) {
@@ -631,9 +685,19 @@ export default function SessionalSchedule() {
       };
 
       // Get unique main sections from allSessionalSections
-      const mainSections = [
-        ...new Set(allSessionalSections.map((s) => s.section.charAt(0))),
-      ];
+      const mainSectionsSet = new Set();
+      allSessionalSections.forEach((s) => {
+        if (s.section.includes('+')) {
+          // For combined sections like A+B, A+B+C, add all individual sections
+          s.section.split('+').forEach(section => {
+            mainSectionsSet.add(section);
+          });
+        } else {
+          // For traditional sections like A1, A2, add the main section letter
+          mainSectionsSet.add(s.section.charAt(0));
+        }
+      });
+      const mainSections = [...mainSectionsSet];
 
       // Execute all schedule loading operations in parallel
       const schedulePromises = [
@@ -1503,74 +1567,75 @@ export default function SessionalSchedule() {
                                       : [];
 
                                     // Get all scheduled courses for this slot across all subsections
-                                    const scheduledCourses = subsections
-                                      .map((subsection) => {
-                                        if (
-                                          !selectedDepartment ||
-                                          !selectedLevelTermBatch ||
-                                          !selectedLevelTermBatch.batch
-                                        ) {
-                                          return null;
-                                        }
+                                    const scheduledCourses = [];
 
-                                        const sectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
-                                        const schedule =
-                                          labSchedulesBySection[sectionKey] ||
-                                          [];
-                                        const slotData = schedule.find(
-                                          (slot) =>
-                                            slot.day === day &&
-                                            slot.time === time
+                                    // Check individual subsections (A1, A2, B1, B2, etc.)
+                                    subsections.forEach((subsection) => {
+                                      if (
+                                        !selectedDepartment ||
+                                        !selectedLevelTermBatch ||
+                                        !selectedLevelTermBatch.batch
+                                      ) {
+                                        return;
+                                      }
+
+                                      const sectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
+                                      const schedule =
+                                        labSchedulesBySection[sectionKey] || [];
+                                      
+                                      // Find all courses in this time slot for this subsection
+                                      const slotsInTime = schedule.filter(
+                                        (slot) =>
+                                          slot.day === day &&
+                                          slot.time === time &&
+                                          slot.course_id &&
+                                          slot.course_id.trim() !== ""
+                                      );
+
+                                      slotsInTime.forEach((slotData) => {
+                                        const course = allSessionalCourses.find(
+                                          (c) =>
+                                            c.id === slotData.course_id ||
+                                            c.course_id === slotData.course_id
                                         );
-
-                                        if (slotData && slotData.course_id) {
-                                          const course =
-                                            allSessionalCourses.find(
-                                              (c) =>
-                                                c.id === slotData.course_id ||
-                                                c.course_id ===
-                                                  slotData.course_id
-                                            );
-                                          return {
-                                            course,
-                                            subsection,
-                                            sectionKey,
-                                            courseId: slotData.course_id,
-                                          };
-                                        }
-                                        return null;
-                                      })
-                                      .filter(Boolean);
+                                        
+                                        scheduledCourses.push({
+                                          course,
+                                          subsection,
+                                          sectionKey,
+                                          courseId: slotData.course_id,
+                                        });
+                                      });
+                                    });
 
                                     // Also check for courses scheduled in the main section (for 0.75 credit courses)
                                     const mainSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${mainSection}`;
                                     const mainSectionSchedule =
-                                      labSchedulesBySection[mainSectionKey] ||
-                                      [];
-                                    const mainSectionSlotData =
-                                      mainSectionSchedule.find(
-                                        (slot) =>
-                                          slot.day === day && slot.time === time
-                                      );
+                                      labSchedulesBySection[mainSectionKey] || [];
+                                    
+                                    // Find all courses in this time slot for the main section
+                                    const mainSectionSlotsInTime = mainSectionSchedule.filter(
+                                      (slot) =>
+                                        slot.day === day && 
+                                        slot.time === time &&
+                                        slot.course_id &&
+                                        slot.course_id.trim() !== ""
+                                    );
 
-                                    if (
-                                      mainSectionSlotData &&
-                                      mainSectionSlotData.course_id
-                                    ) {
+                                    mainSectionSlotsInTime.forEach((slotData) => {
                                       const course = allSessionalCourses.find(
                                         (c) =>
-                                          c.id ===
-                                            mainSectionSlotData.course_id ||
-                                          c.course_id ===
-                                            mainSectionSlotData.course_id
+                                          c.id === slotData.course_id ||
+                                          c.course_id === slotData.course_id
                                       );
+                                      
                                       scheduledCourses.push({
                                         course,
                                         subsection: mainSection, // Show as main section (A, B, C)
                                         sectionKey: mainSectionKey,
-                                        courseId: mainSectionSlotData.course_id,
+                                        courseId: slotData.course_id,
                                       });
-                                    }
+                                    });
 
                                     return (
                                       <td
@@ -1645,6 +1710,7 @@ export default function SessionalSchedule() {
                                                     sectionKey: `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSubsection}`,
                                                     subsection:
                                                       targetSubsection,
+                                                    mainSection: mainSection, // Add the main section (A, B, C)
                                                     currentCourseId,
                                                   });
                                                   setShowLabCoursesModal(true);
@@ -1716,7 +1782,7 @@ export default function SessionalSchedule() {
                                                 index
                                               ) => (
                                                 <div
-                                                  key={`${subsection}-${index}`}
+                                                  key={`${subsection}-${courseId}-${index}`}
                                                   style={{
                                                     ...scheduleTableStyle.courseItem,
                                                     ...scheduleTableStyle.alreadyScheduledCourseItem,
@@ -2035,19 +2101,20 @@ export default function SessionalSchedule() {
                   }}
                 >
                   {allSessionalCourses
-                    .map((course) => {
-                      // Extract main section from the first subsection (e.g., "A" from "A1")
-                      const mainSection = selectedCell.subsection.charAt(0);
-
-                      // Determine how many course cards to show based on class_per_week
+                    .flatMap((course) => {
                       const courseCards = [];
-
-                      if (course.class_per_week === 0.75) {
-                        // For 0.75 credit courses, show one card with main section only
-                        const targetSection = mainSection;
-                        const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${targetSection}`;
-
-                        // Check if already scheduled for this section OR if course is already assigned elsewhere
+                      
+                      // Get the main section from the table that was clicked (A, B, C)
+                      const currentMainSection = selectedCell.mainSection;
+                      
+                      if (course.optional) {
+                        // Optional courses: Create combined section with all available main sections
+                        const allMainSections = Object.keys(groupedSections).sort();
+                        const combinedSection = allMainSections.join('+');
+                        
+                        const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${combinedSection}`;
+                        
+                        // Check conflicts and assignments
                         const isSlotOccupied =
                           labSchedulesBySection[targetSectionKey]?.some(
                             (slot) =>
@@ -2064,7 +2131,6 @@ export default function SessionalSchedule() {
                           selectedCell.time
                         );
 
-                        // Check for sessional conflicts (students can't attend multiple courses at same time)
                         const hasSessionalTimeConflict = hasSessionalConflict(
                           labSchedulesBySection,
                           targetSectionKey,
@@ -2080,32 +2146,29 @@ export default function SessionalSchedule() {
                           hasSessionalTimeConflict;
 
                         courseCards.push({
-                          section: targetSection,
+                          section: combinedSection,
                           sectionKey: targetSectionKey,
                           isAlreadyScheduled,
                           isSlotOccupied,
                           isCourseAssigned,
                           hasSessionalTimeConflict,
-                          displayText: `Section ${targetSection}`,
+                          displayText: `Section ${combinedSection}`,
                           courseId: course.course_id || course.id,
+                          course: course,
                         });
+                        
                       } else {
-                        // For other courses, show cards for both subsections (A1, A2 or B1, B2, etc.)
-                        const subsections = [
-                          `${mainSection}1`,
-                          `${mainSection}2`,
-                        ];
-
-                        subsections.forEach((subsection) => {
-                          const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
-
+                        // Non-optional courses: Use the current main section from the table
+                        if (course.class_per_week === 0.75) {
+                          // 0.75 credit courses get main section only (A, B, C)
+                          const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${currentMainSection}`;
+                          
                           const isSlotOccupied =
                             labSchedulesBySection[targetSectionKey]?.some(
                               (slot) =>
                                 slot.day === selectedCell.day &&
                                 slot.time === selectedCell.time &&
-                                slot.course_id ===
-                                  (course.course_id || course.id)
+                                slot.course_id === (course.course_id || course.id)
                             ) || false;
 
                           const isCourseAssigned = isCourseAlreadyAssigned(
@@ -2116,7 +2179,6 @@ export default function SessionalSchedule() {
                             selectedCell.time
                           );
 
-                          // Check for sessional conflicts (students can't attend multiple courses at same time)
                           const hasSessionalTimeConflict = hasSessionalConflict(
                             labSchedulesBySection,
                             targetSectionKey,
@@ -2132,21 +2194,73 @@ export default function SessionalSchedule() {
                             hasSessionalTimeConflict;
 
                           courseCards.push({
-                            section: subsection,
+                            section: currentMainSection,
                             sectionKey: targetSectionKey,
                             isAlreadyScheduled,
                             isSlotOccupied,
                             isCourseAssigned,
                             hasSessionalTimeConflict,
-                            displayText: `Section ${subsection}`,
+                            displayText: `Section ${currentMainSection}`,
                             courseId: course.course_id || course.id,
+                            course: course,
                           });
-                        });
-                      }
+                          
+                        } else if (course.class_per_week === 1.5) {
+                          // 1.5 credit courses get two subsection cards (A1, A2 or B1, B2, etc.)
+                          for (let i = 1; i <= 2; i++) {
+                            const subsection = `${currentMainSection}${i}`;
+                            const targetSectionKey = `${selectedDepartment} ${selectedLevelTermBatch.batch} ${subsection}`;
+                            
+                            const isSlotOccupied =
+                              labSchedulesBySection[targetSectionKey]?.some(
+                                (slot) =>
+                                  slot.day === selectedCell.day &&
+                                  slot.time === selectedCell.time &&
+                                  slot.course_id === (course.course_id || course.id)
+                              ) || false;
 
-                      return courseCards.map((cardInfo, cardIndex) => (
+                            const isCourseAssigned = isCourseAlreadyAssigned(
+                              labSchedulesBySection,
+                              course.course_id || course.id,
+                              targetSectionKey,
+                              selectedCell.day,
+                              selectedCell.time
+                            );
+
+                            const hasSessionalTimeConflict = hasSessionalConflict(
+                              labSchedulesBySection,
+                              targetSectionKey,
+                              selectedCell.day,
+                              selectedCell.time,
+                              selectedDepartment,
+                              selectedLevelTermBatch
+                            );
+
+                            const isAlreadyScheduled =
+                              isSlotOccupied ||
+                              isCourseAssigned ||
+                              hasSessionalTimeConflict;
+
+                            courseCards.push({
+                              section: subsection,
+                              sectionKey: targetSectionKey,
+                              isAlreadyScheduled,
+                              isSlotOccupied,
+                              isCourseAssigned,
+                              hasSessionalTimeConflict,
+                              displayText: `Section ${subsection}`,
+                              courseId: course.course_id || course.id,
+                              course: course,
+                            });
+                          }
+                        }
+                      }
+                      
+                      return courseCards;
+                    })
+                    .map((cardInfo, cardIndex) => (
                         <div
-                          key={`${course.course_id || course.id}-${
+                          key={`${cardInfo.course.course_id || cardInfo.course.id}-${
                             cardInfo.section
                           }`}
                           style={{
@@ -2207,7 +2321,7 @@ export default function SessionalSchedule() {
                               lineHeight: "1.2",
                             }}
                           >
-                            {course.course_id || course.course_code}
+                            {cardInfo.course.course_id || cardInfo.course.course_code}
                           </div>
                           <div
                             style={{
@@ -2219,7 +2333,7 @@ export default function SessionalSchedule() {
                               fontWeight: "500",
                             }}
                           >
-                            {course.course_title}
+                            {cardInfo.course.course_title}
                           </div>
                           <div
                             style={{
@@ -2231,7 +2345,7 @@ export default function SessionalSchedule() {
                               marginBottom: "8px",
                             }}
                           >
-                            {course.class_per_week} hours/week
+                            {cardInfo.course.class_per_week} hours/week
                           </div>
                           <div
                             style={{
@@ -2268,9 +2382,7 @@ export default function SessionalSchedule() {
                             </div>
                           )}
                         </div>
-                      ));
-                    })
-                    .flat()}
+                      ))}
                 </div>
               )}
             </div>
