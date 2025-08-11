@@ -337,10 +337,6 @@ export default function Courses() {
                         Credit
                       </th>
                       <th>
-                        <i className="mdi mdi-star-outline"></i>
-                        Category
-                      </th>
-                      <th>
                         <i className="mdi mdi-cog"></i>
                         Actions
                       </th>
@@ -366,11 +362,6 @@ export default function Courses() {
                         <td style={{ textAlign: "center" }}> {course.to} </td>
                         <td style={{ textAlign: "center" }}>
                           {course.class_per_week}
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <span className={`badge ${course.optional === 1 ? 'bg-warning' : 'bg-success'}`}>
-                            {course.optional === 1 ? 'Elective' : 'General'}
-                          </span>
                         </td>
                         <td>
                           <div className="d-flex">
@@ -540,6 +531,7 @@ export default function Courses() {
                       <Form.Select
                         className="form-select"
                         value={selectedCourse.optional || 0}
+                        disabled={!addNewCourse}
                         onChange={(e) =>
                           setSelectedCourse({
                             ...selectedCourse,
@@ -552,7 +544,7 @@ export default function Courses() {
                       </Form.Select>
                     </FormGroup>
                   </Col>
-                  <Col className="px-2 py-1">
+                  <Col md={6} className="px-2 py-1">
                     <FormGroup>
                       <Form.Label className="form-label">
                         Offering From
