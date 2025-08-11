@@ -615,7 +615,7 @@ export default function ShowSessionalDistribution() {
           console.log(theorySchedule);
           const theoryConflict = theorySchedule.filter(schedule =>
             schedule.day === day && 
-            (schedule.time === time || schedule.time === (time + 1)%12 || schedule.time === (time + 2) % 12) 
+            (schedule.time === ((time - 1) % 12 + 1) || schedule.time === (time % 12 + 1 ) || schedule.time === ((time + 1) % 12 + 1)) 
           );
           console.log(theoryConflict);
           if (theoryConflict.length > 0) {
@@ -688,7 +688,7 @@ export default function ShowSessionalDistribution() {
                 const theorySchedule = allSchedule.mainSection.filter(schedule => schedule.type === 0);
                 const theoryConflict = theorySchedule.filter(schedule =>
                         schedule.day === day && 
-                        (schedule.time === time || schedule.time === (time + 1) % 12 || schedule.time === (time + 2) % 12) 
+                        (schedule.time === ((time - 1) % 12 + 1) || schedule.time === (time % 12 + 1 ) || schedule.time === ((time + 1) % 12 + 1)) 
                 );
                 
                 if (theoryConflict.length > 0) {
