@@ -109,11 +109,10 @@ export default function TheorySchedule(props) {
           ? selectedLevelTermBatch.level_term
           : selectedLevelTermBatch;
       getTheoryCoursesByDeptLevelTerm(selectedDepartment, levelTermValue)
-        .then((res) =>{
-          console.log(res.data)
-          setAllTheoryCourses(Array.isArray(res.data) ? res.data : [])
-        }
-        )
+        .then((res) => {
+          console.log(res.data);
+          setAllTheoryCourses(Array.isArray(res.data) ? res.data : []);
+        })
         .catch(() => setAllTheoryCourses([]));
     } else {
       setAllTheoryCourses([]);
@@ -285,6 +284,36 @@ export default function TheorySchedule(props) {
       const timeIndex = times.indexOf(time);
       if (timeIndex < 0) return false;
 
+      // If this slot is thesis
+      for (let i = Math.max(0, timeIndex - 5); i <= timeIndex; i++) {
+        console.log(`Checking time ${times[i]} for day ${day}`);
+        const checkTime = times[i];
+        const checkSlotKey = `${day} ${checkTime}`;
+
+        // Check if there are any sessional courses in this slot
+        const slotData = scheduleObj[checkSlotKey];
+        const courseIds =
+          slotData?.course_ids ||
+          (slotData?.course_id ? [slotData.course_id] : []);
+
+        // Check if any of the courses in this slot is a sessional course
+        const hasThesis = courseIds.some((id) => id.includes("CSE400"));
+
+        if (hasThesis) {
+          // Fetch the sessional assignments for this section
+          const sessionalAssignment = courseIds.filter((id) =>
+            isSessionalCourse(id)
+          );
+          if (timeIndex >= i && timeIndex <= i + 5) {
+            return {
+              isDisabled: true,
+              hasThesis: true,
+              sessionalAssignment: sessionalAssignment || null,
+            };
+          }
+        }
+      }
+
       // For each time slot, check if there's a sessional course in any previous slot
       // that would affect this slot (current slot or up to 2 slots after a sessional)
       for (let i = Math.max(0, timeIndex - 2); i <= timeIndex; i++) {
@@ -308,6 +337,7 @@ export default function TheorySchedule(props) {
           if (timeIndex >= i && timeIndex <= i + 2) {
             return {
               isDisabled: true,
+              hasThesis: false,
               sessionalAssignment: sessionalAssignment || null,
             };
           }
@@ -383,7 +413,12 @@ export default function TheorySchedule(props) {
               // Make sure to use function form of setState to ensure we're using the latest state
               setTheorySchedulesBySection((prev) => {
                 const updated = { ...prev };
-                console.log("Updating section:", updated, sectionKey, cellMapClone);
+                console.log(
+                  "Updating section:",
+                  updated,
+                  sectionKey,
+                  cellMapClone
+                );
                 updated[sectionKey] = cellMapClone; // This ensures the exact same reference
                 return updated;
               });
@@ -916,7 +951,7 @@ export default function TheorySchedule(props) {
                         </h4>
                       </div>
                       {(() => {
-                        console.log(theorySchedulesBySection)
+                        console.log(theorySchedulesBySection);
                         const sectionData =
                           theorySchedulesBySection[sectionKey] || {};
                         return (

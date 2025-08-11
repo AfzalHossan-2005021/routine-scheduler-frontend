@@ -25,10 +25,6 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
   // Memoized values for configuration settings
   const { days, times, possibleLabTimes } = useConfig();
 
-  // Convert arrays to MultiSets for efficient lookup
-  const filledSet = useMemo(() => MultiSet.from(filled), [filled]);
-  const selectedSet = useMemo(() => MultiSet.from(selected), [selected]);
-
   // Prepare filtered courses - memoized to prevent unnecessary filtering
   const filteredCourses = useMemo(() => {
     return Array.isArray(allTheoryCourses) ? allTheoryCourses : [];
@@ -123,6 +119,9 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
               {times.map((time) => {
                 const slotKey = `${day} ${time}`;
                 const isDisabled = isDisabledTimeSlot(day, time);
+                if (isDisabled.hasThesis && time != "11") {
+                  return null;
+                }
                 if (!possibleLabTimes.includes(time)) {
                   if (isDisabled.isDisabled) {
                     return null;
@@ -133,7 +132,9 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
                   <td
                     className={`${isDisabled.isDisabled ? "blocked-cell" : ""}`}
                     key={`${day}-${time}`}
-                    colSpan={isDisabled.isDisabled ? 3 : 1}
+                    colSpan={
+                      isDisabled.isDisabled ? (isDisabled.hasThesis ? 6 : 3) : 1
+                    }
                   >
                     {isDisabled.isDisabled ? (
                       <div className="sessional-assignment">
@@ -144,9 +145,16 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
                             {assignment}
                           </div>
                         ))}
-                        <div style={{ fontSize: "0.7rem", opacity: 0.8 }}>
-                          <i className="mdi mdi-flask"></i> Lab
-                        </div>
+                        {isDisabled.hasThesis ? (
+                          <div style={{ fontSize: "0.7rem", opacity: 0.8 }}>
+                            <i className="mdi mdi-book-open-page-variant"></i>{" "}
+                            Thesis
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: "0.7rem", opacity: 0.8 }}>
+                            <i className="mdi mdi-flask"></i> Lab
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div>
@@ -166,7 +174,7 @@ const TheoryScheduleTable = React.memo(function TheoryScheduleTable(props) {
                         {getCourses(slotKey).length > 0 &&
                           getCourses(slotKey).map((course) => (
                             <div
-                              key={course.value}
+                              key={`${course.value}-${day}-${time}`}
                               className="item"
                               title={`${day} ${time}`}
                             >
