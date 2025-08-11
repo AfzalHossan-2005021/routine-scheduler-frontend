@@ -66,29 +66,6 @@ class Sidebar extends Component {
               <i className="mdi mdi-home menu-icon"></i>
             </Link>
           </li>
-          <li className={this.isPathActive('/database') ? 'nav-item active' : 'nav-item'}>
-            <div className={this.state.dbUiMenuOpen ? 'nav-link menu-expanded' : 'nav-link'} onClick={() => this.toggleMenuState('dbUiMenuOpen')} data-toggle="collapse">
-              <span className="menu-title">Database</span>
-              <i className={this.state.dbUiMenuOpen ? 'mdi mdi-chevron-down menu-icon' : 'mdi mdi-chevron-right menu-icon'}></i>
-              <i className="mdi mdi-database menu-icon"></i>
-            </div>
-            <Collapse in={this.state.dbUiMenuOpen}>
-              <ul className="nav flex-column sub-menu">
-                <li className={this.isPathActive('/database/initialize') ? 'nav-item active' : 'nav-item'}>
-                  <Link className="nav-link" to="/database/initialize">
-                    <span className="menu-title">Initialize</span>
-                    <i className="mdi mdi-database-plus menu-icon"></i>
-                  </Link>
-                </li>
-                <li className={this.isPathActive('/database/backup') ? 'nav-item active' : 'nav-item'}>
-                  <Link className="nav-link" to="/database/backup">
-                    <span className="menu-title">Backup</span>
-                    <i className="mdi mdi-database-export menu-icon"></i>
-                  </Link>
-                </li>
-              </ul>
-            </Collapse>
-          </li>
           <li className={this.isPathActive('/information') ? 'nav-item active' : 'nav-item'}>
             <div className={this.state.infoUiMenuOpen ? 'nav-link menu-expanded' : 'nav-link'} onClick={() => this.toggleMenuState('infoUiMenuOpen')} data-toggle="collapse">
               <span className="menu-title">Information</span>
@@ -113,6 +90,29 @@ class Sidebar extends Component {
                   <Link className="nav-link" to="/information/courses">
                     <span className="menu-title">Courses</span>
                     <i className="mdi mdi-book-open-page-variant menu-icon"></i>
+                  </Link>
+                </li>
+              </ul>
+            </Collapse>
+          </li>
+          <li className={this.isPathActive('/database') ? 'nav-item active' : 'nav-item'}>
+            <div className={this.state.dbUiMenuOpen ? 'nav-link menu-expanded' : 'nav-link'} onClick={() => this.toggleMenuState('dbUiMenuOpen')} data-toggle="collapse">
+              <span className="menu-title">Database</span>
+              <i className={this.state.dbUiMenuOpen ? 'mdi mdi-chevron-down menu-icon' : 'mdi mdi-chevron-right menu-icon'}></i>
+              <i className="mdi mdi-database menu-icon"></i>
+            </div>
+            <Collapse in={this.state.dbUiMenuOpen}>
+              <ul className="nav flex-column sub-menu">
+                <li className={this.isPathActive('/database/initialize') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/database/initialize">
+                    <span className="menu-title">Initialize</span>
+                    <i className="mdi mdi-database-plus menu-icon"></i>
+                  </Link>
+                </li>
+                <li className={this.isPathActive('/database/backup') ? 'nav-item active' : 'nav-item'}>
+                  <Link className="nav-link" to="/database/backup">
+                    <span className="menu-title">Backup</span>
+                    <i className="mdi mdi-database-export menu-icon"></i>
                   </Link>
                 </li>
               </ul>
