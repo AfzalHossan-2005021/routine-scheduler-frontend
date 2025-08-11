@@ -16,7 +16,7 @@ import { Modal, Button } from 'react-bootstrap';
  */
 function formatSectionDisplay(section, classPerWeek) {
   // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
-  if (classPerWeek === 0.75) {
+  if (classPerWeek === 0.75 && !section.includes('+')) {
     return `${section}1/${section}2`;
   }
   // For other courses, show the section as is
@@ -495,6 +495,7 @@ export default function ShowSessionalDistribution() {
 
       const schedules = {
         course_id: "None",
+        prev_course_id: courseToRemove.course_id,
         day: courseToRemove.day,
         time: courseToRemove.time,
         batch: courseToRemove.batch,
@@ -573,82 +574,137 @@ export default function ShowSessionalDistribution() {
         return;
       }
 
-      // First check if this section already has a course in this time slot
-      const existingCourseInSlot = sessionalSchedules.find(schedule =>
-        schedule.day === day &&
-        schedule.time === time &&
-        schedule.batch === course.batch &&
-        schedule.section === course.section &&
-        schedule.department === course.department
-      );
-
-      if (existingCourseInSlot) {
-        toast.error(`Section ${formatSectionDisplay(course.section, course.class_per_week)} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
-        return;
-      }
-
-      const mainSection = course.section.replace(/\d+$/, '');
-      const allSchedule = await getSchedules(course.department, course.batch, mainSection);
-
-      console.log(allSchedule);
-      
-      // Check theory conflict schedules
-      if (allSchedule.mainSection && allSchedule.mainSection.length > 0) {
-        const theorySchedule = allSchedule.mainSection.filter(schedule => schedule.type === 0);
-        console.log(theorySchedule);
-        const theoryConflict = theorySchedule.filter(schedule =>
-          schedule.day === day && 
-          (schedule.time === time || schedule.time === (time + 1)%12 || schedule.time === (time + 2) % 12) 
+      // If new course is non optional check conflict
+      if(course.optional === 0){
+        //Non Optional Course, If that section has already any course at that time
+        const existingCourseInSlot = sessionalSchedules.find(schedule =>
+          schedule.day === day &&
+          schedule.time === time &&
+          schedule.batch === course.batch &&
+          schedule.section === course.section &&
+          schedule.department === course.department
         );
-        console.log(theoryConflict);
-        if (theoryConflict.length > 0) {
-          toast.error(`Cannot add ${course.course_id} for section ${formatSectionDisplay(course.section,course.class_per_week)}. ${theoryConflict[0].course_id} for section ${formatSectionDisplay(theoryConflict[0].section, theoryConflict[0].class_per_week)} is already scheduled at this time slot.`);
+
+        if (existingCourseInSlot) {
+          toast.error(`Section ${formatSectionDisplay(course.section, course.class_per_week)} already has ${existingCourseInSlot.course_id} scheduled at this time slot`);
           return;
         }
-      }
 
-      // Check for 0.75 credit course conflicts
-      // For 0.75 credit courses (class_per_week = 0.75), we need to check for subsection conflicts
-      if (course.class_per_week === 0.75) {
-        // If adding a 0.75 credit course for section A, check if A1 or A2 already exist
-        const subsectionConflicts = sessionalSchedules.filter(schedule =>
+        //Check if there is an optional course at that time slot
+        const existingOptionalCourse = sessionalSchedules.find(schedule =>
           schedule.day === day &&
           schedule.time === time &&
           schedule.batch === course.batch &&
           schedule.department === course.department &&
-          (schedule.section === `${course.section}1` || schedule.section === `${course.section}2`)
+          schedule.optional === 1
         );
 
-        if (subsectionConflicts.length > 0) {
-          const conflictingSections = subsectionConflicts.map(s => s.section).join(', ');
-          toast.error(`Cannot add ${course.course_id} for section ${course.section}. Subsections ${conflictingSections} already have courses scheduled at this time slot`);
+        if(existingOptionalCourse){
+          toast.error(`Can't add ${course.course_id} in this slot.Section ${formatSectionDisplay(course.section, course.class_per_week)} already has Optional Courses scheduled at this time slot`);
           return;
         }
-      } else {
-        // For 1.5 credit courses (subsections like A1, A2), check if main section already exists
-        // Extract the main section (remove the number at the end)
-        
-        if (mainSection !== course.section) {
-          // This is a subsection (like A1, A2)
-          const mainSectionConflict = sessionalSchedules.find(schedule =>
+
+        const mainSection = course.section.replace(/\d+$/, '');
+        const allSchedule = await getSchedules(course.department, course.batch, mainSection);
+
+        console.log(allSchedule);
+      
+        // Check theory conflict schedules
+        if (allSchedule.mainSection && allSchedule.mainSection.length > 0) {
+          const theorySchedule = allSchedule.mainSection.filter(schedule => schedule.type === 0);
+          console.log(theorySchedule);
+          const theoryConflict = theorySchedule.filter(schedule =>
+            schedule.day === day && 
+            (schedule.time === time || schedule.time === (time + 1)%12 || schedule.time === (time + 2) % 12) 
+          );
+          console.log(theoryConflict);
+          if (theoryConflict.length > 0) {
+            toast.error(`Cannot add ${course.course_id} for section ${formatSectionDisplay(course.section,course.class_per_week)}. ${theoryConflict[0].course_id} for section ${formatSectionDisplay(theoryConflict[0].section, theoryConflict[0].class_per_week)} is already scheduled at this time slot.`);
+            return;
+          }
+        }
+
+        // Check for 0.75 credit course conflicts
+        // For 0.75 credit courses (class_per_week = 0.75), we need to check for subsection conflicts
+        if (course.class_per_week === 0.75) {
+          // If adding a 0.75 credit course for section A, check if A1 or A2 already exist
+          const subsectionConflicts = sessionalSchedules.filter(schedule =>
             schedule.day === day &&
             schedule.time === time &&
             schedule.batch === course.batch &&
             schedule.department === course.department &&
-            schedule.section === mainSection &&
-            schedule.class_per_week === 0.75 // Only check for 0.75 credit courses
+            (schedule.section === `${course.section}1` || schedule.section === `${course.section}2`)
           );
 
-          if (mainSectionConflict) {
-            toast.error(`Cannot add ${course.course_id} for subsection ${course.section}. Section ${mainSection} already has (${mainSectionConflict.course_id}) scheduled at this time slot`);
+          if (subsectionConflicts.length > 0) {
+            const conflictingSections = subsectionConflicts.map(s => s.section).join(', ');
+            toast.error(`Cannot add ${course.course_id} for section ${course.section}. Subsections ${conflictingSections} already have courses scheduled at this time slot`);
             return;
+          }
+        } else {
+          // For 1.5 credit courses (subsections like A1, A2), check if main section already exists
+          // Extract the main section (remove the number at the end)
+          
+          if (mainSection !== course.section) {
+            // This is a subsection (like A1, A2)
+            const mainSectionConflict = sessionalSchedules.find(schedule =>
+              schedule.day === day &&
+              schedule.time === time &&
+              schedule.batch === course.batch &&
+              schedule.department === course.department &&
+              schedule.section === mainSection &&
+              schedule.class_per_week === 0.75 // Only check for 0.75 credit courses
+            );
+
+            if (mainSectionConflict) {
+              toast.error(`Cannot add ${course.course_id} for section ${formatSectionDisplay(course.section, course.class_per_week)}. Section ${mainSection} already has (${mainSectionConflict.course_id}) scheduled at this time slot`);
+              return;
+            }
           }
         }
       }
-
+      else{
+        // Optional Course, If that batch already have any non optional course at that time
+        const existingNonOptionalCourseInSlot = sessionalSchedules.find(schedule =>
+          schedule.day === day &&
+          schedule.time === time &&
+          schedule.batch === course.batch &&
+          schedule.department === course.department &&
+          schedule.optional === 0
+        );
+        if(existingNonOptionalCourseInSlot){
+          toast.error(`Cannot add ${course.course_id} for Section ${formatSectionDisplay(course.section, course.class_per_week)}. Some Section already has courses scheduled at this time slot`);
+          return;
+        }
+        //Check for Theory Conflict with Optional Course
+         const individualSections = course.section.split('+');
+          
+          for (const sectionToCheck of individualSections) {
+            try {
+              const allSchedule = await getSchedules(course.department, course.batch, sectionToCheck);
+              
+              // Check theory conflict schedules for this individual section
+              if (allSchedule.mainSection && allSchedule.mainSection.length > 0) {
+                const theorySchedule = allSchedule.mainSection.filter(schedule => schedule.type === 0);
+                const theoryConflict = theorySchedule.filter(schedule =>
+                        schedule.day === day && 
+                        (schedule.time === time || schedule.time === (time + 1) % 12 || schedule.time === (time + 2) % 12) 
+                );
+                
+                if (theoryConflict.length > 0) {
+                  toast.error(`Cannot add ${course.course_id} for section ${formatSectionDisplay(course.section, course.class_per_week)}. ${theoryConflict[0].course_id} for section ${formatSectionDisplay(theoryConflict[0].section, theoryConflict[0].class_per_week)} is already scheduled at this time slot in section ${sectionToCheck}.`);
+                  return;
+                }
+              }
+            } catch (error) {
+              console.error(`Error checking theory conflicts for section ${sectionToCheck}:`, error);
+              toast.error(`Failed to check theory conflicts for section ${sectionToCheck}`);
+              return;
+            }
+          }
+        }
       // Check for teacher schedule conflicts
       try {
-        const teacherConflicts = await getSessionalTeachers(course.course_id, course.section);
         const contradictions = await teacherContradiction(course.batch, course.section, course.course_id);
 
         // Check if any assigned teacher has a schedule conflict

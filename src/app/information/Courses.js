@@ -34,8 +34,8 @@ const validateCourse = (course) => {
   if (course.class_per_week <= 0) {
     return "Credit must be a positive number";
   }
-  if (course.level === "") {
-    return "Level cannot be empty";
+  if (course.level_term === "") {
+    return "Level-Term cannot be empty";
   }
   if (course.from === "") {
     return "From cannot be empty";
@@ -45,6 +45,10 @@ const validateCourse = (course) => {
   }
   if (course.from !== "CSE" && course.to !== "CSE") {
     return "Offering or Host Department must be CSE";
+  }
+  // Optional field validation (0 or 1)
+  if (course.optional !== 0 && course.optional !== 1) {
+    return "Course category must be either General (0) or Elective (1)";
   }
   return null;
 };
@@ -291,6 +295,7 @@ export default function Courses() {
                         to: "",
                         teacher_credit: 0,
                         level_term: "",
+                        optional: 0,
                         assignedSections: [],
                       });
                     }}
@@ -520,7 +525,26 @@ export default function Courses() {
                   </Col>
                 </Row>
                 <Row>
-                  <Col className="px-2 py-1">
+                  <Col md={6} className="px-2 py-1">
+                    <FormGroup>
+                      <Form.Label className="form-label">Course Category</Form.Label>
+                      <Form.Select
+                        className="form-select"
+                        value={selectedCourse.optional || 0}
+                        disabled={!addNewCourse}
+                        onChange={(e) =>
+                          setSelectedCourse({
+                            ...selectedCourse,
+                            optional: parseInt(e.target.value),
+                          })
+                        }
+                      >
+                        <option value={0}>General Course</option>
+                        <option value={1}>Elective Course</option>
+                      </Form.Select>
+                    </FormGroup>
+                  </Col>
+                  <Col md={6} className="px-2 py-1">
                     <FormGroup>
                       <Form.Label className="form-label">
                         Offering From
@@ -653,7 +677,7 @@ export default function Courses() {
                         toast.error("Failed to add course: " + res.message);
                       }
                     } else {
-                      console.log("In edit course.");
+                      console.log("DEBUG Frontend: Editing course data:", selectedCourse);
                       const res = await editCourse(selectedCourse.course_id, selectedCourse);
                       if (res.message && res.message.includes("Successfully Updated")) {
                         toast.success("Course updated successfully");

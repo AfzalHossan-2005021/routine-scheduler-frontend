@@ -26,7 +26,7 @@ import toast from 'react-hot-toast';
  */
 function formatSectionDisplay(section, classPerWeek) {
   // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
-  if (classPerWeek === 0.75) {
+  if (classPerWeek === 0.75 && !section.includes('+')) {
     return `${section}1/${section}2`;
   }
   // For other courses, show the section as is
