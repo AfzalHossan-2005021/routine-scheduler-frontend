@@ -13,9 +13,9 @@ import {
  * @param {number} classPerWeek - The class per week value (1 for 0.75 credit, 2 for 1.5 credit)
  * @returns {string} - Formatted section display
  */
-function formatSectionDisplay(section, classPerWeek, optional = 0) {
+function formatSectionDisplay(section, classPerWeek) {
   // For 0.75 credit courses (class_per_week = 0.75), show (A1/A2) format
-  if (classPerWeek === 0.75 && optional !== 1) {
+  if (classPerWeek === 0.75 && !section.includes('+')) {
     return `${section}1/${section}2`;
   }
   // For other courses, show the section as is
@@ -336,7 +336,7 @@ export default function ShowLoadDistribution() {
                                 style={{ fontSize: "0.7rem", opacity: 0.8 }}
                               >
                                 {" "}
-                                ({course.section})
+                                ({formatSectionDisplay(course.section, course.class_per_week)})
                               </span>
                             )}
                           </span>
