@@ -93,7 +93,7 @@ export default function SessionalDistribution() {
               <tr key={index}>
                 <td>{course.course_id}</td>
                 <td>{course.course_name || course.course_id}</td>
-                <td>{course.section}</td>
+                <td>{formatSectionDisplay(course.section, course.class_per_week)}</td>
                 <td>{course.day || "Not scheduled"}</td>
                 <td>{formatTime(course.time)}</td>
                 <td>

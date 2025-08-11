@@ -1503,8 +1503,7 @@ export default function SessionalSchedule() {
                           >
                             {mainSection}
                           </span>
-                          Section {mainSection} ({subsectionNames.length}{" "}
-                          Subsections)
+                          Section {mainSection}
                         </h4>
                       </div>
 
