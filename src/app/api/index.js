@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 export const UNAUTHORIZED = 401, FORBIDDEN = 403;
-const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:4200";
+// Use relative URLs when on production domain (through nginx proxy) or localhost in development
+const BASE_URL = process.env.REACT_APP_BASE_URL || 
+  (window.location.hostname === 'routine-scheduler-buet.duckdns.org' ? '/api' : 'http://localhost:4200');
 
 
 export const api_url = (path) => (`${BASE_URL}/v1${path}`);
